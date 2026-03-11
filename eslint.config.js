@@ -21,8 +21,8 @@ export default tseslint.config(
     },
   },
   {
-    // Disable type-checked rules for config files (untyped plugin APIs)
-    files: ['eslint.config.js', 'vite.config.ts', 'vitest.config.ts', 'playwright.config.ts'],
+    // Disable type-checked rules for JS config (untyped ESLint plugin APIs)
+    files: ['eslint.config.js'],
     ...tseslint.configs.disableTypeChecked,
   },
   {

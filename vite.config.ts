@@ -7,6 +7,15 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 export default defineConfig({
   plugins: [react(), tailwindcss(), wasm(), topLevelAwait()],
   worker: {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     plugins: (): PluginOption[] => [wasm(), topLevelAwait()],
+  },
+  server: {
+    headers: {
+      'X-Frame-Options': 'DENY',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    },
   },
 })
