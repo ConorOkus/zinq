@@ -28,6 +28,7 @@ import {
   type BroadcasterInterface,
   type Persist,
   type ChannelMonitor,
+  type EventHandler,
 } from 'lightningdevkit'
 import { getSeed, generateAndStoreSeed } from './storage/seed'
 import { createLogger } from './traits/logger'
@@ -35,6 +36,7 @@ import { createFeeEstimator } from './traits/fee-estimator'
 import { createBroadcaster } from './traits/broadcaster'
 import { createPersister } from './traits/persist'
 import { createFilter, type WatchState } from './traits/filter'
+import { createEventHandler } from './traits/event-handler'
 import { SIGNET_CONFIG } from './config'
 import { idbGet, idbGetAll } from './storage/idb'
 import { bytesToHex, hexToBytes } from './utils'
@@ -52,11 +54,15 @@ export interface LdkNode {
   networkGraph: NetworkGraph
   scorer: ProbabilisticScorer
   peerManager: PeerManager
+  eventHandler: EventHandler
 }
 
 export interface InitResult {
   node: LdkNode
   watchState: WatchState
+  setConnectToPeer: (
+    fn: (pubkey: string, host: string, port: number) => Promise<void>,
+  ) => void
 }
 
 // WASM double-init guard: deduplicate concurrent calls from React StrictMode
@@ -277,6 +283,10 @@ async function doInitializeLdk(): Promise<InitResult> {
   }
   const nodeId = bytesToHex(nodeIdResult.res)
 
+  // 12. Create EventHandler
+  const { handler: eventHandler, setConnectToPeer } =
+    createEventHandler(channelManager)
+
   const node: LdkNode = {
     nodeId,
     keysManager,
@@ -289,9 +299,10 @@ async function doInitializeLdk(): Promise<InitResult> {
     networkGraph,
     scorer,
     peerManager,
+    eventHandler,
   }
 
-  return { node, watchState }
+  return { node, watchState, setConnectToPeer }
 }
 
 function deserializeMonitors(
