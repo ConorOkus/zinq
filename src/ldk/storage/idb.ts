@@ -1,5 +1,5 @@
 const DB_NAME = 'browser-wallet-ldk'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 const STORES = [
   'ldk_seed',
@@ -7,6 +7,7 @@ const STORES = [
   'ldk_channel_manager',
   'ldk_network_graph',
   'ldk_scorer',
+  'ldk_spendable_outputs',
 ] as const
 
 export type StoreName = (typeof STORES)[number]
