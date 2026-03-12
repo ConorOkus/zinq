@@ -23,6 +23,7 @@
     "@bitcoindevkit/bdk-wallet-web": "^0.2.0",
     "@scure/bip32": "^2.0.1",
     "@scure/bip39": "^2.0.1",
+    "@scure/btc-signer": "^2.0.1",
     "lightningdevkit": "0.1.8-0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

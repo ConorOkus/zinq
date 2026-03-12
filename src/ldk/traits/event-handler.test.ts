@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const mockClaimFunds = vi.fn()
 const mockProcessPendingHtlcForwards = vi.fn()
+const mockFundingTransactionGenerated = vi.fn(() => ({ is_ok: () => true }))
 
 vi.mock('lightningdevkit', () => {
   class MockEvent {}
@@ -43,11 +44,25 @@ vi.mock('lightningdevkit', () => {
     node_id = new Uint8Array([9, 10, 11])
     addresses: unknown[] = []
   }
-  class Event_FundingGenerationReady extends MockEvent {}
-  class Event_FundingTxBroadcastSafe extends MockEvent {}
+  class Event_FundingGenerationReady extends MockEvent {
+    temporary_channel_id = { write: () => new Uint8Array([0xaa, 0xbb]) }
+    counterparty_node_id = new Uint8Array([0xcc, 0xdd])
+    channel_value_satoshis = BigInt(100_000)
+    output_script = new Uint8Array([0x00, 0x14, 0x01, 0x02])
+  }
+  class Event_FundingTxBroadcastSafe extends MockEvent {
+    channel_id = { write: () => new Uint8Array([0xee, 0xff]) }
+    former_temporary_channel_id = { write: () => new Uint8Array([0xaa, 0xbb]) }
+    funding_txo = {}
+    counterparty_node_id = new Uint8Array([0xcc, 0xdd])
+    user_channel_id = BigInt(42)
+  }
   class Event_BumpTransaction extends MockEvent {}
   class Event_OpenChannelRequest extends MockEvent {}
-  class Event_DiscardFunding extends MockEvent {}
+  class Event_DiscardFunding extends MockEvent {
+    channel_id = { write: () => new Uint8Array([0xee, 0xff]) }
+    funding_info = {}
+  }
 
   class Option_ThirtyTwoBytesZ_Some {
     some: Uint8Array
@@ -93,6 +108,45 @@ vi.mock('../storage/idb', () => ({
   idbPut: vi.fn(() => Promise.resolve()),
 }))
 
+const mockExtractTxBytes = vi.fn(() => new Uint8Array([0xde, 0xad]))
+const mockTxBytesToHex = vi.fn(() => 'dead')
+const mockBroadcastTransaction = vi.fn(() => Promise.resolve('txid123'))
+vi.mock('../../onchain/tx-bridge', () => ({
+  extractTxBytes: (...args: unknown[]) => mockExtractTxBytes(...args),
+  txBytesToHex: (...args: unknown[]) => mockTxBytesToHex(...args),
+  broadcastTransaction: (...args: unknown[]) => mockBroadcastTransaction(...args),
+}))
+
+vi.mock('../../onchain/config', () => ({
+  ONCHAIN_CONFIG: { esploraUrl: 'https://test.esplora/api' },
+}))
+
+vi.mock('../../onchain/storage/changeset', () => ({
+  putChangeset: vi.fn(() => Promise.resolve()),
+}))
+
+const mockPsbt = {
+  toString: () => 'base64psbt',
+}
+const mockTxBuilder = {
+  add_recipient: vi.fn(),
+  finish: vi.fn(() => mockPsbt),
+}
+const mockBdkWallet = {
+  build_tx: vi.fn(() => mockTxBuilder),
+  sign: vi.fn(),
+  take_staged: vi.fn(() => ({ is_empty: () => true, to_json: () => '{}' })),
+}
+vi.mock('@bitcoindevkit/bdk-wallet-web', () => ({
+  Wallet: class {},
+  Recipient: class {
+    constructor(_s: unknown, _a: unknown) {} // eslint-disable-line @typescript-eslint/no-unused-vars
+  },
+  ScriptBuf: { from_bytes: vi.fn((b: unknown) => b) },
+  Amount: { from_sat: vi.fn((s: unknown) => s) },
+  SignOptions: class {},
+}))
+
 vi.mock('../utils', () => ({
   bytesToHex: vi.fn((bytes: Uint8Array) =>
     Array.from(bytes)
@@ -115,6 +169,7 @@ import {
   Event_ChannelClosed,
   Event_ConnectionNeeded,
   Event_FundingGenerationReady,
+  Event_FundingTxBroadcastSafe,
   Event_BumpTransaction,
   Event_OpenChannelRequest,
   Event_DiscardFunding,
@@ -125,6 +180,7 @@ function createMockChannelManager() {
   return {
     claim_funds: mockClaimFunds,
     process_pending_htlc_forwards: mockProcessPendingHtlcForwards,
+    funding_transaction_generated: mockFundingTransactionGenerated,
   } as never
 }
 
@@ -279,10 +335,74 @@ describe('createEventHandler', () => {
     )
   })
 
-  it('warns on FundingGenerationReady', () => {
+  it('warns when FundingGenerationReady fires without BDK wallet', () => {
     handleEvent(new Event_FundingGenerationReady())
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('FundingGenerationReady'),
+      expect.stringContaining('BDK wallet not available'),
+    )
+    expect(mockFundingTransactionGenerated).not.toHaveBeenCalled()
+  })
+
+  it('builds funding tx and calls funding_transaction_generated with BDK wallet', () => {
+    const cm = createMockChannelManager()
+    const result = createEventHandler(cm)
+    result.setBdkWallet(mockBdkWallet as never)
+    const handler = (
+      result.handler as unknown as { _impl: { handle_event: HandleEventFn } }
+    )._impl.handle_event
+
+    handler(new Event_FundingGenerationReady())
+
+    expect(mockBdkWallet.build_tx).toHaveBeenCalled()
+    expect(mockBdkWallet.sign).toHaveBeenCalled()
+    expect(mockExtractTxBytes).toHaveBeenCalledWith('base64psbt')
+    expect(mockFundingTransactionGenerated).toHaveBeenCalledWith(
+      expect.anything(), // temporary_channel_id
+      expect.any(Uint8Array), // counterparty_node_id
+      new Uint8Array([0xde, 0xad]), // raw tx bytes from bridge
+    )
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('funding tx registered'),
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+    )
+    result.cleanup()
+  })
+
+  it('broadcasts cached tx on FundingTxBroadcastSafe', async () => {
+    // Set up with BDK wallet to populate the cache via FundingGenerationReady
+    const cm = createMockChannelManager()
+    const result = createEventHandler(cm)
+    result.setBdkWallet(mockBdkWallet as never)
+    const handler = (
+      result.handler as unknown as { _impl: { handle_event: HandleEventFn } }
+    )._impl.handle_event
+
+    // First, trigger funding to populate cache
+    handler(new Event_FundingGenerationReady())
+
+    // Then trigger broadcast
+    handler(new Event_FundingTxBroadcastSafe())
+
+    // Allow the async broadcast to resolve
+    await vi.waitFor(() => {
+      expect(mockBroadcastTransaction).toHaveBeenCalledWith(
+        'dead', // txBytesToHex result
+        'https://test.esplora/api',
+      )
+    })
+    result.cleanup()
+  })
+
+  it('warns when FundingTxBroadcastSafe has no cached tx', () => {
+    handleEvent(new Event_FundingTxBroadcastSafe())
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('no cached tx'),
+      expect.any(String),
+      expect.any(String),
     )
   })
 
@@ -304,6 +424,7 @@ describe('createEventHandler', () => {
     handleEvent(new Event_DiscardFunding())
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('DiscardFunding'),
+      expect.any(String),
     )
   })
 
