@@ -3,6 +3,24 @@ import {
   KeysManager,
   Recipient,
   Result_PublicKeyNoneZ_OK,
+  ChainMonitor,
+  Option_FilterZ,
+  ChannelManager,
+  UserConfig,
+  ChainParameters,
+  BestBlock,
+  NetworkGraph,
+  ProbabilisticScorer,
+  ProbabilisticScoringDecayParameters,
+  ProbabilisticScoringFeeParameters,
+  MultiThreadedLockableScore,
+  DefaultRouter,
+  DefaultMessageRouter,
+  UtilMethods,
+  Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK,
+  Result_C2Tuple_ThirtyTwoBytesChannelManagerZDecodeErrorZ_OK,
+  Result_NetworkGraphDecodeErrorZ_OK,
+  Result_ProbabilisticScorerDecodeErrorZ_OK,
   type Logger,
   type FeeEstimator,
   type BroadcasterInterface,
@@ -13,7 +31,11 @@ import { createLogger } from './traits/logger'
 import { createFeeEstimator } from './traits/fee-estimator'
 import { createBroadcaster } from './traits/broadcaster'
 import { createPersister } from './traits/persist'
+import { createFilter, type WatchState } from './traits/filter'
 import { SIGNET_CONFIG } from './config'
+import { idbGet, idbGetAll } from './storage/idb'
+import { bytesToHex, hexToBytes } from './utils'
+import { EsploraClient } from './sync/esplora-client'
 
 export interface LdkNode {
   nodeId: string
@@ -22,37 +44,193 @@ export interface LdkNode {
   feeEstimator: FeeEstimator
   broadcaster: BroadcasterInterface
   persister: Persist
+  chainMonitor: ChainMonitor
+  channelManager: ChannelManager
+  networkGraph: NetworkGraph
+  scorer: ProbabilisticScorer
 }
 
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
+export interface InitResult {
+  node: LdkNode
+  watchState: WatchState
 }
 
-export async function initializeLdk(): Promise<LdkNode> {
-  // 1. Load WASM binary
-  await initializeWasmWebFetch('/liblightningjs.wasm')
+// WASM double-init guard: deduplicate concurrent calls from React StrictMode
+let wasmInitPromise: Promise<void> | null = null
 
-  // 2. Get or create seed
+function initWasm(): Promise<void> {
+  if (!wasmInitPromise) {
+    wasmInitPromise = initializeWasmWebFetch('/liblightningjs.wasm')
+  }
+  return wasmInitPromise
+}
+
+// Multi-tab lock: prevent two tabs from running independent ChannelManagers
+async function acquireWalletLock(): Promise<void> {
+  if (!navigator.locks) {
+    console.warn('[LDK Init] Web Locks API not available, skipping multi-tab guard')
+    return
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    void navigator.locks.request('ldk-wallet-lock', { ifAvailable: true }, (lock) => {
+      if (!lock) {
+        reject(new Error('Wallet is already open in another tab'))
+        return Promise.resolve()
+      }
+      resolve()
+      // Hold the lock by returning a never-resolving promise
+      return new Promise<void>(() => {})
+    })
+  })
+}
+
+export async function initializeLdk(): Promise<InitResult> {
+  // 0. Safety: acquire multi-tab lock and init WASM
+  await acquireWalletLock()
+  await initWasm()
+
+  // 1. Get or create seed
   let seed = await getSeed()
   if (!seed) {
     seed = await generateAndStoreSeed()
   }
 
-  // 3. Initialize KeysManager with current timestamp for ephemeral key uniqueness
+  // 2. Initialize KeysManager with current timestamp for ephemeral key uniqueness
   const nowMs = Date.now()
   const startingTimeSecs = BigInt(Math.floor(nowMs / 1000))
   const startingTimeNanos = (nowMs % 1000) * 1_000_000
   const keysManager = KeysManager.constructor_new(seed, startingTimeSecs, startingTimeNanos)
 
-  // 4. Create trait implementations
+  // 3. Create trait implementations
   const logger = createLogger()
   const feeEstimator = createFeeEstimator(SIGNET_CONFIG.esploraUrl)
   const broadcaster = createBroadcaster(SIGNET_CONFIG.esploraUrl)
-  const persister = createPersister()
+  const { persist: persister, setChainMonitor } = createPersister()
 
-  // 5. Derive node public key
+  // 4. Create Filter + ChainMonitor
+  const { filter, watchState } = createFilter()
+  const chainMonitor = ChainMonitor.constructor_new(
+    Option_FilterZ.constructor_some(filter),
+    broadcaster,
+    logger,
+    feeEstimator,
+    persister
+  )
+  setChainMonitor(chainMonitor)
+
+  // 5. Restore or create NetworkGraph
+  const ngBytes = await idbGet<Uint8Array>('ldk_network_graph', 'primary')
+  let networkGraph: NetworkGraph
+  if (ngBytes) {
+    const result = NetworkGraph.constructor_read(ngBytes, logger)
+    if (result instanceof Result_NetworkGraphDecodeErrorZ_OK) {
+      networkGraph = result.res
+    } else {
+      console.warn('[LDK Init] Failed to restore NetworkGraph, creating fresh')
+      networkGraph = NetworkGraph.constructor_new(SIGNET_CONFIG.network, logger)
+    }
+  } else {
+    networkGraph = NetworkGraph.constructor_new(SIGNET_CONFIG.network, logger)
+  }
+
+  // 6. Restore or create Scorer
+  const decayParams = ProbabilisticScoringDecayParameters.constructor_default()
+  const scorerBytes = await idbGet<Uint8Array>('ldk_scorer', 'primary')
+  let scorer: ProbabilisticScorer
+  if (scorerBytes) {
+    const result = ProbabilisticScorer.constructor_read(scorerBytes, decayParams, networkGraph, logger)
+    if (result instanceof Result_ProbabilisticScorerDecodeErrorZ_OK) {
+      scorer = result.res
+    } else {
+      console.warn('[LDK Init] Failed to restore Scorer, creating fresh')
+      scorer = ProbabilisticScorer.constructor_new(decayParams, networkGraph, logger)
+    }
+  } else {
+    scorer = ProbabilisticScorer.constructor_new(decayParams, networkGraph, logger)
+  }
+
+  // 7. Wire Router + MessageRouter
+  const lockableScore = MultiThreadedLockableScore.constructor_new(scorer.as_Score())
+  const router = DefaultRouter.constructor_new(
+    networkGraph,
+    logger,
+    keysManager.as_EntropySource(),
+    lockableScore.as_LockableScore(),
+    ProbabilisticScoringFeeParameters.constructor_default()
+  )
+  const messageRouter = DefaultMessageRouter.constructor_new(
+    networkGraph,
+    keysManager.as_EntropySource()
+  )
+
+  // 8. Restore ChannelMonitors from IndexedDB
+  const monitorEntries = await idbGetAll<Uint8Array>('ldk_channel_monitors')
+  const restoredMonitors = deserializeMonitors(monitorEntries, keysManager)
+
+  // 9. Restore or create ChannelManager
+  const cmBytes = await idbGet<Uint8Array>('ldk_channel_manager', 'primary')
+  let channelManager: ChannelManager
+
+  if (cmBytes && cmBytes instanceof Uint8Array) {
+    const result = UtilMethods.constructor_C2Tuple_ThirtyTwoBytesChannelManagerZ_read(
+      cmBytes,
+      keysManager.as_EntropySource(),
+      keysManager.as_NodeSigner(),
+      keysManager.as_SignerProvider(),
+      feeEstimator,
+      chainMonitor.as_Watch(),
+      broadcaster,
+      router.as_Router(),
+      messageRouter.as_MessageRouter(),
+      logger,
+      UserConfig.constructor_default(),
+      restoredMonitors
+    )
+    if (!(result instanceof Result_C2Tuple_ThirtyTwoBytesChannelManagerZDecodeErrorZ_OK)) {
+      throw new Error('[LDK Init] Failed to deserialize ChannelManager')
+    }
+    channelManager = result.res.get_b()
+
+    // Register restored monitors with ChainMonitor
+    const watch = chainMonitor.as_Watch()
+    for (const monitor of restoredMonitors) {
+      const fundingTxo = monitor.get_funding_txo().get_a()
+      watch.watch_channel(fundingTxo, monitor)
+    }
+  } else {
+    // Log warning if orphaned monitors exist without a ChannelManager
+    if (restoredMonitors.length > 0) {
+      console.warn(
+        '[LDK Init] Found orphaned ChannelMonitors without ChannelManager, starting fresh'
+      )
+    }
+
+    // Fresh ChannelManager — fetch current chain tip from Esplora
+    const esplora = new EsploraClient(SIGNET_CONFIG.esploraUrl)
+    const tipHash = await esplora.getTipHash()
+    const tipHeight = await esplora.getTipHeight()
+
+    const bestBlock = BestBlock.constructor_new(hexToBytes(tipHash), tipHeight)
+    const chainParams = ChainParameters.constructor_new(SIGNET_CONFIG.network, bestBlock)
+
+    channelManager = ChannelManager.constructor_new(
+      feeEstimator,
+      chainMonitor.as_Watch(),
+      broadcaster,
+      router.as_Router(),
+      messageRouter.as_MessageRouter(),
+      logger,
+      keysManager.as_EntropySource(),
+      keysManager.as_NodeSigner(),
+      keysManager.as_SignerProvider(),
+      UserConfig.constructor_default(),
+      chainParams,
+      Math.floor(Date.now() / 1000)
+    )
+  }
+
+  // 10. Derive node public key
   const nodeIdResult = keysManager.as_NodeSigner().get_node_id(Recipient.LDKRecipient_Node)
   if (!nodeIdResult.is_ok()) {
     throw new Error('Failed to derive node ID from KeysManager')
@@ -62,5 +240,38 @@ export async function initializeLdk(): Promise<LdkNode> {
   }
   const nodeId = bytesToHex(nodeIdResult.res)
 
-  return { nodeId, keysManager, logger, feeEstimator, broadcaster, persister }
+  const node: LdkNode = {
+    nodeId,
+    keysManager,
+    logger,
+    feeEstimator,
+    broadcaster,
+    persister,
+    chainMonitor,
+    channelManager,
+    networkGraph,
+    scorer,
+  }
+
+  return { node, watchState }
+}
+
+function deserializeMonitors(
+  entries: Map<string, Uint8Array>,
+  keysManager: KeysManager
+): import('lightningdevkit').ChannelMonitor[] {
+  const monitors: import('lightningdevkit').ChannelMonitor[] = []
+  for (const [key, data] of entries) {
+    const result = UtilMethods.constructor_C2Tuple_ThirtyTwoBytesChannelMonitorZ_read(
+      data,
+      keysManager.as_EntropySource(),
+      keysManager.as_SignerProvider()
+    )
+    if (result instanceof Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK) {
+      monitors.push(result.res.get_b())
+    } else {
+      console.error(`[LDK Init] Failed to deserialize ChannelMonitor: ${key}`)
+    }
+  }
+  return monitors
 }

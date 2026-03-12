@@ -4,33 +4,39 @@ import {
   type OutPoint,
   type ChannelMonitor,
   type ChannelMonitorUpdate,
+  type ChainMonitor,
 } from 'lightningdevkit'
 import { idbPut, idbDelete } from '../storage/idb'
+import { bytesToHex } from '../utils'
 
 function outpointKey(outpoint: OutPoint): string {
-  const txid = Array.from(outpoint.get_txid())
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-  return `${txid}:${outpoint.get_index().toString()}`
+  return `${bytesToHex(outpoint.get_txid())}:${outpoint.get_index().toString()}`
 }
 
-export function createPersister(): Persist {
-  return Persist.new_impl({
+export function createPersister(): {
+  persist: Persist
+  setChainMonitor: (cm: ChainMonitor) => void
+} {
+  let chainMonitorRef: ChainMonitor | null = null
+
+  const persist = Persist.new_impl({
     persist_new_channel(
       channel_funding_outpoint: OutPoint,
       monitor: ChannelMonitor
     ): ChannelMonitorUpdateStatus {
       const key = outpointKey(channel_funding_outpoint)
       const data = monitor.write()
+      const updateId = monitor.get_latest_update_id()
 
-      // IndexedDB is async but Persist methods are sync.
-      // We persist asynchronously and return InProgress, then notify
-      // ChainMonitor when complete. For the foundation layer this is
-      // acceptable — full async persistence with ChainMonitor callback
-      // will be implemented when ChannelManager is added.
-      idbPut('ldk_channel_monitors', key, data).catch((err: unknown) => {
-        console.error('[LDK Persist] Failed to persist new channel monitor:', err)
-      })
+      idbPut('ldk_channel_monitors', key, data)
+        .then(() => {
+          if (chainMonitorRef) {
+            chainMonitorRef.channel_monitor_updated(channel_funding_outpoint, updateId)
+          }
+        })
+        .catch((err: unknown) => {
+          console.error('[LDK Persist] Failed to persist new channel monitor:', err)
+        })
 
       return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_InProgress
     },
@@ -41,22 +47,34 @@ export function createPersister(): Persist {
       monitor: ChannelMonitor
     ): ChannelMonitorUpdateStatus {
       const key = outpointKey(channel_funding_outpoint)
-      // Persist the full updated monitor (simplest approach)
       const data = monitor.write()
+      const updateId = monitor.get_latest_update_id()
 
-      idbPut('ldk_channel_monitors', key, data).catch((err: unknown) => {
-        console.error('[LDK Persist] Failed to update channel monitor:', err)
-      })
+      idbPut('ldk_channel_monitors', key, data)
+        .then(() => {
+          if (chainMonitorRef) {
+            chainMonitorRef.channel_monitor_updated(channel_funding_outpoint, updateId)
+          }
+        })
+        .catch((err: unknown) => {
+          console.error('[LDK Persist] Failed to update channel monitor:', err)
+        })
 
       return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_InProgress
     },
 
     archive_persisted_channel(channel_funding_outpoint: OutPoint): void {
       const key = outpointKey(channel_funding_outpoint)
-      // Move to an archived prefix rather than deleting
       idbDelete('ldk_channel_monitors', key).catch((err: unknown) => {
-        console.error('[LDK Persist] Failed to archive channel monitor:', err)
+        console.error('[LDK Persist] Failed to delete archived channel monitor:', err)
       })
     },
   })
+
+  return {
+    persist,
+    setChainMonitor: (cm: ChainMonitor) => {
+      chainMonitorRef = cm
+    },
+  }
 }

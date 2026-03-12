@@ -1,16 +1,11 @@
 import { BroadcasterInterface } from 'lightningdevkit'
-
-function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-}
+import { bytesToHex } from '../utils'
 
 export function createBroadcaster(esploraUrl: string): BroadcasterInterface {
   return BroadcasterInterface.new_impl({
     broadcast_transactions(txs: Uint8Array[]): void {
       for (const tx of txs) {
-        const txHex = toHex(tx)
+        const txHex = bytesToHex(tx)
         fetch(`${esploraUrl}/tx`, {
           method: 'POST',
           body: txHex,
