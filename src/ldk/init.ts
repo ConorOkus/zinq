@@ -25,6 +25,7 @@ import {
   type FeeEstimator,
   type BroadcasterInterface,
   type Persist,
+  type ChannelMonitor,
 } from 'lightningdevkit'
 import { getSeed, generateAndStoreSeed } from './storage/seed'
 import { createLogger } from './traits/logger'
@@ -199,10 +200,13 @@ export async function initializeLdk(): Promise<InitResult> {
       watch.watch_channel(fundingTxo, monitor)
     }
   } else {
-    // Log warning if orphaned monitors exist without a ChannelManager
+    // Orphaned monitors without a ChannelManager means channels exist but state is lost.
+    // This is a fund-safety issue — halt initialization rather than silently discard.
     if (restoredMonitors.length > 0) {
-      console.warn(
-        '[LDK Init] Found orphaned ChannelMonitors without ChannelManager, starting fresh'
+      throw new Error(
+        `[LDK Init] Found ${restoredMonitors.length} ChannelMonitor(s) in IndexedDB but no ChannelManager. ` +
+          'This indicates corrupted state — channel funds may be at risk. ' +
+          'Clear browser data to start fresh (existing channels will be lost).'
       )
     }
 
@@ -259,8 +263,8 @@ export async function initializeLdk(): Promise<InitResult> {
 function deserializeMonitors(
   entries: Map<string, Uint8Array>,
   keysManager: KeysManager
-): import('lightningdevkit').ChannelMonitor[] {
-  const monitors: import('lightningdevkit').ChannelMonitor[] = []
+): ChannelMonitor[] {
+  const monitors: ChannelMonitor[] = []
   for (const [key, data] of entries) {
     const result = UtilMethods.constructor_C2Tuple_ThirtyTwoBytesChannelMonitorZ_read(
       data,
@@ -270,7 +274,10 @@ function deserializeMonitors(
     if (result instanceof Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK) {
       monitors.push(result.res.get_b())
     } else {
-      console.error(`[LDK Init] Failed to deserialize ChannelMonitor: ${key}`)
+      throw new Error(
+        `[LDK Init] Failed to deserialize ChannelMonitor "${key}". ` +
+          'Channel funds may be at risk — refusing to start with incomplete state.'
+      )
     }
   }
   return monitors
