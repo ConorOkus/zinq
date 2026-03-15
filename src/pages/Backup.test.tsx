@@ -55,13 +55,14 @@ describe('Backup', () => {
     expect(screen.getByText(/unable to retrieve seed phrase/i)).toBeInTheDocument()
   })
 
-  it('shows error when getMnemonic rejects', async () => {
+  it('shows generic error when getMnemonic rejects', async () => {
     vi.mocked(getMnemonic).mockRejectedValue(new Error('DB corrupted'))
     const user = userEvent.setup()
     renderBackup()
 
     await user.click(screen.getByRole('button', { name: /reveal seed phrase/i }))
 
-    expect(screen.getByText('DB corrupted')).toBeInTheDocument()
+    expect(screen.getByText(/unable to retrieve seed phrase/i)).toBeInTheDocument()
+    expect(screen.queryByText('DB corrupted')).not.toBeInTheDocument()
   })
 })

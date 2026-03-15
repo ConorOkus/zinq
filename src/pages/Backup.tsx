@@ -5,7 +5,6 @@ import { getMnemonic } from '../wallet/mnemonic'
 
 type BackupState =
   | { status: 'warning' }
-  | { status: 'loading' }
   | { status: 'revealed'; words: string[] }
   | { status: 'error'; message: string }
 
@@ -13,7 +12,6 @@ export function Backup() {
   const [state, setState] = useState<BackupState>({ status: 'warning' })
 
   const handleReveal = async () => {
-    setState({ status: 'loading' })
     try {
       const mnemonic = await getMnemonic()
       if (!mnemonic) {
@@ -25,9 +23,10 @@ export function Backup() {
       }
       setState({ status: 'revealed', words: mnemonic.split(' ') })
     } catch (err) {
+      console.error('Failed to retrieve mnemonic:', err)
       setState({
         status: 'error',
-        message: err instanceof Error ? err.message : 'Failed to retrieve seed phrase.',
+        message: 'Unable to retrieve seed phrase. Please restart the app and try again.',
       })
     }
   }
@@ -83,12 +82,6 @@ export function Backup() {
             >
               Reveal Seed Phrase
             </button>
-          </div>
-        )}
-
-        {state.status === 'loading' && (
-          <div className="flex flex-1 items-center justify-center">
-            <span className="text-[var(--color-on-dark-muted)]">Loading...</span>
           </div>
         )}
 
