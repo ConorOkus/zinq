@@ -1,5 +1,5 @@
 ---
-status: pending
+status: complete
 priority: p1
 issue_id: "044"
 tags: [code-review, typescript, react, bug]

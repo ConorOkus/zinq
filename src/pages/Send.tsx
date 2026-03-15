@@ -6,6 +6,7 @@ import { ONCHAIN_CONFIG } from '../onchain/config'
 import { formatBtc } from '../utils/format-btc'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { Numpad, type NumpadKey } from '../components/Numpad'
+import { Check, XClose, ArrowRight } from '../components/icons'
 
 type SendStep =
   | { step: 'address' }
@@ -211,17 +212,7 @@ export function Send() {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-dark px-8 text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-10 w-10 text-white"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          <Check className="h-10 w-10 text-white" />
         </div>
         <div>
           <div className="font-display text-4xl font-bold text-on-dark">
@@ -258,18 +249,7 @@ export function Send() {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-dark px-8 text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-10 w-10 text-red-400"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <XClose className="h-10 w-10 text-red-400" />
         </div>
         <div>
           <div className="font-display text-2xl font-bold text-on-dark">
@@ -408,18 +388,7 @@ export function Send() {
           disabled={!address.trim()}
         >
           Next
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-5 w-5"
-          >
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <polyline points="12 5 19 12 12 19" />
-          </svg>
+          <ArrowRight className="h-5 w-5" />
         </button>
       </div>
     </div>

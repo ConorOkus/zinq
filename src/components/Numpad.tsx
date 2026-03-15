@@ -1,3 +1,5 @@
+import { ArrowRight, BackspaceIcon } from './icons'
+
 export type NumpadKey = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'backspace'
 
 interface NumpadProps {
@@ -15,18 +17,7 @@ export function Numpad({ onKey, onNext, nextDisabled }: NumpadProps) {
         disabled={nextDisabled}
       >
         Next
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <line x1="5" y1="12" x2="19" y2="12" />
-          <polyline points="12 5 19 12 12 19" />
-        </svg>
+        <ArrowRight className="h-5 w-5" />
       </button>
 
       <div className="grid grid-cols-3 gap-2">
@@ -53,19 +44,7 @@ export function Numpad({ onKey, onNext, nextDisabled }: NumpadProps) {
           onClick={() => onKey('backspace')}
           aria-label="Delete"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-7 w-7 opacity-70"
-          >
-            <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
-            <line x1="18" y1="9" x2="12" y2="15" />
-            <line x1="12" y1="9" x2="18" y2="15" />
-          </svg>
+          <BackspaceIcon className="h-7 w-7 opacity-70" />
         </button>
       </div>
     </div>

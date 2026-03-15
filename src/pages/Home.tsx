@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router'
 import { useOnchain } from '../onchain/use-onchain'
 import { useLdk } from '../ldk/use-ldk'
 import { BalanceDisplay } from '../components/BalanceDisplay'
+import { ArrowUpRight, ArrowDownLeft } from '../components/icons'
 
 export function Home() {
   const navigate = useNavigate()
@@ -58,36 +59,14 @@ export function Home() {
           onClick={() => void navigate('/send')}
         >
           Send
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-[22px] w-[22px]"
-          >
-            <line x1="7" y1="17" x2="17" y2="7" />
-            <polyline points="7 7 17 7 17 17" />
-          </svg>
+          <ArrowUpRight className="h-[22px] w-[22px]" />
         </button>
         <button
           className="flex h-[88px] flex-1 items-center justify-center gap-3 rounded-2xl border-2 border-on-accent font-display text-xl font-bold uppercase tracking-wide text-on-accent transition-transform active:scale-[0.97]"
           onClick={() => void navigate('/receive')}
         >
           Request
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-[22px] w-[22px]"
-          >
-            <line x1="17" y1="7" x2="7" y2="17" />
-            <polyline points="17 17 7 17 7 7" />
-          </svg>
+          <ArrowDownLeft className="h-[22px] w-[22px]" />
         </button>
       </div>
     </div>

@@ -1,16 +1,13 @@
 import { useLocation, useNavigate } from 'react-router'
+import { ScanIcon, MenuIcon } from './icons'
 
-const SUB_FLOW_PREFIXES = ['/send', '/receive', '/settings']
+const TAB_BAR_ROUTES = ['/', '/activity']
 
 export function TabBar() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const isSubFlow = SUB_FLOW_PREFIXES.some(
-    (prefix) => location.pathname.startsWith(prefix) && location.pathname !== '/',
-  )
-
-  if (isSubFlow) return null
+  if (!TAB_BAR_ROUTES.includes(location.pathname)) return null
 
   const isWallet = location.pathname === '/'
   const isActivity = location.pathname === '/activity'
@@ -22,25 +19,11 @@ export function TabBar() {
       aria-label="Main navigation"
     >
       <button
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-accent"
-        onClick={() => alert('Coming soon')}
-        aria-label="Scan QR code"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-accent opacity-40"
+        disabled
+        aria-label="Scan QR code (coming soon)"
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-[22px] w-[22px]"
-        >
-          <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-          <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-          <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-          <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-          <rect x="7" y="7" width="10" height="10" rx="1" />
-        </svg>
+        <ScanIcon className="h-[22px] w-[22px]" />
       </button>
 
       <button
@@ -70,18 +53,7 @@ export function TabBar() {
         onClick={() => void navigate('/settings')}
         aria-label="Settings menu"
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          className="h-[22px] w-[22px]"
-        >
-          <line x1="4" y1="6" x2="20" y2="6" />
-          <line x1="4" y1="12" x2="20" y2="12" />
-          <line x1="4" y1="18" x2="20" y2="18" />
-        </svg>
+        <MenuIcon className="h-[22px] w-[22px]" />
       </button>
     </nav>
   )
