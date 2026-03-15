@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react'
 import {
   type Wallet,
   type EsploraClient,
+  type Psbt,
   Address,
   Amount,
   Recipient,
@@ -17,6 +18,7 @@ import {
   type MaxSendEstimate,
 } from './onchain-context'
 import { initializeBdkWallet } from './init'
+import { ONCHAIN_CONFIG } from './config'
 import { startOnchainSyncLoop, type OnchainBalance, type OnchainSyncHandle } from './sync'
 import { putChangeset } from './storage/changeset'
 import { useLdk } from '../ldk/use-ldk'
@@ -32,7 +34,7 @@ async function getFeeRate(esploraClient: EsploraClient): Promise<bigint> {
     if (satPerVb !== undefined && satPerVb > 0) {
       return BigInt(Math.ceil(satPerVb))
     }
-  } catch (err) {
+  } catch (err: unknown) {
     console.warn('[Onchain] Fee estimation failed, using default:', err)
   }
   return DEFAULT_FEE_RATE_SAT_VB
@@ -101,82 +103,43 @@ export function OnchainProvider({
     return info.address.toString()
   }, [])
 
-  const estimateFee = useCallback(
-    async (address: string, amountSats: bigint): Promise<FeeEstimate> => {
+  /**
+   * Shared helper: build a PSBT via callback, get the fee, then discard
+   * staged changes. Used by estimateFee and estimateMaxSendable.
+   */
+  const buildAndEstimate = useCallback(
+    async (buildPsbt: (feeRate: FeeRate) => Psbt): Promise<{ psbt: Psbt; fee: bigint; feeRate: bigint }> => {
       const wallet = walletRef.current
       const esplora = esploraRef.current
       if (!wallet || !esplora) throw new Error('Wallet not ready')
 
       const feeRateSatVb = await getFeeRate(esplora)
-      const addr = Address.from_string(address, 'signet')
-      const recipient = Recipient.from_address(addr, Amount.from_sat(amountSats))
-
-      // TxBuilder methods consume self — must chain calls
-      const psbt = wallet
-        .build_tx()
-        .add_recipient(recipient)
-        .fee_rate(new FeeRate(feeRateSatVb))
-        .finish()
-
+      const psbt = buildPsbt(new FeeRate(feeRateSatVb))
       const fee = psbt.fee().to_sat()
 
       // Discard staged changes from the estimate build
       discardStagedChanges(wallet)
 
-      return { fee, feeRate: feeRateSatVb }
+      return { psbt, fee, feeRate: feeRateSatVb }
     },
     [],
   )
 
-  const estimateMaxSendable = useCallback(
-    async (address: string): Promise<MaxSendEstimate> => {
-      const wallet = walletRef.current
-      const esplora = esploraRef.current
-      if (!wallet || !esplora) throw new Error('Wallet not ready')
-
-      const feeRateSatVb = await getFeeRate(esplora)
-      const addr = Address.from_string(address, 'signet')
-
-      // TxBuilder methods consume self — must chain calls
-      const psbt = wallet
-        .build_tx()
-        .drain_wallet()
-        .drain_to(addr.script_pubkey)
-        .fee_rate(new FeeRate(feeRateSatVb))
-        .finish()
-
-      const fee = psbt.fee().to_sat()
-      // Total inputs minus fee = amount sent
-      const balance = wallet.balance
-      const totalAvailable = balance.confirmed.to_sat() + balance.trusted_pending.to_sat()
-      const amount = totalAvailable - fee
-
-      // Discard staged changes from the estimate build
-      discardStagedChanges(wallet)
-
-      return { amount, fee, feeRate: feeRateSatVb }
-    },
-    [],
-  )
-
-  const sendToAddress = useCallback(
-    async (address: string, amountSats: bigint): Promise<string> => {
+  /**
+   * Shared helper: pause sync, build a PSBT via callback, apply fee sanity
+   * check, sign, extract tx, broadcast, persist changeset, resume sync.
+   * Used by sendToAddress and sendMax.
+   */
+  const buildSignBroadcast = useCallback(
+    async (buildPsbt: (feeRate: FeeRate) => Psbt, feeRateSatVb?: bigint): Promise<string> => {
       const wallet = walletRef.current
       const esplora = esploraRef.current
       if (!wallet || !esplora) throw new Error('Wallet not ready')
 
       syncHandleRef.current?.pause()
       try {
-        const feeRateSatVb = await getFeeRate(esplora)
-        const addr = Address.from_string(address, 'signet')
-        const recipient = Recipient.from_address(addr, Amount.from_sat(amountSats))
-
-        // TxBuilder methods consume self — must chain calls
-        const psbt = wallet
-          .build_tx()
-          .add_recipient(recipient)
-          .fee_rate(new FeeRate(feeRateSatVb))
-          .finish()
+        const resolvedFeeRate = feeRateSatVb ?? await getFeeRate(esplora)
+        const psbt = buildPsbt(new FeeRate(resolvedFeeRate))
 
         // Fee sanity check
         const fee = psbt.fee().to_sat()
@@ -186,14 +149,14 @@ export function OnchainProvider({
         }
 
         wallet.sign(psbt, new SignOptions())
-        persistChangeset(wallet)
 
         const tx = psbt.extract_tx()
         const txid = tx.compute_txid().toString()
         await esplora.broadcast(tx)
+        persistChangeset(wallet)
 
         return txid
-      } catch (err) {
+      } catch (err: unknown) {
         throw mapSendError(err)
       } finally {
         syncHandleRef.current?.resume()
@@ -202,52 +165,97 @@ export function OnchainProvider({
     [],
   )
 
-  const sendMax = useCallback(
-    async (address: string): Promise<string> => {
+  const estimateFee = useCallback(
+    async (address: string, amountSats: bigint): Promise<FeeEstimate> => {
       const wallet = walletRef.current
-      const esplora = esploraRef.current
-      if (!wallet || !esplora) throw new Error('Wallet not ready')
+      if (!wallet) throw new Error('Wallet not ready')
 
-      syncHandleRef.current?.pause()
-      try {
-        const feeRateSatVb = await getFeeRate(esplora)
-        const addr = Address.from_string(address, 'signet')
-
+      const addr = Address.from_string(address, ONCHAIN_CONFIG.network)
+      const { fee, feeRate } = await buildAndEstimate((feeRate) =>
         // TxBuilder methods consume self — must chain calls
-        const psbt = wallet
+        wallet
+          .build_tx()
+          .add_recipient(Recipient.from_address(addr, Amount.from_sat(amountSats)))
+          .fee_rate(feeRate)
+          .finish(),
+      )
+
+      return { fee, feeRate }
+    },
+    [buildAndEstimate],
+  )
+
+  const estimateMaxSendable = useCallback(
+    async (address: string): Promise<MaxSendEstimate> => {
+      const wallet = walletRef.current
+      if (!wallet) throw new Error('Wallet not ready')
+
+      const addr = Address.from_string(address, ONCHAIN_CONFIG.network)
+      const { fee, feeRate } = await buildAndEstimate((feeRate) =>
+        // TxBuilder methods consume self — must chain calls
+        wallet
           .build_tx()
           .drain_wallet()
           .drain_to(addr.script_pubkey)
-          .fee_rate(new FeeRate(feeRateSatVb))
-          .finish()
+          .fee_rate(feeRate)
+          .finish(),
+      )
 
-        const fee = psbt.fee().to_sat()
-        if (fee > MAX_FEE_SATS) {
-          discardStagedChanges(wallet)
-          throw new Error(`Fee too high: ${fee.toString()} sats exceeds safety limit`)
-        }
+      // Total inputs minus fee = amount sent
+      const balance = wallet.balance
+      const totalAvailable = balance.confirmed.to_sat() + balance.trusted_pending.to_sat()
+      const amount = totalAvailable - fee
 
-        wallet.sign(psbt, new SignOptions())
-        persistChangeset(wallet)
-
-        const tx = psbt.extract_tx()
-        const txid = tx.compute_txid().toString()
-        await esplora.broadcast(tx)
-
-        return txid
-      } catch (err) {
-        throw mapSendError(err)
-      } finally {
-        syncHandleRef.current?.resume()
-      }
+      return { amount, fee, feeRate }
     },
-    [],
+    [buildAndEstimate],
+  )
+
+  const sendToAddress = useCallback(
+    async (address: string, amountSats: bigint, feeRateSatVb?: bigint): Promise<string> => {
+      const wallet = walletRef.current
+      if (!wallet) throw new Error('Wallet not ready')
+
+      const addr = Address.from_string(address, ONCHAIN_CONFIG.network)
+      return buildSignBroadcast(
+        (feeRate) =>
+          // TxBuilder methods consume self — must chain calls
+          wallet
+            .build_tx()
+            .add_recipient(Recipient.from_address(addr, Amount.from_sat(amountSats)))
+            .fee_rate(feeRate)
+            .finish(),
+        feeRateSatVb,
+      )
+    },
+    [buildSignBroadcast],
+  )
+
+  const sendMax = useCallback(
+    async (address: string, feeRateSatVb?: bigint): Promise<string> => {
+      const wallet = walletRef.current
+      if (!wallet) throw new Error('Wallet not ready')
+
+      const addr = Address.from_string(address, ONCHAIN_CONFIG.network)
+      return buildSignBroadcast(
+        (feeRate) =>
+          // TxBuilder methods consume self — must chain calls
+          wallet
+            .build_tx()
+            .drain_wallet()
+            .drain_to(addr.script_pubkey)
+            .fee_rate(feeRate)
+            .finish(),
+        feeRateSatVb,
+      )
+    },
+    [buildSignBroadcast],
   )
 
   useEffect(() => {
     let cancelled = false
 
-    initializeBdkWallet(bdkDescriptors, 'signet')
+    initializeBdkWallet(bdkDescriptors, ONCHAIN_CONFIG.network)
       .then(({ wallet, esploraClient }) => {
         if (cancelled) return
 
@@ -265,7 +273,6 @@ export function OnchainProvider({
             setState({
               status: 'ready',
               balance,
-              wallet,
               generateAddress,
               estimateFee,
               estimateMaxSendable,
@@ -282,7 +289,6 @@ export function OnchainProvider({
         setState({
           status: 'error',
           balance: null,
-          wallet: null,
           error: err instanceof Error ? err : new Error(String(err)),
         })
       })

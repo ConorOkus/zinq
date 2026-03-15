@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Link } from 'react-router'
 import { useOnchain } from '../onchain/use-onchain'
 import { parseBip21 } from '../onchain/bip21'
@@ -16,9 +16,20 @@ type SendStep =
     }
   | { step: 'broadcasting' }
   | { step: 'success'; txid: string }
-  | { step: 'error'; message: string; canRetry: boolean }
+  | { step: 'error'; message: string }
 
 const MIN_DUST_SATS = 294n
+
+function classifyEstimateError(err: unknown): { field: 'address' | 'amount'; message: string } {
+  const msg = err instanceof Error ? err.message : String(err)
+  if (msg.includes('network') || msg.includes('different Bitcoin network')) {
+    return { field: 'address', message: 'This address is for a different Bitcoin network' }
+  }
+  if (msg.includes('Invalid') || msg.includes('address')) {
+    return { field: 'address', message: 'Invalid Bitcoin address' }
+  }
+  return { field: 'amount', message: msg }
+}
 
 export function Send() {
   const onchain = useOnchain()
@@ -28,6 +39,7 @@ export function Send() {
   const [isSendMax, setIsSendMax] = useState(false)
   const [addressError, setAddressError] = useState<string | null>(null)
   const [amountError, setAmountError] = useState<string | null>(null)
+  const sendingRef = useRef(false)
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -81,14 +93,9 @@ export function Send() {
           isSendMax: true,
         })
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        if (msg.includes('network') || msg.includes('different Bitcoin network')) {
-          setAddressError('This address is for a different Bitcoin network')
-        } else if (msg.includes('Invalid') || msg.includes('address')) {
-          setAddressError('Invalid Bitcoin address')
-        } else {
-          setAmountError(msg)
-        }
+        const { field, message } = classifyEstimateError(err)
+        if (field === 'address') setAddressError(message)
+        else setAmountError(message)
       }
       return
     }
@@ -111,7 +118,7 @@ export function Send() {
       return
     }
 
-    if (amountSats > onchain.balance.confirmed) {
+    if (amountSats > onchain.balance.confirmed + onchain.balance.trustedPending) {
       setAmountError('Amount exceeds available balance')
       return
     }
@@ -127,31 +134,29 @@ export function Send() {
         isSendMax: false,
       })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (msg.includes('network') || msg.includes('different Bitcoin network')) {
-        setAddressError('This address is for a different Bitcoin network')
-      } else if (msg.includes('Invalid') || msg.includes('address')) {
-        setAddressError('Invalid Bitcoin address')
-      } else {
-        setAmountError(msg)
-      }
+      const { field, message } = classifyEstimateError(err)
+      if (field === 'address') setAddressError(message)
+      else setAmountError(message)
     }
   }, [onchain, address, amountStr, isSendMax])
 
   const handleConfirm = useCallback(async () => {
+    if (sendingRef.current) return
     if (onchain.status !== 'ready' || sendStep.step !== 'reviewing') return
 
+    sendingRef.current = true
     setSendStep({ step: 'broadcasting' })
 
     try {
       const txid = sendStep.isSendMax
-        ? await onchain.sendMax(sendStep.address)
-        : await onchain.sendToAddress(sendStep.address, sendStep.amount)
+        ? await onchain.sendMax(sendStep.address, sendStep.feeRate)
+        : await onchain.sendToAddress(sendStep.address, sendStep.amount, sendStep.feeRate)
       setSendStep({ step: 'success', txid })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      const canRetry = message.toLowerCase().includes('broadcast')
-      setSendStep({ step: 'error', message, canRetry })
+      setSendStep({ step: 'error', message })
+    } finally {
+      sendingRef.current = false
     }
   }, [onchain, sendStep])
 
@@ -159,10 +164,6 @@ export function Send() {
     setSendStep({ step: 'input' })
   }, [])
 
-  const handleRetry = useCallback(() => {
-    // Go back to review with the same values if we had them
-    setSendStep({ step: 'input' })
-  }, [])
 
   if (onchain.status === 'loading') {
     return <p className="text-center text-gray-500">Loading wallet...</p>
@@ -182,7 +183,7 @@ export function Send() {
 
   const { balance } = onchain
   const pending = balance.trustedPending + balance.untrustedPending
-  const explorerBaseUrl = ONCHAIN_CONFIG.esploraUrl.replace('/api', '')
+  const explorerBaseUrl = ONCHAIN_CONFIG.explorerUrl
 
   // Success screen
   if (sendStep.step === 'success') {
@@ -219,7 +220,7 @@ export function Send() {
         <p className="text-red-600 font-medium">{sendStep.message}</p>
         <p className="text-sm text-gray-500">Your funds are safe.</p>
         <button
-          onClick={handleRetry}
+          onClick={handleBack}
           className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
         >
           Try Again

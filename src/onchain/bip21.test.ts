@@ -55,4 +55,28 @@ describe('parseBip21', () => {
   it('returns null for bitcoin: with no address', () => {
     expect(parseBip21('bitcoin:')).toBeNull()
   })
+
+  it('parses large amount without floating-point precision loss', () => {
+    const result = parseBip21('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=21000000.00000001')
+    expect(result).toEqual({
+      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      amountSats: 2100000000000001n,
+    })
+  })
+
+  it('treats Infinity as no amount', () => {
+    const result = parseBip21('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=Infinity')
+    expect(result).toEqual({
+      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      amountSats: undefined,
+    })
+  })
+
+  it('treats non-numeric amount as no amount', () => {
+    const result = parseBip21('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=abc')
+    expect(result).toEqual({
+      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      amountSats: undefined,
+    })
+  })
 })

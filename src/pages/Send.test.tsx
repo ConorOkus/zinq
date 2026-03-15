@@ -7,7 +7,6 @@ import {
   type OnchainContextValue,
   defaultOnchainContextValue,
 } from '../onchain/onchain-context'
-import type { Wallet } from '@bitcoindevkit/bdk-wallet-web'
 import { Send } from './Send'
 
 function renderWithOnchain(contextValue?: OnchainContextValue) {
@@ -27,7 +26,6 @@ function readyContext(
   return {
     status: 'ready',
     balance: { confirmed: 50000n, trustedPending: 0n, untrustedPending: 0n },
-    wallet: {} as unknown as Wallet,
     generateAddress: () => 'tb1qtest',
     estimateFee: vi.fn().mockResolvedValue({ fee: 150n, feeRate: 1n }),
     estimateMaxSendable: vi
@@ -50,7 +48,6 @@ describe('Send', () => {
     renderWithOnchain({
       status: 'error',
       balance: null,
-      wallet: null,
       error: new Error('BDK init failed'),
     })
     expect(screen.getByText(/failed to load wallet/i)).toBeInTheDocument()
