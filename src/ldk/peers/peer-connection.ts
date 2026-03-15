@@ -6,7 +6,7 @@ import {
   type SocketDescriptor,
 } from 'lightningdevkit'
 import { createSocketDescriptor } from './socket-descriptor'
-import { hexToBytes } from '../utils'
+import { hexToBytes, bytesToHex } from '../utils'
 import { SIGNET_CONFIG } from '../config'
 
 const CONNECTION_TIMEOUT_MS = 15_000
@@ -62,7 +62,8 @@ export function connectToPeer(
 
     ws.onmessage = (event) => {
       if (!descriptor || resolved) return
-      const data = new Uint8Array(event.data as ArrayBuffer)
+      if (!(event.data instanceof ArrayBuffer)) return
+      const data = new Uint8Array(event.data)
 
       const readResult = peerManager.read_event(descriptor, data)
       if (!(readResult instanceof Result_boolPeerHandleErrorZ_OK)) {
@@ -80,9 +81,7 @@ export function connectToPeer(
         const peers = peerManager.list_peers()
         for (const peer of peers) {
           const peerPubkeyBytes = peer.get_counterparty_node_id()
-          const peerPubkey = Array.from(peerPubkeyBytes)
-            .map((b) => b.toString(16).padStart(2, '0'))
-            .join('')
+          const peerPubkey = bytesToHex(peerPubkeyBytes)
           if (peerPubkey === pubkeyHex) {
             cleanup()
             resolved = true
@@ -132,6 +131,12 @@ export function parsePeerAddress(address: string): { pubkey: string; host: strin
   }
   if (pubkey.length !== 66) {
     throw new Error('Invalid peer address: pubkey must be 66 hex characters')
+  }
+  if (!/^[0-9a-f]{66}$/.test(pubkey)) {
+    throw new Error('Invalid peer address: pubkey must be valid lowercase hex')
+  }
+  if (host.length === 0 || /[/?#]/.test(host)) {
+    throw new Error('Invalid peer address: host contains invalid characters')
   }
   return { pubkey, host, port }
 }
