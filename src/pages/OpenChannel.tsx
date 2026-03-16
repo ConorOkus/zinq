@@ -9,9 +9,16 @@ import { ScreenHeader } from '../components/ScreenHeader'
 import { Numpad, type NumpadKey } from '../components/Numpad'
 import { Check, XClose } from '../components/icons'
 
+interface OpenChannelState {
+  peerPubkey?: string
+  peerHost?: string
+  peerPort?: number
+}
+
 type OpenChannelStep =
   | { step: 'amount' }
   | { step: 'reviewing'; amountSats: bigint; estimatedFeeSats: bigint; feeRate: bigint }
+  | { step: 'opening'; amountSats: bigint }
   | { step: 'success' }
   | { step: 'error'; message: string }
 
@@ -28,7 +35,9 @@ export function OpenChannel() {
   const ldk = useLdk()
   const onchain = useOnchain()
 
-  const peerPubkey = (location.state as { peerPubkey?: string } | null)?.peerPubkey
+  const routeState = (location.state as OpenChannelState | null) ?? {}
+  const { peerPubkey, peerHost, peerPort } = routeState
+  const needsConnect = Boolean(peerHost && peerPort)
 
   const [currentStep, setCurrentStep] = useState<OpenChannelStep>({ step: 'amount' })
   const [amountDigits, setAmountDigits] = useState('')
@@ -109,16 +118,23 @@ export function OpenChannel() {
     })
   }, [currentStep, amountSats, balance, feeRate])
 
-  // --- Confirm open channel ---
-  const handleConfirm = useCallback(() => {
+  // --- Confirm: connect (if needed) then open channel ---
+  const handleConfirm = useCallback(async () => {
     if (openingRef.current) return
     if (ldk.status !== 'ready' || currentStep.step !== 'reviewing' || !peerPubkey) return
 
     openingRef.current = true
+    const channelAmountSats = currentStep.amountSats
+    setCurrentStep({ step: 'opening', amountSats: channelAmountSats })
 
     try {
+      // Connect to peer first if we have host/port
+      if (needsConnect && peerHost && peerPort) {
+        await ldk.connectToPeer(peerPubkey, peerHost, peerPort)
+      }
+
       const pubkeyBytes = hexToBytes(peerPubkey)
-      const ok = ldk.createChannel(pubkeyBytes, currentStep.amountSats)
+      const ok = ldk.createChannel(pubkeyBytes, channelAmountSats)
       if (ok) {
         setCurrentStep({ step: 'success' })
       } else {
@@ -126,12 +142,12 @@ export function OpenChannel() {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      console.error('[OpenChannel] create_channel error:', err)
+      console.error('[OpenChannel] error:', err)
       setCurrentStep({ step: 'error', message })
     } finally {
       openingRef.current = false
     }
-  }, [ldk, currentStep, peerPubkey])
+  }, [ldk, currentStep, peerPubkey, needsConnect, peerHost, peerPort])
 
   // --- Guard: no peer pubkey ---
   if (!peerPubkey) return null
@@ -161,6 +177,18 @@ export function OpenChannel() {
         >
           Back to Peers
         </button>
+      </div>
+    )
+  }
+
+  // --- Opening screen (connecting + opening) ---
+  if (currentStep.step === 'opening') {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-dark px-8 text-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+        <div className="text-sm text-[var(--color-on-dark-muted)]">
+          {needsConnect ? 'Connecting to peer & opening channel...' : 'Opening channel...'}
+        </div>
       </div>
     )
   }
@@ -249,9 +277,9 @@ export function OpenChannel() {
         <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
           <button
             className="h-14 w-full rounded-xl bg-accent font-display text-lg font-bold text-white transition-transform active:scale-[0.98]"
-            onClick={handleConfirm}
+            onClick={() => void handleConfirm()}
           >
-            Open Channel
+            {needsConnect ? 'Connect & Open Channel' : 'Open Channel'}
           </button>
         </div>
       </div>

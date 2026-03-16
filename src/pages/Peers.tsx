@@ -31,7 +31,6 @@ export function Peers() {
   const navigate = useNavigate()
   const ldk = useLdk()
   const [peerAddress, setPeerAddress] = useState('')
-  const [connecting, setConnecting] = useState(false)
   const [connectError, setConnectError] = useState<string | null>(null)
   const [peers, setPeers] = useState<PeerEntry[]>([])
   const [forgetError, setForgetError] = useState<string | null>(null)
@@ -108,21 +107,17 @@ export function Peers() {
     void refreshPeers()
   }, [refreshPeers])
 
-  const handleConnect = useCallback(async () => {
-    if (ldk.status !== 'ready') return
-    setConnecting(true)
+  const handleConnect = useCallback(() => {
     setConnectError(null)
     try {
       const { pubkey, host, port } = parsePeerAddress(peerAddress.trim())
-      await ldk.connectToPeer(pubkey, host, port)
-      setPeerAddress('')
-      await refreshPeers()
+      void navigate('/settings/advanced/peers/open-channel', {
+        state: { peerPubkey: pubkey, peerHost: host, peerPort: port },
+      })
     } catch (err: unknown) {
       setConnectError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setConnecting(false)
     }
-  }, [ldk, peerAddress, refreshPeers])
+  }, [peerAddress, navigate])
 
   const handleForget = useCallback(
     async (pubkey: string) => {
@@ -171,7 +166,7 @@ export function Peers() {
         {/* Connect form */}
         <div className="flex flex-col gap-2">
           <label htmlFor="peer-address" className="text-sm font-medium text-[var(--color-on-dark-muted)]">
-            Connect to Peer
+            Connect & Open Channel
           </label>
           <input
             id="peer-address"
@@ -180,9 +175,8 @@ export function Peers() {
             onChange={(e) => setPeerAddress(e.target.value)}
             placeholder="pubkey@host:port"
             className="w-full rounded-xl border border-dark-border bg-dark-elevated px-4 py-3 font-mono text-sm text-on-dark placeholder:text-[var(--color-on-dark-muted)] focus:outline-none focus:ring-2 focus:ring-accent"
-            disabled={connecting}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !connecting) void handleConnect()
+              if (e.key === 'Enter') handleConnect()
             }}
           />
           {connectError && (
@@ -190,10 +184,10 @@ export function Peers() {
           )}
           <button
             className="h-12 w-full rounded-xl bg-accent font-display font-bold text-white transition-transform disabled:cursor-not-allowed disabled:opacity-30 active:scale-[0.98]"
-            onClick={() => void handleConnect()}
-            disabled={connecting || !peerAddress.trim()}
+            onClick={handleConnect}
+            disabled={!peerAddress.trim()}
           >
-            {connecting ? 'Connecting...' : 'Connect'}
+            Next
           </button>
         </div>
 
