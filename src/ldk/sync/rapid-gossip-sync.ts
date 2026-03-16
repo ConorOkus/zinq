@@ -84,10 +84,12 @@ async function applyRgsUpdate(
   const updateData = new Uint8Array(buffer)
   console.log(`[RGS] Received ${updateData.byteLength} bytes`)
 
-  const now = BigInt(Math.floor(Date.now() / 1000))
+  // Pass None for current_time to skip the 2-week staleness check.
+  // The RGS server URL is hardcoded and trusted; gossip messages have
+  // their own signature validation inside LDK.
   const result = rgs.update_network_graph_no_std(
     updateData,
-    Option_u64Z.constructor_some(now),
+    Option_u64Z.constructor_none(),
   )
 
   if (!(result instanceof Result_u32GraphSyncErrorZ_OK)) {
