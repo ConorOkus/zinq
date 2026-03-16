@@ -20,9 +20,14 @@ vi.mock('lightningdevkit', () => {
   }
   class Event_PaymentSent extends MockEvent {
     payment_hash = new Uint8Array([1, 2, 3])
+    payment_id = new Option_ThirtyTwoBytesZ_Some(new Uint8Array([1, 2, 3]))
+    payment_preimage = new Uint8Array([7, 8, 9])
+    fee_paid_msat = new Option_u64Z_Some(BigInt(100))
   }
   class Event_PaymentFailed extends MockEvent {
-    payment_hash = new Uint8Array([1, 2, 3])
+    payment_id = new Uint8Array([1, 2, 3])
+    payment_hash = new Option_ThirtyTwoBytesZ_Some(new Uint8Array([1, 2, 3]))
+    reason = new Option_PaymentFailureReasonZ_Some(0) // RecipientRejected
   }
   class Event_PendingHTLCsForwardable extends MockEvent {
     time_forwardable = BigInt(2)
@@ -73,6 +78,33 @@ vi.mock('lightningdevkit', () => {
 
   class Option_ThirtyTwoBytesZ_None {}
 
+  class Option_u64Z_Some {
+    some: bigint
+    constructor(s: bigint) {
+      this.some = s
+    }
+  }
+
+  class Option_PaymentFailureReasonZ_Some {
+    some: number
+    constructor(s: number) {
+      this.some = s
+    }
+  }
+
+  const PaymentFailureReason = {
+    LDKPaymentFailureReason_RecipientRejected: 0,
+    LDKPaymentFailureReason_UserAbandoned: 1,
+    LDKPaymentFailureReason_RetriesExhausted: 2,
+    LDKPaymentFailureReason_PaymentExpired: 3,
+    LDKPaymentFailureReason_RouteNotFound: 4,
+    LDKPaymentFailureReason_UnexpectedError: 5,
+    LDKPaymentFailureReason_UnknownRequiredFeatures: 6,
+    LDKPaymentFailureReason_InvoiceRequestExpired: 7,
+    LDKPaymentFailureReason_InvoiceRequestRejected: 8,
+    LDKPaymentFailureReason_BlindedPathCreationFailed: 9,
+  }
+
   return {
     EventHandler: {
       new_impl: vi.fn(
@@ -98,6 +130,9 @@ vi.mock('lightningdevkit', () => {
     Event_DiscardFunding,
     Option_ThirtyTwoBytesZ_Some,
     Option_ThirtyTwoBytesZ_None,
+    Option_u64Z_Some,
+    Option_PaymentFailureReasonZ_Some,
+    PaymentFailureReason,
     Result_NoneReplayEventZ: {
       constructor_ok: vi.fn(() => ({ is_ok: () => true })),
     },
@@ -250,6 +285,7 @@ describe('createEventHandler', () => {
     handleEvent(new Event_PaymentFailed())
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('PaymentFailed'),
+      expect.any(String),
       expect.any(String),
     )
   })

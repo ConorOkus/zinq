@@ -1,31 +1,59 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { useOnchain } from '../onchain/use-onchain'
-import { parseBip21 } from '../onchain/bip21'
+import { useLdk } from '../ldk/use-ldk'
+import { classifyPaymentInput, type ParsedPaymentInput } from '../ldk/payment-input'
 import { ONCHAIN_CONFIG } from '../onchain/config'
 import { formatBtc } from '../utils/format-btc'
+import { bytesToHex } from '../ldk/utils'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { Numpad, type NumpadKey } from '../components/Numpad'
 import { Check, XClose, ArrowRight } from '../components/icons'
+import {
+  RecentPaymentDetails_AwaitingInvoice,
+  RecentPaymentDetails_Pending,
+  RecentPaymentDetails_Fulfilled,
+  RecentPaymentDetails_Abandoned,
+} from 'lightningdevkit'
+
+// --- State machine ---
 
 type SendStep =
-  | { step: 'address' }
-  | { step: 'amount' }
+  // Shared entry
+  | { step: 'input' }
+  // On-chain flow
+  | { step: 'oc-amount'; address: string }
   | {
-      step: 'reviewing'
+      step: 'oc-review'
       address: string
       amount: bigint
       fee: bigint
       feeRate: bigint
       isSendMax: boolean
     }
-  | { step: 'broadcasting' }
-  | { step: 'success'; txid: string; amount: bigint }
-  | { step: 'error'; message: string }
+  | { step: 'oc-broadcasting' }
+  | { step: 'oc-success'; txid: string; amount: bigint }
+  // Lightning flow
+  | { step: 'ln-amount'; parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' } }
+  | {
+      step: 'ln-review'
+      parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }
+      amountMsat: bigint
+    }
+  | {
+      step: 'ln-sending'
+      parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }
+      amountMsat: bigint
+      paymentId: Uint8Array
+    }
+  | { step: 'ln-success'; preimage: Uint8Array; amountMsat: bigint }
+  // Shared
+  | { step: 'error'; message: string; canRetry: boolean }
 
 const MIN_DUST_SATS = 294n
 const TXID_RE = /^[0-9a-f]{64}$/i
 const MAX_DIGITS = 8
+const PAYMENT_POLL_MS = 1_000
 
 function classifyEstimateError(err: unknown): { field: 'address' | 'amount'; message: string } {
   const msg = err instanceof Error ? err.message : String(err)
@@ -38,20 +66,57 @@ function classifyEstimateError(err: unknown): { field: 'address' | 'amount'; mes
   return { field: 'amount', message: msg }
 }
 
+/** Convert millisatoshis to satoshis, rounding up. */
+function msatToSat(msat: bigint): bigint {
+  return (msat + 999n) / 1000n
+}
+
+/** Get a display label for a Lightning payment recipient. */
+function recipientLabel(parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }): string {
+  switch (parsed.type) {
+    case 'bolt11':
+      return parsed.description ?? 'Lightning Invoice'
+    case 'bolt12':
+      return parsed.description ?? 'Lightning Offer'
+    case 'bip353':
+      return parsed.raw
+  }
+}
+
+/** Get a short badge label for the payment type. */
+function typeBadge(parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }): string {
+  switch (parsed.type) {
+    case 'bolt11': return 'BOLT 11'
+    case 'bolt12': return 'BOLT 12'
+    case 'bip353': return 'BIP 353'
+  }
+}
+
 export function Send() {
   const navigate = useNavigate()
   const onchain = useOnchain()
-  const [sendStep, setSendStep] = useState<SendStep>({ step: 'address' })
-  const [address, setAddress] = useState('')
+  const ldk = useLdk()
+  const [sendStep, setSendStep] = useState<SendStep>({ step: 'input' })
+  const [inputValue, setInputValue] = useState('')
   const [amountDigits, setAmountDigits] = useState('')
-  const [addressError, setAddressError] = useState<string | null>(null)
+  const [inputError, setInputError] = useState<string | null>(null)
   const [amountError, setAmountError] = useState<string | null>(null)
   const sendingRef = useRef(false)
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const balance =
+  const onchainBalance =
     onchain.status === 'ready'
       ? onchain.balance.confirmed + onchain.balance.trustedPending
       : 0n
+
+  const lnCapacityMsat = ldk.status === 'ready' ? ldk.outboundCapacityMsat() : 0n
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+    }
+  }, [])
 
   // --- Numpad handlers ---
   const handleNumpadKey = useCallback((key: NumpadKey) => {
@@ -68,45 +133,92 @@ export function Send() {
 
   const amountSats = amountDigits ? BigInt(amountDigits) : 0n
 
-  // --- Address step ---
-  const handleAddressPaste = useCallback(
+  // --- Input classification on paste ---
+  const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
       const pasted = e.clipboardData.getData('text')
-      const bip21 = parseBip21(pasted)
-      if (bip21) {
-        e.preventDefault()
-        setAddress(bip21.address)
-        if (bip21.amountSats !== undefined) {
-          setAmountDigits(bip21.amountSats.toString())
+      if (!pasted.trim()) return
+
+      e.preventDefault()
+      const parsed = classifyPaymentInput(pasted)
+
+      if (parsed.type === 'error') {
+        setInputValue(pasted)
+        setInputError(parsed.message)
+        return
+      }
+
+      if (parsed.type === 'onchain') {
+        setInputValue(parsed.address)
+        if (parsed.amountSats) {
+          setAmountDigits(parsed.amountSats.toString())
         }
-        setAddressError(null)
+        setInputError(null)
+        setSendStep({ step: 'oc-amount', address: parsed.address })
+        return
+      }
+
+      // Lightning types
+      setInputValue(pasted)
+      setInputError(null)
+
+      if (parsed.type === 'bolt11' && parsed.amountMsat !== null) {
+        // BOLT 11 with amount — skip to review
+        setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat })
+      } else if (parsed.type === 'bolt12' && parsed.amountMsat !== null) {
+        // BOLT 12 with fixed amount — skip to review
+        setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat })
+      } else {
+        // Needs amount input
+        setSendStep({ step: 'ln-amount', parsed })
       }
     },
     [],
   )
 
-  const handleAddressNext = useCallback(() => {
-    if (!address.trim()) {
-      setAddressError('Enter a Bitcoin address')
+  // --- Input next button (manual entry) ---
+  const handleInputNext = useCallback(() => {
+    const trimmed = inputValue.trim()
+    if (!trimmed) {
+      setInputError('Paste an invoice, offer, or address')
       return
     }
-    setAddressError(null)
-    setSendStep({ step: 'amount' })
-  }, [address])
 
-  // --- Send max ---
+    const parsed = classifyPaymentInput(trimmed)
+
+    if (parsed.type === 'error') {
+      setInputError(parsed.message)
+      return
+    }
+
+    if (parsed.type === 'onchain') {
+      setInputError(null)
+      setSendStep({ step: 'oc-amount', address: parsed.address })
+      return
+    }
+
+    setInputError(null)
+
+    if ((parsed.type === 'bolt11' || parsed.type === 'bolt12') && parsed.amountMsat !== null) {
+      setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat })
+    } else {
+      setSendStep({ step: 'ln-amount', parsed })
+    }
+  }, [inputValue])
+
+  // --- On-chain: Send max ---
   const handleSendMax = useCallback(async () => {
-    if (onchain.status !== 'ready') return
+    if (onchain.status !== 'ready' || sendStep.step !== 'oc-amount') return
     setAmountError(null)
     try {
-      const estimate = await onchain.estimateMaxSendable(address.trim())
+      const estimate = await onchain.estimateMaxSendable(sendStep.address)
       if (estimate.amount <= 0n) {
         setAmountError('Balance too low to cover fees')
         return
       }
       setSendStep({
-        step: 'reviewing',
-        address: address.trim(),
+        step: 'oc-review',
+        address: sendStep.address,
         amount: estimate.amount,
         fee: estimate.fee,
         feeRate: estimate.feeRate,
@@ -115,36 +227,34 @@ export function Send() {
     } catch (err) {
       const { field, message } = classifyEstimateError(err)
       if (field === 'address') {
-        setAddressError(message)
-        setSendStep({ step: 'address' })
+        setInputError(message)
+        setSendStep({ step: 'input' })
       } else {
         setAmountError(message)
       }
     }
-  }, [onchain, address])
+  }, [onchain, sendStep])
 
-  // --- Amount next (go to review) ---
-  const handleAmountNext = useCallback(async () => {
-    if (onchain.status !== 'ready') return
+  // --- On-chain: Amount next ---
+  const handleOcAmountNext = useCallback(async () => {
+    if (onchain.status !== 'ready' || sendStep.step !== 'oc-amount') return
     setAmountError(null)
 
     if (amountSats <= 0n) return
-
     if (amountSats < MIN_DUST_SATS) {
       setAmountError('Amount must be at least 294 sats')
       return
     }
-
-    if (amountSats > balance) {
+    if (amountSats > onchainBalance) {
       setAmountError('Amount exceeds available balance')
       return
     }
 
     try {
-      const estimate = await onchain.estimateFee(address.trim(), amountSats)
+      const estimate = await onchain.estimateFee(sendStep.address, amountSats)
       setSendStep({
-        step: 'reviewing',
-        address: address.trim(),
+        step: 'oc-review',
+        address: sendStep.address,
         amount: amountSats,
         fee: estimate.fee,
         feeRate: estimate.feeRate,
@@ -153,38 +263,150 @@ export function Send() {
     } catch (err) {
       const { field, message } = classifyEstimateError(err)
       if (field === 'address') {
-        setAddressError(message)
-        setSendStep({ step: 'address' })
+        setInputError(message)
+        setSendStep({ step: 'input' })
       } else {
         setAmountError(message)
       }
     }
-  }, [onchain, amountSats, balance, address])
+  }, [onchain, amountSats, onchainBalance, sendStep])
 
-  // --- Confirm send ---
-  const handleConfirm = useCallback(async () => {
+  // --- On-chain: Confirm send ---
+  const handleOcConfirm = useCallback(async () => {
     if (sendingRef.current) return
-    if (onchain.status !== 'ready' || sendStep.step !== 'reviewing') return
+    if (onchain.status !== 'ready' || sendStep.step !== 'oc-review') return
 
     sendingRef.current = true
     const sentAmount = sendStep.amount
-    setSendStep({ step: 'broadcasting' })
+    setSendStep({ step: 'oc-broadcasting' })
 
     try {
       const txid = sendStep.isSendMax
         ? await onchain.sendMax(sendStep.address, sendStep.feeRate)
         : await onchain.sendToAddress(sendStep.address, sendStep.amount, sendStep.feeRate)
-      setSendStep({ step: 'success', txid, amount: sentAmount })
+      setSendStep({ step: 'oc-success', txid, amount: sentAmount })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      setSendStep({ step: 'error', message })
+      setSendStep({ step: 'error', message, canRetry: true })
     } finally {
       sendingRef.current = false
     }
   }, [onchain, sendStep])
 
+  // --- Lightning: Amount next ---
+  const handleLnAmountNext = useCallback(() => {
+    if (sendStep.step !== 'ln-amount') return
+    setAmountError(null)
+
+    if (amountSats <= 0n) return
+
+    const amountMsat = amountSats * 1000n
+
+    if (amountMsat > lnCapacityMsat) {
+      setAmountError('Amount exceeds Lightning channel capacity')
+      return
+    }
+
+    setSendStep({ step: 'ln-review', parsed: sendStep.parsed, amountMsat })
+  }, [sendStep, amountSats, lnCapacityMsat])
+
+  // --- Lightning: Confirm send ---
+  const handleLnConfirm = useCallback(() => {
+    if (sendingRef.current) return
+    if (ldk.status !== 'ready' || sendStep.step !== 'ln-review') return
+
+    sendingRef.current = true
+    const { parsed, amountMsat } = sendStep
+
+    try {
+      let paymentId: Uint8Array
+
+      switch (parsed.type) {
+        case 'bolt11':
+          paymentId = ldk.sendBolt11Payment(
+            parsed.invoice,
+            parsed.amountMsat === null ? amountMsat : undefined,
+          )
+          break
+        case 'bolt12':
+          paymentId = ldk.sendBolt12Payment(
+            parsed.offer,
+            parsed.amountMsat === null ? amountMsat : undefined,
+          )
+          break
+        case 'bip353':
+          paymentId = ldk.sendBip353Payment(parsed.name, amountMsat)
+          break
+      }
+
+      setSendStep({ step: 'ln-sending', parsed, amountMsat, paymentId })
+
+      // Start polling for payment result
+      pollTimerRef.current = setInterval(() => {
+        // Check event-based result first
+        const result = ldk.getPaymentResult(paymentId)
+        if (result && result.status === 'sent') {
+          clearInterval(pollTimerRef.current!)
+          pollTimerRef.current = null
+          sendingRef.current = false
+          setSendStep({ step: 'ln-success', preimage: result.preimage, amountMsat })
+          return
+        }
+        if (result && result.status === 'failed') {
+          clearInterval(pollTimerRef.current!)
+          pollTimerRef.current = null
+          sendingRef.current = false
+          setSendStep({ step: 'error', message: result.reason, canRetry: false })
+          return
+        }
+
+        // Also check list_recent_payments for BOLT 12 state transitions
+        const recent = ldk.listRecentPayments()
+        const paymentIdHex = bytesToHex(paymentId)
+        for (const p of recent) {
+          if (p instanceof RecentPaymentDetails_Fulfilled && bytesToHex(p.payment_id) === paymentIdHex) {
+            clearInterval(pollTimerRef.current!)
+            pollTimerRef.current = null
+            sendingRef.current = false
+            // Fulfilled but no preimage from events yet — show success anyway
+            const eventResult = ldk.getPaymentResult(paymentId)
+            if (eventResult?.status === 'sent') {
+              setSendStep({ step: 'ln-success', preimage: eventResult.preimage, amountMsat })
+            } else {
+              setSendStep({ step: 'ln-success', preimage: new Uint8Array(32), amountMsat })
+            }
+            return
+          }
+          if (p instanceof RecentPaymentDetails_Abandoned && bytesToHex(p.payment_id) === paymentIdHex) {
+            clearInterval(pollTimerRef.current!)
+            pollTimerRef.current = null
+            sendingRef.current = false
+            setSendStep({ step: 'error', message: 'Payment was abandoned', canRetry: false })
+            return
+          }
+        }
+      }, PAYMENT_POLL_MS)
+    } catch (err) {
+      sendingRef.current = false
+      const message = err instanceof Error ? err.message : String(err)
+      setSendStep({ step: 'error', message, canRetry: false })
+    }
+  }, [ldk, sendStep])
+
+  // --- Lightning: Cancel payment ---
+  const handleCancelPayment = useCallback(() => {
+    if (ldk.status !== 'ready' || sendStep.step !== 'ln-sending') return
+    ldk.abandonPayment(sendStep.paymentId)
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+    sendingRef.current = false
+    setSendStep({ step: 'error', message: 'Payment cancelled', canRetry: false })
+  }, [ldk, sendStep])
+
   // --- Loading / error gates ---
-  if (onchain.status === 'loading') {
+  if (onchain.status === 'loading' || ldk.status === 'loading') {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center bg-dark">
         <p className="text-[var(--color-on-dark-muted)]">Loading wallet...</p>
@@ -197,18 +419,15 @@ export function Send() {
       <div className="flex min-h-dvh flex-col items-center justify-center bg-dark px-6">
         <p className="text-lg font-semibold text-on-dark">Failed to load wallet</p>
         <p className="mt-2 text-sm text-red-400">{onchain.error.message}</p>
-        <button
-          className="mt-6 text-sm text-accent"
-          onClick={() => void navigate('/')}
-        >
+        <button className="mt-6 text-sm text-accent" onClick={() => void navigate('/')}>
           Back to Home
         </button>
       </div>
     )
   }
 
-  // --- Success screen ---
-  if (sendStep.step === 'success') {
+  // --- On-chain success ---
+  if (sendStep.step === 'oc-success') {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-dark px-8 text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent">
@@ -218,9 +437,7 @@ export function Send() {
           <div className="font-display text-4xl font-bold text-on-dark">
             {formatBtc(sendStep.amount)}
           </div>
-          <div className="mt-1 text-[var(--color-on-dark-muted)]">
-            sent successfully
-          </div>
+          <div className="mt-1 text-[var(--color-on-dark-muted)]">sent successfully</div>
         </div>
         {TXID_RE.test(sendStep.txid) ? (
           <a
@@ -232,7 +449,42 @@ export function Send() {
             View on explorer
           </a>
         ) : (
-          <p className="font-mono text-sm text-[var(--color-on-dark-muted)] break-all">{sendStep.txid}</p>
+          <p className="font-mono text-sm text-[var(--color-on-dark-muted)] break-all">
+            {sendStep.txid}
+          </p>
+        )}
+        <button
+          className="mt-4 h-14 w-full max-w-[280px] rounded-xl bg-white font-display text-lg font-bold text-dark transition-transform active:scale-[0.98]"
+          onClick={() => void navigate('/')}
+        >
+          Done
+        </button>
+      </div>
+    )
+  }
+
+  // --- Lightning success ---
+  if (sendStep.step === 'ln-success') {
+    const preimageHex = bytesToHex(sendStep.preimage)
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-dark px-8 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent">
+          <Check className="h-10 w-10 text-white" />
+        </div>
+        <div>
+          <div className="font-display text-4xl font-bold text-on-dark">
+            {formatBtc(msatToSat(sendStep.amountMsat))}
+          </div>
+          <div className="mt-1 text-[var(--color-on-dark-muted)]">sent via Lightning</div>
+        </div>
+        {preimageHex !== '0'.repeat(64) && (
+          <button
+            className="rounded-full border border-dark-border px-4 py-2 font-mono text-xs text-[var(--color-on-dark-muted)] transition-colors hover:bg-white/5"
+            onClick={() => void navigator.clipboard.writeText(preimageHex)}
+            title="Copy preimage"
+          >
+            {preimageHex.slice(0, 8)}...{preimageHex.slice(-8)}
+          </button>
         )}
         <button
           className="mt-4 h-14 w-full max-w-[280px] rounded-xl bg-white font-display text-lg font-bold text-dark transition-transform active:scale-[0.98]"
@@ -252,40 +504,75 @@ export function Send() {
           <XClose className="h-10 w-10 text-red-400" />
         </div>
         <div>
-          <div className="font-display text-2xl font-bold text-on-dark">
-            Send Failed
-          </div>
+          <div className="font-display text-2xl font-bold text-on-dark">Send Failed</div>
           <div className="mt-2 text-sm text-red-400">{sendStep.message}</div>
-          <div className="mt-1 text-sm text-[var(--color-on-dark-muted)]">
-            Your funds are safe.
-          </div>
+          <div className="mt-1 text-sm text-[var(--color-on-dark-muted)]">Your funds are safe.</div>
         </div>
         <button
           className="mt-4 h-14 w-full max-w-[280px] rounded-xl bg-white font-display text-lg font-bold text-dark transition-transform active:scale-[0.98]"
-          onClick={() => setSendStep({ step: 'amount' })}
+          onClick={() => {
+            setAmountDigits('')
+            setSendStep({ step: 'input' })
+          }}
         >
-          Try Again
+          {sendStep.canRetry ? 'Try Again' : 'Done'}
         </button>
       </div>
     )
   }
 
-  // --- Broadcasting screen ---
-  if (sendStep.step === 'broadcasting') {
+  // --- On-chain broadcasting ---
+  if (sendStep.step === 'oc-broadcasting') {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-dark">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-        <p className="text-[var(--color-on-dark-muted)]">Sending...</p>
+        <p className="text-[var(--color-on-dark-muted)]">Broadcasting transaction...</p>
       </div>
     )
   }
 
-  // --- Review screen ---
-  if (sendStep.step === 'reviewing') {
+  // --- Lightning sending ---
+  if (sendStep.step === 'ln-sending') {
+    // Determine display status based on list_recent_payments
+    let statusText = 'Sending payment...'
+    if (ldk.status === 'ready') {
+      const recent = ldk.listRecentPayments()
+      const paymentIdHex = bytesToHex(sendStep.paymentId)
+      for (const p of recent) {
+        if (p instanceof RecentPaymentDetails_AwaitingInvoice && bytesToHex(p.payment_id) === paymentIdHex) {
+          statusText = 'Requesting invoice...'
+          break
+        }
+        if (p instanceof RecentPaymentDetails_Pending && bytesToHex(p.payment_id) === paymentIdHex) {
+          statusText = 'Sending payment...'
+          break
+        }
+      }
+    }
+
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-dark">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        <p className="text-[var(--color-on-dark-muted)]">{statusText}</p>
+        <div className="mt-1 text-xs text-[var(--color-on-dark-muted)]">
+          {formatBtc(msatToSat(sendStep.amountMsat))}
+        </div>
+        <button
+          className="mt-4 text-sm text-red-400 transition-colors hover:text-red-300"
+          onClick={handleCancelPayment}
+        >
+          Cancel
+        </button>
+      </div>
+    )
+  }
+
+  // --- On-chain review ---
+  if (sendStep.step === 'oc-review') {
     const total = sendStep.amount + sendStep.fee
     return (
       <div className="flex min-h-dvh flex-col justify-between bg-dark text-on-dark">
-        <ScreenHeader title="Review" onBack={() => setSendStep({ step: 'amount' })} />
+        <ScreenHeader title="Review" onBack={() => setSendStep({ step: 'oc-amount', address: sendStep.address })} />
         <div className="flex flex-1 flex-col gap-6 px-6 pt-8">
           <div className="flex justify-between">
             <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">To</span>
@@ -312,7 +599,7 @@ export function Send() {
         <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
           <button
             className="h-14 w-full rounded-xl bg-accent font-display text-lg font-bold text-white transition-transform active:scale-[0.98]"
-            onClick={() => void handleConfirm()}
+            onClick={() => void handleOcConfirm()}
           >
             Confirm Send
           </button>
@@ -321,17 +608,63 @@ export function Send() {
     )
   }
 
-  // --- Amount screen (numpad) ---
-  if (sendStep.step === 'amount') {
+  // --- Lightning review ---
+  if (sendStep.step === 'ln-review') {
+    const { parsed, amountMsat } = sendStep
     return (
       <div className="flex min-h-dvh flex-col justify-between bg-dark text-on-dark">
-        <ScreenHeader title="Send" onBack={() => setSendStep({ step: 'address' })} />
+        <ScreenHeader
+          title="Review"
+          onBack={() => {
+            if ((parsed.type === 'bolt11' || parsed.type === 'bolt12') && parsed.amountMsat !== null) {
+              setSendStep({ step: 'input' })
+            } else {
+              setAmountDigits(msatToSat(amountMsat).toString())
+              setSendStep({ step: 'ln-amount', parsed })
+            }
+          }}
+        />
+        <div className="flex flex-1 flex-col gap-6 px-6 pt-8">
+          <div className="flex justify-between">
+            <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">To</span>
+            <span className="max-w-[60%] break-all text-right text-sm font-semibold">
+              {recipientLabel(parsed)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Type</span>
+            <span className="rounded-full bg-accent/20 px-3 py-0.5 text-xs font-semibold text-accent">
+              {typeBadge(parsed)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Amount</span>
+            <span className="font-display text-3xl font-bold">{formatBtc(msatToSat(amountMsat))}</span>
+          </div>
+        </div>
+        <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
+          <button
+            className="h-14 w-full rounded-xl bg-accent font-display text-lg font-bold text-white transition-transform active:scale-[0.98]"
+            onClick={handleLnConfirm}
+          >
+            Confirm Send
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // --- On-chain amount (numpad) ---
+  if (sendStep.step === 'oc-amount') {
+    return (
+      <div className="flex min-h-dvh flex-col justify-between bg-dark text-on-dark">
+        <ScreenHeader title="Send" onBack={() => setSendStep({ step: 'input' })} />
         <div className="flex flex-1 flex-col items-center justify-center gap-2">
           <button
             className="text-sm text-[var(--color-on-dark-muted)] transition-colors hover:text-on-dark"
             onClick={() => void handleSendMax()}
           >
-            {formatBtc(balance)} available
+            {formatBtc(onchainBalance)} available
           </button>
           <div
             className={`font-display font-bold leading-none tracking-tight ${
@@ -341,51 +674,82 @@ export function Send() {
           >
             {formatBtc(amountSats)}
           </div>
-          {amountError && (
-            <p className="mt-1 text-sm text-red-400">{amountError}</p>
-          )}
+          {amountError && <p className="mt-1 text-sm text-red-400">{amountError}</p>}
         </div>
         <Numpad
           onKey={handleNumpadKey}
-          onNext={() => void handleAmountNext()}
+          onNext={() => void handleOcAmountNext()}
           nextDisabled={amountSats <= 0n}
         />
       </div>
     )
   }
 
-  // --- Address screen ---
+  // --- Lightning amount (numpad) ---
+  if (sendStep.step === 'ln-amount') {
+    const capacitySats = msatToSat(lnCapacityMsat)
+    return (
+      <div className="flex min-h-dvh flex-col justify-between bg-dark text-on-dark">
+        <ScreenHeader title="Send" onBack={() => setSendStep({ step: 'input' })} />
+        <div className="flex flex-1 flex-col items-center justify-center gap-2">
+          <div className="text-sm text-[var(--color-on-dark-muted)]">
+            {formatBtc(capacitySats)} available
+          </div>
+          <div
+            className={`font-display font-bold leading-none tracking-tight ${
+              amountDigits.length > 5 ? 'text-5xl' : 'text-7xl'
+            }`}
+            aria-live="polite"
+          >
+            {formatBtc(amountSats)}
+          </div>
+          {amountError && <p className="mt-1 text-sm text-red-400">{amountError}</p>}
+          <div className="mt-1 rounded-full bg-accent/20 px-3 py-0.5 text-xs font-semibold text-accent">
+            {typeBadge(sendStep.parsed)}
+          </div>
+        </div>
+        <Numpad
+          onKey={handleNumpadKey}
+          onNext={handleLnAmountNext}
+          nextDisabled={amountSats <= 0n}
+        />
+      </div>
+    )
+  }
+
+  // --- Input screen (unified entry point) ---
   return (
     <div className="flex min-h-dvh flex-col bg-dark text-on-dark">
       <ScreenHeader title="Send" backTo="/" />
       <div className="flex flex-1 flex-col gap-5 px-6 pt-6">
         <div className="flex flex-col gap-2">
-          <label htmlFor="send-address" className="text-sm font-medium text-[var(--color-on-dark-muted)]">
-            Recipient Address
+          <label
+            htmlFor="send-input"
+            className="text-sm font-medium text-[var(--color-on-dark-muted)]"
+          >
+            Recipient
           </label>
           <input
-            id="send-address"
+            id="send-input"
             type="text"
-            value={address}
+            value={inputValue}
             onChange={(e) => {
-              setAddress(e.target.value)
-              setAddressError(null)
+              setInputValue(e.target.value)
+              setInputError(null)
             }}
-            onPaste={handleAddressPaste}
-            placeholder="tb1q... or bitcoin:tb1q..."
-            maxLength={200}
+            onPaste={handlePaste}
+            placeholder="Invoice, offer, address, or user@domain"
+            maxLength={2000}
             className="w-full rounded-xl border border-dark-border bg-dark-elevated px-4 py-3 font-mono text-sm text-on-dark placeholder:text-[var(--color-on-dark-muted)] focus:outline-none focus:ring-2 focus:ring-accent"
           />
-          {addressError && (
-            <p className="text-sm text-red-400">{addressError}</p>
-          )}
+          {inputError && <p className="text-sm text-red-400">{inputError}</p>}
         </div>
       </div>
       <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
         <button
           className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-white font-display text-lg font-bold uppercase tracking-wider text-dark transition-transform disabled:cursor-not-allowed disabled:opacity-30 active:scale-[0.98]"
-          onClick={handleAddressNext}
-          disabled={!address.trim()}
+          onClick={handleInputNext}
+          disabled={!inputValue.trim()}
         >
           Next
           <ArrowRight className="h-5 w-5" />

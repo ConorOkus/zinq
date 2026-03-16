@@ -7,15 +7,50 @@ import {
   type OnchainContextValue,
   defaultOnchainContextValue,
 } from '../onchain/onchain-context'
+import {
+  LdkContext,
+  defaultLdkContextValue,
+  type LdkContextValue,
+} from '../ldk/ldk-context'
 import { Send } from './Send'
 
-function renderSend(contextValue?: OnchainContextValue) {
-  const value = contextValue ?? defaultOnchainContextValue
+vi.mock('../ldk/payment-input', () => ({
+  classifyPaymentInput: (raw: string) => {
+    if (raw.startsWith('lntbs')) {
+      return { type: 'error', message: 'Invalid Lightning invoice' }
+    }
+    return { type: 'onchain', address: raw, amountSats: null }
+  },
+}))
+
+function renderSend(onchainValue?: OnchainContextValue, ldkValue?: LdkContextValue) {
+  const oc = onchainValue ?? defaultOnchainContextValue
+  const lk = ldkValue ?? {
+    ...defaultLdkContextValue,
+    status: 'ready' as const,
+    node: {} as never,
+    nodeId: 'test',
+    error: null,
+    syncStatus: 'synced' as const,
+    connectToPeer: vi.fn(),
+    forgetPeer: vi.fn(),
+    createChannel: vi.fn(),
+    setBdkWallet: vi.fn(),
+    sendBolt11Payment: vi.fn(),
+    sendBolt12Payment: vi.fn(),
+    sendBip353Payment: vi.fn(),
+    abandonPayment: vi.fn(),
+    getPaymentResult: vi.fn(() => null),
+    listRecentPayments: vi.fn(() => []),
+    outboundCapacityMsat: vi.fn(() => 1_000_000_000n),
+  }
   return render(
     <MemoryRouter>
-      <OnchainContext value={value}>
-        <Send />
-      </OnchainContext>
+      <LdkContext value={lk}>
+        <OnchainContext value={oc}>
+          <Send />
+        </OnchainContext>
+      </LdkContext>
     </MemoryRouter>,
   )
 }
@@ -39,7 +74,7 @@ function readyContext(
 }
 
 async function goToAmountScreen(user: ReturnType<typeof userEvent.setup>, address = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx') {
-  await user.type(screen.getByLabelText(/recipient address/i), address)
+  await user.type(screen.getByLabelText(/recipient/i), address)
   await user.click(screen.getByRole('button', { name: /next/i }))
   await waitFor(() => {
     expect(screen.getByText(/available/i)).toBeInTheDocument()
@@ -53,7 +88,7 @@ async function typeOnNumpad(user: ReturnType<typeof userEvent.setup>, digits: st
 }
 
 describe('Send', () => {
-  it('shows loading state', () => {
+  it('shows loading state when onchain is loading', () => {
     renderSend()
     expect(screen.getByText(/loading wallet/i)).toBeInTheDocument()
   })
@@ -68,23 +103,23 @@ describe('Send', () => {
     expect(screen.getByText(/bdk init failed/i)).toBeInTheDocument()
   })
 
-  it('shows address input when ready', () => {
+  it('shows unified input when ready', () => {
     renderSend(readyContext())
-    expect(screen.getByLabelText(/recipient address/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/recipient/i)).toBeInTheDocument()
   })
 
-  it('shows Next disabled when address is empty', () => {
+  it('shows Next disabled when input is empty', () => {
     renderSend(readyContext())
     const button = screen.getByRole('button', { name: /next/i })
     expect(button).toBeDisabled()
   })
 
-  describe('address step', () => {
+  describe('on-chain flow', () => {
     it('navigates to amount screen after entering address', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await user.type(screen.getByLabelText(/recipient address/i), 'tb1qtest')
+      await user.type(screen.getByLabelText(/recipient/i), 'tb1qtest')
       await user.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
@@ -92,20 +127,6 @@ describe('Send', () => {
       })
     })
 
-    it('shows error for empty address', async () => {
-      const user = userEvent.setup()
-      renderSend(readyContext())
-
-      // Focus and clear to trigger empty validation
-      const input = screen.getByLabelText(/recipient address/i)
-      await user.click(input)
-      // Try to proceed with empty address by enabling button state
-      // The Next button should be disabled, so we test that
-      expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
-    })
-  })
-
-  describe('numpad', () => {
     it('displays entered amount in BIP 177 format', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
@@ -120,7 +141,6 @@ describe('Send', () => {
       renderSend(readyContext())
       await goToAmountScreen(user)
 
-      // The "Next" button in numpad should be disabled
       const nextBtns = screen.getAllByRole('button', { name: /next/i })
       const numpadNext = nextBtns[nextBtns.length - 1]
       expect(numpadNext).toBeDisabled()
@@ -137,9 +157,7 @@ describe('Send', () => {
       await user.click(screen.getByRole('button', { name: /delete/i }))
       expect(screen.getByText('₿12')).toBeInTheDocument()
     })
-  })
 
-  describe('review step', () => {
     it('displays review with correct values', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
@@ -173,9 +191,7 @@ describe('Send', () => {
       await user.click(screen.getByRole('button', { name: /back/i }))
       expect(screen.getByText(/available/i)).toBeInTheDocument()
     })
-  })
 
-  describe('broadcast', () => {
     it('shows success after confirm', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
@@ -220,9 +236,7 @@ describe('Send', () => {
       expect(screen.getByText(/broadcast failed/i)).toBeInTheDocument()
       expect(screen.getByText(/your funds are safe/i)).toBeInTheDocument()
     })
-  })
 
-  describe('dust validation', () => {
     it('shows error for dust amount', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
