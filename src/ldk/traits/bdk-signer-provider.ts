@@ -70,11 +70,17 @@ export function createBdkSignerProvider(keysManager: KeysManager): {
     get_shutdown_scriptpubkey() {
       const script = getScriptFromBdkWallet()
       if (script) {
-        // BDK uses P2WPKH (BIP84), so the script is: OP_0 <20-byte-pubkey-hash>
-        // Extract the 20-byte hash (bytes 2..22 of the 22-byte script)
-        const pubkeyHash = script.slice(2)
-        const shutdownScript = ShutdownScript.constructor_new_p2wpkh(pubkeyHash)
-        return Result_ShutdownScriptNoneZ.constructor_ok(shutdownScript)
+        // Validate P2WPKH format: OP_0 (0x00) + PUSH_20 (0x14) + 20-byte pubkey hash = 22 bytes
+        if (script.length === 22 && script[0] === 0x00 && script[1] === 0x14) {
+          const pubkeyHash = script.slice(2)
+          const shutdownScript = ShutdownScript.constructor_new_p2wpkh(pubkeyHash)
+          return Result_ShutdownScriptNoneZ.constructor_ok(shutdownScript)
+        }
+        console.warn(
+          '[BdkSignerProvider] Unexpected script format (length=%d, prefix=0x%s), falling back to KeysManager',
+          script.length,
+          script[0]?.toString(16),
+        )
       }
       return defaultProvider.get_shutdown_scriptpubkey()
     },

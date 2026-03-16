@@ -32,6 +32,7 @@ import {
   type Persist,
   type ChannelMonitor,
   type EventHandler,
+  type SignerProvider,
 } from 'lightningdevkit'
 import { getSeed, storeDerivedSeed } from './storage/seed'
 import { createLogger } from './traits/logger'
@@ -215,7 +216,7 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
 
   // 8. Restore ChannelMonitors from IndexedDB
   const monitorEntries = await idbGetAll<Uint8Array>('ldk_channel_monitors')
-  const restoredMonitors = deserializeMonitors(monitorEntries, keysManager)
+  const restoredMonitors = deserializeMonitors(monitorEntries, keysManager, bdkSignerProvider)
 
   // 9. Restore or create ChannelManager
   const cmBytes = await idbGet<Uint8Array>('ldk_channel_manager', 'primary')
@@ -377,14 +378,15 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
 
 function deserializeMonitors(
   entries: Map<string, Uint8Array>,
-  keysManager: KeysManager
+  keysManager: KeysManager,
+  signerProvider: SignerProvider,
 ): ChannelMonitor[] {
   const monitors: ChannelMonitor[] = []
   for (const [key, data] of entries) {
     const result = UtilMethods.constructor_C2Tuple_ThirtyTwoBytesChannelMonitorZ_read(
       data,
       keysManager.as_EntropySource(),
-      keysManager.as_SignerProvider()
+      signerProvider,
     )
     if (result instanceof Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK) {
       monitors.push(result.res.get_b())
