@@ -3,7 +3,16 @@ import { useLdk } from '../ldk/use-ldk'
 import { parsePeerAddress } from '../ldk/peers/peer-connection'
 import { getKnownPeers, type KnownPeer } from '../ldk/storage/known-peers'
 import { bytesToHex } from '../ldk/utils'
+import { formatBtc } from '../utils/format-btc'
 import { ScreenHeader } from '../components/ScreenHeader'
+
+interface ChannelInfo {
+  capacitySats: bigint
+  outboundMsat: bigint
+  inboundMsat: bigint
+  isUsable: boolean
+  isReady: boolean
+}
 
 interface PeerEntry {
   pubkey: string
@@ -12,6 +21,7 @@ interface PeerEntry {
   host?: string
   port?: number
   hasChannels: boolean
+  channels: ChannelInfo[]
 }
 
 export function Peers() {
@@ -39,24 +49,40 @@ export function Peers() {
       knownPeers = new Map()
     }
 
-    // Get channels to check which peers have open channels
+    // Get channels grouped by peer pubkey
     const channels = ldk.node.channelManager.list_channels()
-    const channelPeerPubkeys = new Set(
-      channels.map((ch) => bytesToHex(ch.get_counterparty().get_node_id()))
-    )
+    const channelsByPeer = new Map<string, ChannelInfo[]>()
+    for (const ch of channels) {
+      const peerPubkey = bytesToHex(ch.get_counterparty().get_node_id())
+      const info: ChannelInfo = {
+        capacitySats: ch.get_channel_value_satoshis(),
+        outboundMsat: ch.get_outbound_capacity_msat(),
+        inboundMsat: ch.get_inbound_capacity_msat(),
+        isUsable: ch.get_is_usable(),
+        isReady: ch.get_is_channel_ready(),
+      }
+      const existing = channelsByPeer.get(peerPubkey)
+      if (existing) {
+        existing.push(info)
+      } else {
+        channelsByPeer.set(peerPubkey, [info])
+      }
+    }
 
     // Merge: all known peers + any connected peers not in known list
     const allPubkeys = new Set([...knownPeers.keys(), ...connectedPubkeys])
     const entries: PeerEntry[] = Array.from(allPubkeys).map((pubkey) => {
       const known = knownPeers.has(pubkey)
       const peer = knownPeers.get(pubkey)
+      const peerChannels = channelsByPeer.get(pubkey) ?? []
       return {
         pubkey,
         connected: connectedPubkeys.has(pubkey),
         known,
         host: peer?.host,
         port: peer?.port,
-        hasChannels: channelPeerPubkeys.has(pubkey),
+        hasChannels: peerChannels.length > 0,
+        channels: peerChannels,
       }
     })
 
@@ -190,33 +216,51 @@ export function Peers() {
               {peers.map((peer) => (
                 <div
                   key={peer.pubkey}
-                  className="flex items-center gap-3 rounded-xl bg-dark-elevated p-4"
+                  className="flex flex-col gap-2 rounded-xl bg-dark-elevated p-4"
                 >
-                  <div
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                      peer.connected ? 'bg-green-500' : 'bg-gray-500'
-                    }`}
-                  />
-                  <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm">
-                    {peer.pubkey.slice(0, 16)}...{peer.pubkey.slice(-8)}
-                  </span>
-                  <span
-                    className={`shrink-0 text-xs font-semibold ${
-                      peer.connected ? 'text-green-500' : 'text-[var(--color-on-dark-muted)]'
-                    }`}
-                  >
-                    {peer.connected ? 'Connected' : 'Offline'}
-                  </span>
-                  {peer.known && (
-                    <button
-                      className="shrink-0 text-xs text-red-400 disabled:opacity-30"
-                      onClick={() => void handleForget(peer.pubkey)}
-                      disabled={peer.hasChannels}
-                      title={peer.hasChannels ? 'Cannot forget peer with open channels' : 'Remove from saved peers'}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                        peer.connected ? 'bg-green-500' : 'bg-gray-500'
+                      }`}
+                    />
+                    <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm">
+                      {peer.pubkey.slice(0, 16)}...{peer.pubkey.slice(-8)}
+                    </span>
+                    <span
+                      className={`shrink-0 text-xs font-semibold ${
+                        peer.connected ? 'text-green-500' : 'text-[var(--color-on-dark-muted)]'
+                      }`}
                     >
-                      Forget
-                    </button>
-                  )}
+                      {peer.connected ? 'Connected' : 'Offline'}
+                    </span>
+                    {peer.known && (
+                      <button
+                        className="shrink-0 text-xs text-red-400 disabled:opacity-30"
+                        onClick={() => void handleForget(peer.pubkey)}
+                        disabled={peer.hasChannels}
+                        title={peer.hasChannels ? 'Cannot forget peer with open channels' : 'Remove from saved peers'}
+                      >
+                        Forget
+                      </button>
+                    )}
+                  </div>
+                  {peer.channels.map((ch, i) => (
+                    <div key={i} className="ml-5 flex flex-col gap-1 border-l border-dark-border pl-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[var(--color-on-dark-muted)]">
+                          {ch.isUsable ? 'Active' : ch.isReady ? 'Ready' : 'Pending'}
+                        </span>
+                        <span className="text-xs font-semibold">
+                          {formatBtc(ch.capacitySats)} capacity
+                        </span>
+                      </div>
+                      <div className="flex gap-3 text-xs text-[var(--color-on-dark-muted)]">
+                        <span>Send: {formatBtc(ch.outboundMsat / 1000n)}</span>
+                        <span>Receive: {formatBtc(ch.inboundMsat / 1000n)}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
