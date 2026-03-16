@@ -1,5 +1,5 @@
 import { Filter, type WatchedOutput } from 'lightningdevkit'
-import { bytesToHex, txidBytesToHex } from '../utils'
+import { txidBytesToHex } from '../utils'
 
 export interface WatchState {
   watchedTxids: Map<string, Uint8Array>
