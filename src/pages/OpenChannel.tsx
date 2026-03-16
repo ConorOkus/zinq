@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router'
 import { useLdk } from '../ldk/use-ldk'
 import { useOnchain } from '../onchain/use-onchain'
-import { hexToBytes } from '../ldk/utils'
+import { hexToBytes, bytesToHex } from '../ldk/utils'
 import { formatBtc } from '../utils/format-btc'
 import { SIGNET_CONFIG } from '../ldk/config'
 import { ScreenHeader } from '../components/ScreenHeader'
@@ -128,9 +128,14 @@ export function OpenChannel() {
     setCurrentStep({ step: 'opening', amountSats: channelAmountSats })
 
     try {
-      // Connect to peer first if we have host/port
+      // Connect to peer first if we have host/port and aren't already connected
       if (needsConnect && peerHost && peerPort) {
-        await ldk.connectToPeer(peerPubkey, peerHost, peerPort)
+        const alreadyConnected = ldk.node.peerManager
+          .list_peers()
+          .some((p) => bytesToHex(p.get_counterparty_node_id()) === peerPubkey)
+        if (!alreadyConnected) {
+          await ldk.connectToPeer(peerPubkey, peerHost, peerPort)
+        }
       }
 
       const pubkeyBytes = hexToBytes(peerPubkey)
