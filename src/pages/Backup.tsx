@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { MnemonicWordGrid } from '../components/MnemonicWordGrid'
 import { getMnemonic } from '../wallet/mnemonic'
+
+const AUTO_HIDE_MS = 60_000
 
 type BackupState =
   | { status: 'warning' }
@@ -10,6 +13,13 @@ type BackupState =
 
 export function Backup() {
   const [state, setState] = useState<BackupState>({ status: 'warning' })
+  const [countdown, setCountdown] = useState(AUTO_HIDE_MS / 1000)
+  const navigate = useNavigate()
+
+  const hideWords = useCallback(() => {
+    setState({ status: 'warning' })
+    setCountdown(AUTO_HIDE_MS / 1000)
+  }, [])
 
   const handleReveal = async () => {
     try {
@@ -22,6 +32,7 @@ export function Backup() {
         return
       }
       setState({ status: 'revealed', words: mnemonic.split(' ') })
+      setCountdown(AUTO_HIDE_MS / 1000)
     } catch (err) {
       console.error('Failed to retrieve mnemonic:', err)
       setState({
@@ -30,6 +41,27 @@ export function Backup() {
       })
     }
   }
+
+  // Auto-hide after 60s + clear on tab hidden
+  useEffect(() => {
+    if (state.status !== 'revealed') return
+
+    const timer = setTimeout(hideWords, AUTO_HIDE_MS)
+    const interval = setInterval(() => {
+      setCountdown((prev) => Math.max(0, prev - 1))
+    }, 1000)
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') hideWords()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearTimeout(timer)
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [state.status, hideWords])
 
   return (
     <div className="flex min-h-dvh flex-col bg-dark text-on-dark">
@@ -87,10 +119,21 @@ export function Backup() {
 
         {state.status === 'revealed' && (
           <div className="flex flex-1 flex-col gap-6 pt-4">
-            <p className="text-center text-sm text-[var(--color-on-dark-muted)]">
-              Write down these 12 words in order. They are the only way to recover your wallet.
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[var(--color-on-dark-muted)]">
+                Write down these 12 words in order.
+              </p>
+              <span className="text-xs text-[var(--color-on-dark-muted)]">
+                Hides in {countdown}s
+              </span>
+            </div>
             <MnemonicWordGrid words={state.words} />
+            <button
+              onClick={() => void navigate('/settings')}
+              className="mt-4 w-full rounded-xl bg-dark-elevated px-6 py-4 font-display font-bold text-white active:scale-[0.98]"
+            >
+              Done
+            </button>
           </div>
         )}
 
