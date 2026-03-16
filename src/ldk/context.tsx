@@ -20,6 +20,7 @@ import { connectToPeer as doConnectToPeer } from './peers/peer-connection'
 import { idbPut } from './storage/idb'
 import { getKnownPeers, putKnownPeer, deleteKnownPeer } from './storage/known-peers'
 import { bytesToHex } from './utils'
+import { msatToSatFloor } from '../utils/msat'
 
 export function LdkProvider({
   children,
@@ -363,7 +364,7 @@ export function LdkProvider({
           const capacityMsat = node.channelManager
             .list_usable_channels()
             .reduce((sum, ch) => sum + ch.get_outbound_capacity_msat(), 0n)
-          const newBalanceSats = capacityMsat / 1000n
+          const newBalanceSats = msatToSatFloor(capacityMsat)
           if (newBalanceSats !== lightningBalanceSatsRef.current) {
             lightningBalanceSatsRef.current = newBalanceSats
             setState((prev) =>
@@ -387,6 +388,14 @@ export function LdkProvider({
           }
         }, SIGNET_CONFIG.peerTimerIntervalMs)
 
+        // Compute initial Lightning balance eagerly so Home screen
+        // does not show 0 for up to 10s before the first timer tick.
+        const initialCapacityMsat = node.channelManager
+          .list_usable_channels()
+          .reduce((sum, ch) => sum + ch.get_outbound_capacity_msat(), 0n)
+        const initialBalanceSats = msatToSatFloor(initialCapacityMsat)
+        lightningBalanceSatsRef.current = initialBalanceSats
+
         setState({
           status: 'ready',
           node,
@@ -407,7 +416,7 @@ export function LdkProvider({
           getPaymentResult,
           listRecentPayments,
           outboundCapacityMsat,
-          lightningBalanceSats: 0n,
+          lightningBalanceSats: initialBalanceSats,
         })
 
         // Auto-reconnect to known peers (fire-and-forget, non-blocking)

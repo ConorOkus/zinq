@@ -2,7 +2,6 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { useOnchain } from '../onchain/use-onchain'
 import { useLdk } from '../ldk/use-ldk'
-import { useUnifiedBalance } from '../hooks/use-unified-balance'
 import { classifyPaymentInput, type ParsedPaymentInput } from '../ldk/payment-input'
 import { ONCHAIN_CONFIG } from '../onchain/config'
 import { formatBtc } from '../utils/format-btc'
@@ -106,7 +105,10 @@ export function Send() {
   const sendingRef = useRef(false)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const { onchain: onchainBalance } = useUnifiedBalance()
+  const onchainBalance =
+    onchain.status === 'ready'
+      ? onchain.balance.confirmed + onchain.balance.trustedPending
+      : 0n
   const lnCapacityMsat = ldk.status === 'ready' ? ldk.outboundCapacityMsat() : 0n
 
   // Cleanup polling on unmount
