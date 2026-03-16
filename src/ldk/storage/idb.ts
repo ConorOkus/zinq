@@ -1,5 +1,5 @@
 const DB_NAME = 'browser-wallet-ldk'
-const DB_VERSION = 5
+const DB_VERSION = 6
 
 const STORES = [
   'ldk_seed',
@@ -10,6 +10,7 @@ const STORES = [
   'ldk_spendable_outputs',
   'ldk_known_peers',
   'ldk_rgs_last_sync_timestamp',
+  'ldk_funding_txs',
   'wallet_mnemonic',
   'bdk_changeset',
 ] as const

@@ -30,7 +30,7 @@ import {
   Amount,
   SignOptions,
 } from '@bitcoindevkit/bdk-wallet-web'
-import { idbPut } from '../storage/idb'
+import { idbPut, idbGet, idbDelete } from '../storage/idb'
 import { bytesToHex } from '../utils'
 import { putChangeset } from '../../onchain/storage/changeset'
 import { extractTxBytes, broadcastTransaction } from '../../onchain/tx-bridge'
@@ -54,15 +54,10 @@ export function createEventHandler(
   let forwardTimerId: ReturnType<typeof setTimeout> | null = null
   let bdkWallet: Wallet | null = null
 
-  // In-memory cache of signed funding transactions waiting for FundingTxBroadcastSafe.
-  // Keyed by temporary_channel_id hex → raw tx hex.
-  // TEMPORARY: Remove when bdk-wasm exposes Transaction.to_bytes() (bdk-wasm#38)
-  const fundingTxCache = new Map<string, string>()
-
   const handler = EventHandler.new_impl({
     handle_event(event: Event): Result_NoneReplayEventZ {
       try {
-        handleEvent(event, channelManager, bdkWallet, fundingTxCache, (id) => {
+        handleEvent(event, channelManager, bdkWallet, (id) => {
           if (forwardTimerId !== null) clearTimeout(forwardTimerId)
           forwardTimerId = id
         }, onPaymentEvent)
@@ -80,7 +75,6 @@ export function createEventHandler(
         clearTimeout(forwardTimerId)
         forwardTimerId = null
       }
-      fundingTxCache.clear()
     },
     setBdkWallet: (wallet: Wallet | null) => {
       bdkWallet = wallet
@@ -92,7 +86,6 @@ function handleEvent(
   event: Event,
   channelManager: ChannelManager,
   bdkWallet: Wallet | null,
-  fundingTxCache: Map<string, string>,
   setForwardTimer: (id: ReturnType<typeof setTimeout>) => void,
   onPaymentEvent?: PaymentEventCallback,
 ): void {
@@ -272,10 +265,13 @@ function handleEvent(
         return
       }
 
-      // Cache the raw tx hex for broadcasting when FundingTxBroadcastSafe fires
+      // Persist the raw tx hex to IDB for broadcasting when FundingTxBroadcastSafe fires.
+      // IDB survives page reloads, unlike the previous in-memory Map cache.
       const tempChannelIdHex = bytesToHex(event.temporary_channel_id.write())
       const txHex = bytesToHex(rawTxBytes)
-      fundingTxCache.set(tempChannelIdHex, txHex)
+      void idbPut('ldk_funding_txs', tempChannelIdHex, txHex).catch((err: unknown) =>
+        console.error('[LDK Event] Failed to persist funding tx to IDB:', err),
+      )
 
       console.log(
         '[LDK Event] FundingGenerationReady: funding tx registered',
@@ -301,27 +297,30 @@ function handleEvent(
 
   if (event instanceof Event_FundingTxBroadcastSafe) {
     const tempChannelIdHex = bytesToHex(event.former_temporary_channel_id.write())
-    const txHex = fundingTxCache.get(tempChannelIdHex)
 
-    if (txHex) {
-      void broadcastTransaction(txHex, ONCHAIN_CONFIG.esploraUrl)
-        .then((txid) => {
-          fundingTxCache.delete(tempChannelIdHex)
-          console.log('[LDK Event] FundingTxBroadcastSafe: broadcast tx:', txid)
-        })
-        .catch((err: unknown) => {
-          console.error(
-            '[LDK Event] FundingTxBroadcastSafe: broadcast failed (tx retained in cache):',
-            err,
+    // Read funding tx from IDB (persisted in FundingGenerationReady, survives reloads)
+    void idbGet<string>('ldk_funding_txs', tempChannelIdHex)
+      .then((txHex) => {
+        if (!txHex) {
+          console.warn(
+            '[LDK Event] FundingTxBroadcastSafe: no persisted tx for',
+            tempChannelIdHex.substring(0, 16) + '...',
           )
-        })
-    } else {
-      console.warn(
-        '[LDK Event] FundingTxBroadcastSafe: no cached tx for',
-        tempChannelIdHex.substring(0, 16) + '...',
-        '— may have been cleaned up or tab was reloaded',
-      )
-    }
+          return
+        }
+        return broadcastTransaction(txHex, ONCHAIN_CONFIG.esploraUrl)
+          .then((txid) => {
+            // Clean up the persisted tx after successful broadcast
+            void idbDelete('ldk_funding_txs', tempChannelIdHex).catch(() => {})
+            console.log('[LDK Event] FundingTxBroadcastSafe: broadcast tx:', txid)
+          })
+      })
+      .catch((err: unknown) => {
+        console.error(
+          '[LDK Event] FundingTxBroadcastSafe: broadcast failed:',
+          err,
+        )
+      })
     return
   }
 
