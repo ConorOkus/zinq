@@ -10,8 +10,15 @@ import { Transaction } from '@scure/btc-signer'
 export function extractTxBytes(psbtBase64: string): Uint8Array {
   const psbtBytes = base64ToBytes(psbtBase64)
   const tx = Transaction.fromPSBT(psbtBytes)
-  tx.finalize()
-  return tx.extract()
+  // BDK's sign() may already finalize inputs (populating finalScriptWitness
+  // instead of partialSig). Try extract directly first; fall back to
+  // finalize + extract for PSBTs with only partial signatures.
+  try {
+    return tx.extract()
+  } catch {
+    tx.finalize()
+    return tx.extract()
+  }
 }
 
 /** Broadcast a raw transaction hex to Esplora POST /tx, returns the txid */
