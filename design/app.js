@@ -1,5 +1,5 @@
 // ============================================
-// Browser Wallet — Design Prototype App
+// Zinq — Design Prototype App
 // ============================================
 
 // --- BIP 177 ₿-only Format ---

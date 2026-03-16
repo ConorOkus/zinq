@@ -1,4 +1,4 @@
-const DB_NAME = 'browser-wallet-ldk'
+const DB_NAME = 'zinq-ldk'
 const DB_VERSION = 6
 
 const STORES = [
