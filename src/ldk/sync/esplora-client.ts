@@ -10,7 +10,7 @@ function assertHex(value: string, label: string): void {
 }
 
 export class EsploraClient {
-  baseUrl: string
+  readonly baseUrl: string
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl
   }

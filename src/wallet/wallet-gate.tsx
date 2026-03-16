@@ -9,7 +9,7 @@ function normalizeMnemonic(input: string): string {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, ' ')
-    .replace(/[^\w\s]/g, '')
+    .replace(/[^a-z\s]/g, '')
 }
 
 function ImportWalletForm({ onImport }: { onImport: (mnemonic: string) => void }) {
@@ -29,6 +29,7 @@ function ImportWalletForm({ onImport }: { onImport: (mnemonic: string) => void }
       return
     }
     setError(null)
+    setInput('')
     onImport(normalized)
   }
 

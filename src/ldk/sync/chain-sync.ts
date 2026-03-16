@@ -10,8 +10,9 @@ import {
 import type { EsploraClient } from './esplora-client'
 import type { WatchState } from '../traits/filter'
 import { initRapidGossipSync, syncRapidGossip, type RgsHandle } from './rapid-gossip-sync'
-import { txidBytesToHex, bytesToHex } from '../utils'
+import { txidBytesToHex } from '../utils'
 import { idbPut } from '../storage/idb'
+import type { SyncStatus } from '../ldk-context'
 
 export async function syncOnce(
   confirmables: Confirm[],
@@ -109,7 +110,7 @@ export async function syncOnce(
   const allRelevantTxids = new Set<string>()
   for (const confirmable of confirmables) {
     for (const tuple of confirmable.get_relevant_txids()) {
-      allRelevantTxids.add(bytesToHex(tuple.get_a()))
+      allRelevantTxids.add(txidBytesToHex(tuple.get_a()))
     }
   }
   for (const txid of watchState.watchedTxids.keys()) {
@@ -126,8 +127,6 @@ export async function syncOnce(
 
   return tipHash
 }
-
-import type { SyncStatus } from '../ldk-context'
 
 export interface SyncLoopHandle {
   stop: () => void

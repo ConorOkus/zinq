@@ -38,6 +38,7 @@ export function LdkProvider({
     async (pubkey: string, host: string, port: number): Promise<void> => {
       if (!nodeRef.current) throw new Error('Node not initialized')
       const conn = await doConnectToPeer(nodeRef.current.peerManager, pubkey, host, port)
+      activeConnections.current.get(pubkey)?.disconnect()
       activeConnections.current.set(pubkey, conn)
       putKnownPeer(pubkey, host, port).catch((err: unknown) =>
         console.warn('[ldk] failed to persist known peer:', err)
