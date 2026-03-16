@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EsploraClient } from './esplora-client'
 
 const BASE_URL = 'https://mutinynet.com/api'
+const FAKE_HASH = 'aa'.repeat(32)
+const FAKE_TXID = 'bb'.repeat(32)
 
 describe('EsploraClient', () => {
   let client: EsploraClient
@@ -13,11 +15,14 @@ describe('EsploraClient', () => {
 
   it('getTipHash returns trimmed hash string', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('abc123def456\n', { status: 200 })
+      new Response(`${FAKE_HASH}\n`, { status: 200 })
     )
     const hash = await client.getTipHash()
-    expect(hash).toBe('abc123def456')
-    expect(fetch).toHaveBeenCalledWith(`${BASE_URL}/blocks/tip/hash`)
+    expect(hash).toBe(FAKE_HASH)
+    expect(fetch).toHaveBeenCalledWith(
+      `${BASE_URL}/blocks/tip/hash`,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    )
   })
 
   it('getTipHeight returns parsed number', async () => {
@@ -28,22 +33,39 @@ describe('EsploraClient', () => {
     expect(height).toBe(42000)
   })
 
+  it('getTipHeight rejects non-integer response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('not-a-number', { status: 200 })
+    )
+    await expect(client.getTipHeight()).rejects.toThrow('Invalid tip height')
+  })
+
   it('getBlockHeader returns decoded hex bytes', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('0a0b0c', { status: 200 })
     )
-    const header = await client.getBlockHeader('somehash')
+    const header = await client.getBlockHeader(FAKE_HASH)
     expect(Array.from(header)).toEqual([10, 11, 12])
-    expect(fetch).toHaveBeenCalledWith(`${BASE_URL}/block/somehash/header`)
+    expect(fetch).toHaveBeenCalledWith(
+      `${BASE_URL}/block/${FAKE_HASH}/header`,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    )
   })
 
   it('getBlockStatus returns parsed JSON', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify({ in_best_chain: true, height: 100 }), { status: 200 })
     )
-    const status = await client.getBlockStatus('somehash')
+    const status = await client.getBlockStatus(FAKE_HASH)
     expect(status.in_best_chain).toBe(true)
     expect(status.height).toBe(100)
+  })
+
+  it('getBlockStatus rejects malformed response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ wrong: 'shape' }), { status: 200 })
+    )
+    await expect(client.getBlockStatus(FAKE_HASH)).rejects.toThrow('Malformed block status')
   })
 
   it('getTxStatus returns parsed JSON', async () => {
@@ -53,7 +75,7 @@ describe('EsploraClient', () => {
         { status: 200 }
       )
     )
-    const status = await client.getTxStatus('txid123')
+    const status = await client.getTxStatus(FAKE_TXID)
     expect(status.confirmed).toBe(true)
     expect(status.block_height).toBe(50)
   })
@@ -65,10 +87,18 @@ describe('EsploraClient', () => {
         { status: 200 }
       )
     )
-    const result = await client.getOutspend('txid', 1)
+    const result = await client.getOutspend(FAKE_TXID, 1)
     expect(result.spent).toBe(true)
     expect(result.txid).toBe('spend_txid')
-    expect(fetch).toHaveBeenCalledWith(`${BASE_URL}/tx/txid/outspend/1`)
+    expect(fetch).toHaveBeenCalledWith(
+      `${BASE_URL}/tx/${FAKE_TXID}/outspend/1`,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    )
+  })
+
+  it('rejects non-hex inputs', async () => {
+    await expect(client.getBlockHeader('not-valid-hex!')).rejects.toThrow('Invalid hex')
+    await expect(client.getTxStatus('xyz')).rejects.toThrow('Invalid hex')
   })
 
   it('throws on non-ok response', async () => {
