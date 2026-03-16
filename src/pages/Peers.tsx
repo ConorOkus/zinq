@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router'
 import { useLdk } from '../ldk/use-ldk'
 import { parsePeerAddress } from '../ldk/peers/peer-connection'
 import { getKnownPeers, type KnownPeer } from '../ldk/storage/known-peers'
@@ -7,6 +8,9 @@ import { formatBtc } from '../utils/format-btc'
 import { ScreenHeader } from '../components/ScreenHeader'
 
 interface ChannelInfo {
+  channelIdHex: string
+  counterpartyNodeId: Uint8Array
+  counterpartyPubkey: string
   capacitySats: bigint
   outboundMsat: bigint
   inboundMsat: bigint
@@ -24,6 +28,7 @@ interface PeerEntry {
 }
 
 export function Peers() {
+  const navigate = useNavigate()
   const ldk = useLdk()
   const [peerAddress, setPeerAddress] = useState('')
   const [connecting, setConnecting] = useState(false)
@@ -52,8 +57,13 @@ export function Peers() {
     const channels = ldk.node.channelManager.list_channels()
     const channelsByPeer = new Map<string, ChannelInfo[]>()
     for (const ch of channels) {
-      const peerPubkey = bytesToHex(ch.get_counterparty().get_node_id())
+      const counterparty = ch.get_counterparty()
+      const counterpartyNodeId = counterparty.get_node_id()
+      const peerPubkey = bytesToHex(counterpartyNodeId)
       const info: ChannelInfo = {
+        channelIdHex: bytesToHex(ch.get_channel_id().write()),
+        counterpartyNodeId,
+        counterpartyPubkey: peerPubkey,
         capacitySats: ch.get_channel_value_satoshis(),
         outboundMsat: ch.get_outbound_capacity_msat(),
         inboundMsat: ch.get_inbound_capacity_msat(),
@@ -253,12 +263,32 @@ export function Peers() {
                           {formatBtc(ch.capacitySats)} capacity
                         </span>
                       </div>
-                      <div className="flex gap-3 text-xs text-[var(--color-on-dark-muted)]">
-                        <span>Send: {formatBtc(ch.outboundMsat / 1000n)}</span>
-                        <span>Receive: {formatBtc(ch.inboundMsat / 1000n)}</span>
+                      <div className="flex items-center justify-between gap-3 text-xs text-[var(--color-on-dark-muted)]">
+                        <div className="flex gap-3">
+                          <span>Send: {formatBtc(ch.outboundMsat / 1000n)}</span>
+                          <span>Receive: {formatBtc(ch.inboundMsat / 1000n)}</span>
+                        </div>
+                        <button
+                          className="shrink-0 text-xs font-semibold text-red-400 transition-colors active:text-red-300"
+                          onClick={() => void navigate('/settings/advanced/peers/close-channel', {
+                            state: { channelIdHex: ch.channelIdHex, counterpartyPubkey: ch.counterpartyPubkey },
+                          })}
+                        >
+                          Close
+                        </button>
                       </div>
                     </div>
                   ))}
+                  {peer.connected && (
+                    <button
+                      className="mt-1 h-10 w-full rounded-lg border border-accent/50 text-sm font-semibold text-accent transition-colors active:bg-accent/10"
+                      onClick={() => void navigate('/settings/advanced/peers/open-channel', {
+                        state: { peerPubkey: peer.pubkey },
+                      })}
+                    >
+                      Open Channel
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

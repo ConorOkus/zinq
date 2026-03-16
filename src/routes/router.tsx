@@ -24,8 +24,8 @@ export const router = createBrowserRouter([
       { path: 'settings/backup', element: <Backup /> },
       { path: 'settings/advanced', element: <Advanced /> },
       { path: 'settings/advanced/peers', element: <Peers /> },
-      { path: 'settings/advanced/open-channel', element: <OpenChannel /> },
-      { path: 'settings/advanced/close-channel', element: <CloseChannel /> },
+      { path: 'settings/advanced/peers/open-channel', element: <OpenChannel /> },
+      { path: 'settings/advanced/peers/close-channel', element: <CloseChannel /> },
     ],
   },
 ])
