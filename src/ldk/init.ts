@@ -40,6 +40,7 @@ import { createBroadcaster } from './traits/broadcaster'
 import { createPersister } from './traits/persist'
 import { createFilter, type WatchState } from './traits/filter'
 import { createEventHandler, type PaymentEventCallback, type ChannelClosedCallback } from './traits/event-handler'
+import { createBdkSignerProvider } from './traits/bdk-signer-provider'
 import { SIGNET_CONFIG } from './config'
 import { idbGet, idbGetAll } from './storage/idb'
 import { bytesToHex, hexToBytes } from './utils'
@@ -143,6 +144,10 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
   const keysManager = KeysManager.constructor_new(seed, startingTimeSecs, startingTimeNanos)
   seed.fill(0) // Zero seed bytes after KeysManager copies them
 
+  // Custom SignerProvider that directs close/sweep funds to the BDK wallet
+  const { signerProvider: bdkSignerProvider, setBdkWallet: setSignerBdkWallet } =
+    createBdkSignerProvider(keysManager)
+
   // 3. Create trait implementations
   const logger = createLogger()
   const feeEstimator = createFeeEstimator(SIGNET_CONFIG.esploraUrl)
@@ -221,7 +226,7 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
       cmBytes,
       keysManager.as_EntropySource(),
       keysManager.as_NodeSigner(),
-      keysManager.as_SignerProvider(),
+      bdkSignerProvider,
       feeEstimator,
       chainMonitor.as_Watch(),
       broadcaster,
@@ -270,7 +275,7 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
       logger,
       keysManager.as_EntropySource(),
       keysManager.as_NodeSigner(),
-      keysManager.as_SignerProvider(),
+      bdkSignerProvider,
       UserConfig.constructor_default(),
       chainParams,
       Math.floor(Date.now() / 1000)
@@ -326,13 +331,19 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
   // 14. Create EventHandler
   let paymentCallback: PaymentEventCallback | undefined
   let channelClosedCallback: ChannelClosedCallback | undefined
-  const { handler: eventHandler, cleanup: cleanupEventHandler, setBdkWallet } =
+  const { handler: eventHandler, cleanup: cleanupEventHandler, setBdkWallet: setEventHandlerBdkWallet } =
     createEventHandler(
       channelManager,
       keysManager,
       (...args) => paymentCallback?.(...args),
       (...args) => channelClosedCallback?.(...args),
     )
+
+  // Unified setBdkWallet that wires both the event handler and signer provider
+  const setBdkWallet = (wallet: import('@bitcoindevkit/bdk-wallet-web').Wallet | null) => {
+    setEventHandlerBdkWallet(wallet)
+    setSignerBdkWallet(wallet)
+  }
 
   const node: LdkNode = {
     nodeId,
