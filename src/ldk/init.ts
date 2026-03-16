@@ -22,6 +22,8 @@ import {
   Result_C2Tuple_ThirtyTwoBytesChannelManagerZDecodeErrorZ_OK,
   Result_NetworkGraphDecodeErrorZ_OK,
   Result_ProbabilisticScorerDecodeErrorZ_OK,
+  P2PGossipSync,
+  Option_UtxoLookupZ,
   PeerManager,
   IgnoringMessageHandler,
   type Logger,
@@ -273,7 +275,17 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
     )
   }
 
-  // 10. Create OnionMessenger (required for BOLT 12 offers and BIP 353)
+  // 10. Create P2PGossipSync for routing message handling.
+  // Even though we use RGS for bulk graph population, P2PGossipSync is needed
+  // as the RoutingMessageHandler to process incremental peer gossip and signal
+  // to LDK that the routing graph is available for pathfinding.
+  const gossipSync = P2PGossipSync.constructor_new(
+    networkGraph,
+    Option_UtxoLookupZ.constructor_none(),
+    logger,
+  )
+
+  // 11. Create OnionMessenger (required for BOLT 12 offers and BIP 353)
   const ignorer = IgnoringMessageHandler.constructor_new()
   const onionMessenger = OnionMessenger.constructor_new(
     keysManager.as_EntropySource(),
@@ -287,10 +299,10 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
     ignorer.as_CustomOnionMessageHandler()
   )
 
-  // 11. Create PeerManager
+  // 12. Create PeerManager
   const peerManager = PeerManager.constructor_new(
     channelManager.as_ChannelMessageHandler(),
-    ignorer.as_RoutingMessageHandler(),
+    gossipSync.as_RoutingMessageHandler(),
     onionMessenger.as_OnionMessageHandler(),
     ignorer.as_CustomMessageHandler(),
     Math.floor(Date.now() / 1000),
@@ -299,7 +311,7 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
     keysManager.as_NodeSigner()
   )
 
-  // 12. Derive node public key
+  // 13. Derive node public key
   const nodeIdResult = keysManager.as_NodeSigner().get_node_id(Recipient.LDKRecipient_Node)
   if (!nodeIdResult.is_ok()) {
     throw new Error('Failed to derive node ID from KeysManager')
@@ -309,7 +321,7 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
   }
   const nodeId = bytesToHex(nodeIdResult.res)
 
-  // 13. Create EventHandler
+  // 14. Create EventHandler
   let paymentCallback: PaymentEventCallback | undefined
   const { handler: eventHandler, cleanup: cleanupEventHandler, setBdkWallet } =
     createEventHandler(channelManager, (...args) => paymentCallback?.(...args))
