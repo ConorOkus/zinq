@@ -30,6 +30,7 @@ export function LdkProvider({
 }) {
   const [state, setState] = useState<LdkContextValue>(defaultLdkContextValue)
   const nodeRef = useRef<LdkNode | null>(null)
+  const lightningBalanceSatsRef = useRef(0n)
 
   const connectToPeer = useCallback(
     async (pubkey: string, host: string, port: number): Promise<void> => {
@@ -286,7 +287,7 @@ export function LdkProvider({
     let cleanupEventHandlerFn: (() => void) | null = null
 
     initializeLdk(ldkSeed)
-      .then(({ node, watchState, cleanupEventHandler, setBdkWallet, setPaymentCallback }) => {
+      .then(({ node, watchState, cleanupEventHandler, setBdkWallet, setPaymentCallback, setChannelClosedCallback }) => {
         if (cancelled) return
 
         nodeRef.current = node
@@ -311,6 +312,15 @@ export function LdkProvider({
             })
           }
         })
+
+        // Remove peer from known peers when their last channel closes,
+        // so auto-reconnect doesn't trigger stale "wrong node" warnings.
+        setChannelClosedCallback((counterpartyPubkeyHex) => {
+          deleteKnownPeer(counterpartyPubkeyHex).catch((err: unknown) => {
+            console.warn('[ldk] Failed to remove known peer after channel close:', err)
+          })
+        })
+
         cleanupEventHandlerFn = cleanupEventHandler
 
         const esplora = new EsploraClient(SIGNET_CONFIG.esploraUrl)
@@ -349,6 +359,20 @@ export function LdkProvider({
             .as_EventsProvider()
             .process_pending_events(node.eventHandler)
 
+          // Recompute Lightning balance and update context if changed
+          const capacityMsat = node.channelManager
+            .list_usable_channels()
+            .reduce((sum, ch) => sum + ch.get_outbound_capacity_msat(), 0n)
+          const newBalanceSats = capacityMsat / 1000n
+          if (newBalanceSats !== lightningBalanceSatsRef.current) {
+            lightningBalanceSatsRef.current = newBalanceSats
+            setState((prev) =>
+              prev.status === 'ready'
+                ? { ...prev, lightningBalanceSats: newBalanceSats }
+                : prev,
+            )
+          }
+
           // Flush ChannelManager state immediately after processing events
           if (node.channelManager.get_and_clear_needs_persistence()) {
             const data = node.channelManager.write()
@@ -383,6 +407,7 @@ export function LdkProvider({
           getPaymentResult,
           listRecentPayments,
           outboundCapacityMsat,
+          lightningBalanceSats: 0n,
         })
 
         // Auto-reconnect to known peers (fire-and-forget, non-blocking)

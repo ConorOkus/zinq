@@ -32,6 +32,7 @@ export type LdkContextValue =
       getPaymentResult: (paymentId: Uint8Array) => PaymentResult | null
       listRecentPayments: () => RecentPaymentDetails[]
       outboundCapacityMsat: () => bigint
+      lightningBalanceSats: bigint
     }
   | { status: 'error'; node: null; nodeId: null; error: Error }
 
