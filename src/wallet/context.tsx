@@ -1,56 +1,39 @@
-import { useEffect, useState, useCallback, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { WalletContext, defaultWalletContextValue, type WalletContextValue } from './wallet-context'
-import { generateMnemonic, validateMnemonic, getMnemonic, storeMnemonic } from './mnemonic'
+import { generateMnemonic, getMnemonic, storeMnemonic } from './mnemonic'
 import { deriveLdkSeed, deriveBdkDescriptors } from './keys'
+
+// Deduplicate concurrent calls from React StrictMode double-mount.
+let walletInitPromise: Promise<{ ldkSeed: Uint8Array; bdkDescriptors: { external: string; internal: string } }> | null = null
+
+async function doInitializeWallet() {
+  let mnemonic = await getMnemonic()
+  if (!mnemonic) {
+    mnemonic = generateMnemonic()
+    await storeMnemonic(mnemonic)
+  }
+  const ldkSeed = deriveLdkSeed(mnemonic)
+  const bdkDescriptors = deriveBdkDescriptors(mnemonic, 'signet')
+  return { ldkSeed, bdkDescriptors }
+}
+
+function initializeWallet() {
+  if (!walletInitPromise) {
+    walletInitPromise = doInitializeWallet().catch((err) => {
+      walletInitPromise = null
+      throw err
+    })
+  }
+  return walletInitPromise
+}
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WalletContextValue>(defaultWalletContextValue)
 
-  const setReady = useCallback((mnemonic: string) => {
-    const ldkSeed = deriveLdkSeed(mnemonic)
-    const bdkDescriptors = deriveBdkDescriptors(mnemonic, 'signet')
-    setState({ status: 'ready', ldkSeed, bdkDescriptors })
-  }, [])
-
-  const createWallet = useCallback(() => {
-    const mnemonic = generateMnemonic()
-    setState({
-      status: 'backup',
-      mnemonic,
-      confirmBackup: async () => {
-        await storeMnemonic(mnemonic)
-        setReady(mnemonic)
-      },
-    })
-  }, [setReady])
-
-  const importWallet = useCallback(
-    (raw: string) => {
-      const mnemonic = raw.trim().toLowerCase().replace(/\s+/g, ' ')
-      if (!validateMnemonic(mnemonic)) {
-        setState({ status: 'error', error: new Error('Invalid mnemonic') })
-        return
-      }
-      void storeMnemonic(mnemonic)
-        .then(() => setReady(mnemonic))
-        .catch((err: unknown) => {
-          setState({
-            status: 'error',
-            error: err instanceof Error ? err : new Error(String(err)),
-          })
-        })
-    },
-    [setReady],
-  )
-
   useEffect(() => {
-    getMnemonic()
-      .then((existing) => {
-        if (existing) {
-          setReady(existing)
-        } else {
-          setState({ status: 'new', createWallet, importWallet })
-        }
+    initializeWallet()
+      .then(({ ldkSeed, bdkDescriptors }) => {
+        setState({ status: 'ready', ldkSeed, bdkDescriptors })
       })
       .catch((err: unknown) => {
         setState({
@@ -58,7 +41,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           error: err instanceof Error ? err : new Error(String(err)),
         })
       })
-  }, [createWallet, importWallet, setReady])
+  }, [])
 
   return <WalletContext value={state}>{children}</WalletContext>
 }
