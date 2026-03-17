@@ -1,6 +1,6 @@
 import { generateMnemonic as generateBip39Mnemonic, validateMnemonic as validateBip39Mnemonic } from '@scure/bip39'
 import { wordlist } from '@scure/bip39/wordlists/english.js'
-import { idbGet, idbPut } from '../ldk/storage/idb'
+import { idbGet, openDb } from '../ldk/storage/idb'
 
 const MNEMONIC_KEY = 'primary'
 
@@ -16,10 +16,32 @@ export async function getMnemonic(): Promise<string | undefined> {
   return idbGet<string>('wallet_mnemonic', MNEMONIC_KEY)
 }
 
+// Atomic check-and-write in a single readwrite transaction to prevent TOCTOU
+// race across tabs. Throws if a mnemonic already exists.
 export async function storeMnemonic(mnemonic: string): Promise<void> {
-  const existing = await getMnemonic()
-  if (existing) {
-    throw new Error('Mnemonic already exists. Refusing to overwrite — this would destroy access to existing funds.')
-  }
-  await idbPut('wallet_mnemonic', MNEMONIC_KEY, mnemonic)
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('wallet_mnemonic', 'readwrite')
+    const store = tx.objectStore('wallet_mnemonic')
+    const getReq = store.get(MNEMONIC_KEY)
+
+    getReq.onsuccess = () => {
+      if (getReq.result !== undefined) {
+        tx.abort()
+        reject(new Error('Mnemonic already exists. Refusing to overwrite — this would destroy access to existing funds.'))
+        return
+      }
+      store.put(mnemonic, MNEMONIC_KEY)
+    }
+
+    getReq.onerror = () => {
+      reject(new Error(`IndexedDB get failed: ${getReq.error?.message ?? 'unknown'}`))
+    }
+
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => {
+      if (!tx.error || tx.error.name === 'AbortError') return // Already rejected above
+      reject(new Error(`IndexedDB put failed: ${tx.error.message}`))
+    }
+  })
 }

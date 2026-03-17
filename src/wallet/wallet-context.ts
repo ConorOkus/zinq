@@ -2,8 +2,6 @@ import { createContext } from 'react'
 
 export type WalletContextValue =
   | { status: 'loading' }
-  | { status: 'new'; createWallet: () => void; importWallet: (mnemonic: string) => void }
-  | { status: 'backup'; mnemonic: string; confirmBackup: () => Promise<void> }
   | {
       status: 'ready'
       ldkSeed: Uint8Array
