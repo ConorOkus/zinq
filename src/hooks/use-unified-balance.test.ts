@@ -14,6 +14,7 @@ function readyOnchain(overrides?: Partial<Extract<OnchainContextValue, { status:
     estimateMaxSendable: async () => ({ amount: 99_000n, fee: 1_000n, feeRate: 2n }),
     sendToAddress: async () => 'txid123',
     sendMax: async () => 'txid123',
+    listTransactions: () => [],
     error: null,
     ...overrides,
   }
@@ -44,6 +45,7 @@ function readyLdk(overrides?: Partial<Extract<LdkContextValue, { status: 'ready'
     createInvoice: () => 'lnbc1test',
     channelChangeCounter: 0,
     peersReconnected: true,
+    paymentHistory: [],
     ...overrides,
   }
 }

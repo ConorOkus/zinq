@@ -25,6 +25,7 @@ function readyContext(
     estimateMaxSendable: vi.fn().mockResolvedValue({ amount: 49850n, fee: 150n, feeRate: 1n }),
     sendToAddress: vi.fn().mockResolvedValue('txid123'),
     sendMax: vi.fn().mockResolvedValue('txid123'),
+    listTransactions: () => [],
     error: null,
     ...overrides,
   }
@@ -56,6 +57,7 @@ function readyLdkContext(): LdkContextValue {
     outboundCapacityMsat: vi.fn(() => 1_000_000_000n),
     lightningBalanceSats: 1_000_000n,
     channelChangeCounter: 0,
+    paymentHistory: [],
   }
 }
 

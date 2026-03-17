@@ -50,6 +50,7 @@ function renderSend(onchainValue?: OnchainContextValue, ldkValue?: LdkContextVal
     lightningBalanceSats: 1_000_000n,
     createInvoice: vi.fn(() => 'lnbc1test'),
     channelChangeCounter: 0,
+    paymentHistory: [],
   }
   return render(
     <MemoryRouter>
@@ -75,6 +76,7 @@ function readyContext(
       .mockResolvedValue({ amount: 49850n, fee: 150n, feeRate: 1n }),
     sendToAddress: vi.fn().mockResolvedValue('abc123txid'),
     sendMax: vi.fn().mockResolvedValue('maxabc123txid'),
+    listTransactions: () => [],
     error: null,
     ...overrides,
   }
