@@ -1,4 +1,4 @@
-import { idbPut, idbGetAll, type StoreName } from './idb'
+import { idbPut, idbGet, idbGetAll, type StoreName } from './idb'
 
 const STORE: StoreName = 'ldk_payment_history'
 
@@ -41,9 +41,9 @@ export async function updatePaymentStatus(
   feePaidMsat?: bigint | null,
   failureReason?: string,
 ): Promise<void> {
-  const all = await loadAllPayments()
-  const existing = all.get(paymentHash)
-  if (!existing) return
+  const raw = await idbGet<SerializedPayment>(STORE, paymentHash)
+  if (!raw) return
+  const existing = deserializePayment(raw)
   await persistPayment({
     ...existing,
     status,
@@ -52,19 +52,23 @@ export async function updatePaymentStatus(
   })
 }
 
+function deserializePayment(value: SerializedPayment): PersistedPayment {
+  return {
+    paymentHash: value.paymentHash,
+    direction: value.direction,
+    amountMsat: BigInt(value.amountMsat),
+    status: value.status,
+    feePaidMsat: value.feePaidMsat ? BigInt(value.feePaidMsat) : null,
+    createdAt: value.createdAt,
+    failureReason: value.failureReason,
+  }
+}
+
 export async function loadAllPayments(): Promise<Map<string, PersistedPayment>> {
   const raw = await idbGetAll<SerializedPayment>(STORE)
   const result = new Map<string, PersistedPayment>()
   for (const [key, value] of raw) {
-    result.set(key, {
-      paymentHash: value.paymentHash,
-      direction: value.direction,
-      amountMsat: BigInt(value.amountMsat),
-      status: value.status,
-      feePaidMsat: value.feePaidMsat ? BigInt(value.feePaidMsat) : null,
-      createdAt: value.createdAt,
-      failureReason: value.failureReason,
-    })
+    result.set(key, deserializePayment(value))
   }
   return result
 }

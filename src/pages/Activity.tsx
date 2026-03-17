@@ -3,6 +3,7 @@ import { formatBtc } from '../utils/format-btc'
 import { ArrowUpRight, ArrowDownLeft } from '../components/icons'
 
 function formatRelativeTime(timestamp: number): string {
+  if (timestamp === 0) return ''
   const seconds = Math.floor((Date.now() - timestamp) / 1000)
   if (seconds < 60) return 'Just now'
   const minutes = Math.floor(seconds / 60)
@@ -52,7 +53,7 @@ export function Activity() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-on-accent">
-                  {tx.label}
+                  {tx.direction === 'sent' ? 'Sent' : 'Received'}
                   {tx.status === 'pending' && (
                     <span className="ml-2 text-xs font-normal text-[var(--color-on-accent-muted)]">
                       Pending

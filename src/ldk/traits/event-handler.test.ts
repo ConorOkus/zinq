@@ -252,6 +252,8 @@ const {
   Event_FundingGenerationReady,
   Event_FundingTxBroadcastSafe,
   Event_BumpTransaction,
+  Event_PaymentPathSuccessful,
+  Event_PaymentPathFailed,
   Event_OpenChannelRequest,
   Event_DiscardFunding,
   Option_ThirtyTwoBytesZ_None,
@@ -533,6 +535,16 @@ describe('createEventHandler', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('BumpTransaction'),
     )
+  })
+
+  it('silently handles PaymentPathSuccessful', () => {
+    handleEvent(new Event_PaymentPathSuccessful())
+    expect(logSpy).not.toHaveBeenCalled()
+  })
+
+  it('silently handles PaymentPathFailed', () => {
+    handleEvent(new Event_PaymentPathFailed())
+    expect(logSpy).not.toHaveBeenCalled()
   })
 
   it('logs OpenChannelRequest with timeout note', () => {

@@ -22,7 +22,7 @@ import { startSyncLoop } from './sync/chain-sync'
 import { connectToPeer as doConnectToPeer, type PeerConnection } from './peers/peer-connection'
 import { idbPut } from './storage/idb'
 import { getKnownPeers, putKnownPeer, deleteKnownPeer } from './storage/known-peers'
-import { persistPayment, loadAllPayments, type PersistedPayment } from './storage/payment-history'
+import { persistPayment, loadAllPayments } from './storage/payment-history'
 import { bytesToHex } from './utils'
 import { msatToSatFloor } from '../utils/msat'
 
@@ -39,12 +39,10 @@ export function LdkProvider({
   const channelChangeCounterRef = useRef(0)
   const lastChannelSnapshotRef = useRef('')
   const activeConnections = useRef<Map<string, PeerConnection>>(new Map())
-  const paymentHistoryRef = useRef<PersistedPayment[]>([])
 
   const refreshPaymentHistory = useCallback(async () => {
     const all = await loadAllPayments()
     const payments = Array.from(all.values())
-    paymentHistoryRef.current = payments
     setState((prev) =>
       prev.status === 'ready' ? { ...prev, paymentHistory: payments } : prev,
     )
@@ -390,7 +388,7 @@ export function LdkProvider({
               preimage: event.preimage,
               feePaidMsat: event.feePaidMsat,
             })
-          } else {
+          } else if (event.type === 'failed') {
             setPaymentResult(event.paymentHash, {
               status: 'failed',
               reason: event.reason,
@@ -502,7 +500,6 @@ export function LdkProvider({
         // Load persisted Lightning payment history
         const initialPayments = await loadAllPayments()
         const initialPaymentHistory = Array.from(initialPayments.values())
-        paymentHistoryRef.current = initialPaymentHistory
 
         setState({
           status: 'ready',

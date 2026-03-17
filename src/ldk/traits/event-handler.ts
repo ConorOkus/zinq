@@ -61,6 +61,7 @@ const MAX_FORWARD_DELAY_MS = 10_000
 export type PaymentEventCallback = (event:
   | { type: 'sent'; paymentHash: string; preimage: Uint8Array; feePaidMsat: bigint | null }
   | { type: 'failed'; paymentHash: string; reason: string }
+  | { type: 'claimed'; paymentHash: string; amountMsat: bigint }
 ) => void
 
 export type ChannelClosedCallback = (counterpartyPubkeyHex: string) => void
@@ -180,6 +181,7 @@ function handleEvent(
       createdAt: Date.now(),
       failureReason: null,
     })
+    onPaymentEvent?.({ type: 'claimed', paymentHash, amountMsat: event.amount_msat })
     return
   }
 
