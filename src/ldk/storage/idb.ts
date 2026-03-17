@@ -1,5 +1,5 @@
 const DB_NAME = 'zinq-ldk'
-const DB_VERSION = 6
+const DB_VERSION = 7
 
 const STORES = [
   'ldk_seed',
@@ -11,6 +11,7 @@ const STORES = [
   'ldk_known_peers',
   'ldk_rgs_last_sync_timestamp',
   'ldk_funding_txs',
+  'ldk_payment_history',
   'wallet_mnemonic',
   'bdk_changeset',
 ] as const

@@ -2,6 +2,7 @@ import { createContext } from 'react'
 import type { Wallet } from '@bitcoindevkit/bdk-wallet-web'
 import type { Bolt11Invoice, Offer, HumanReadableName, RecentPaymentDetails, ChannelDetails, ChannelId } from 'lightningdevkit'
 import type { LdkNode } from './init'
+import type { PersistedPayment } from './storage/payment-history'
 
 export type SyncStatus = 'syncing' | 'synced' | 'stale'
 
@@ -40,6 +41,8 @@ export type LdkContextValue =
       channelChangeCounter: number
       /** True once initial peer reconnection has completed and lightning balance is accurate. */
       peersReconnected: boolean
+      /** Persisted Lightning payment history (inbound + outbound). */
+      paymentHistory: PersistedPayment[]
     }
   | { status: 'error'; node: null; nodeId: null; error: Error }
 

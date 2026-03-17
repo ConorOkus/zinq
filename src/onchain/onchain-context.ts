@@ -12,11 +12,21 @@ export interface MaxSendEstimate {
   feeRate: bigint
 }
 
+export interface OnchainTransaction {
+  txid: string
+  sent: bigint
+  received: bigint
+  confirmationTime: bigint | null
+  firstSeen: bigint | null
+  isConfirmed: boolean
+}
+
 export type OnchainContextValue =
   | { status: 'loading'; balance: null; error: null }
   | {
       status: 'ready'
       balance: OnchainBalance
+      listTransactions: () => OnchainTransaction[]
       generateAddress: () => string
       estimateFee: (address: string, amountSats: bigint) => Promise<FeeEstimate>
       estimateMaxSendable: (address: string) => Promise<MaxSendEstimate>

@@ -15,6 +15,8 @@ import {
   Event_ConnectionNeeded,
   Event_BumpTransaction,
   Event_DiscardFunding,
+  Event_PaymentPathSuccessful,
+  Event_PaymentPathFailed,
   Option_ThirtyTwoBytesZ_Some,
   Option_u64Z_Some,
   Option_PaymentFailureReasonZ_Some,
@@ -47,6 +49,7 @@ import {
   SignOptions,
 } from '@bitcoindevkit/bdk-wallet-web'
 import { idbPut, idbGet, idbDelete } from '../storage/idb'
+import { persistPayment, updatePaymentStatus } from '../storage/payment-history'
 import { bytesToHex } from '../utils'
 import { putChangeset } from '../../onchain/storage/changeset'
 import { extractTxBytes, broadcastTransaction } from '../../onchain/tx-bridge'
@@ -58,6 +61,7 @@ const MAX_FORWARD_DELAY_MS = 10_000
 export type PaymentEventCallback = (event:
   | { type: 'sent'; paymentHash: string; preimage: Uint8Array; feePaidMsat: bigint | null }
   | { type: 'failed'; paymentHash: string; reason: string }
+  | { type: 'claimed'; paymentHash: string; amountMsat: bigint }
 ) => void
 
 export type ChannelClosedCallback = (counterpartyPubkeyHex: string) => void
@@ -161,12 +165,23 @@ function handleEvent(
   }
 
   if (event instanceof Event_PaymentClaimed) {
+    const paymentHash = bytesToHex(event.payment_hash)
     console.log(
       '[LDK Event] PaymentClaimed:',
-      bytesToHex(event.payment_hash),
+      paymentHash,
       'amount_msat:',
       event.amount_msat.toString(),
     )
+    void persistPayment({
+      paymentHash,
+      direction: 'inbound',
+      amountMsat: event.amount_msat,
+      status: 'succeeded',
+      feePaidMsat: null,
+      createdAt: Date.now(),
+      failureReason: null,
+    })
+    onPaymentEvent?.({ type: 'claimed', paymentHash, amountMsat: event.amount_msat })
     return
   }
 
@@ -178,6 +193,7 @@ function handleEvent(
     const feePaid = event.fee_paid_msat
     const feePaidMsat = feePaid instanceof Option_u64Z_Some ? feePaid.some : null
     console.log('[LDK Event] PaymentSent:', paymentHash)
+    void updatePaymentStatus(paymentIdHex, 'succeeded', feePaidMsat)
     onPaymentEvent?.({
       type: 'sent',
       paymentHash: paymentIdHex,
@@ -198,6 +214,7 @@ function handleEvent(
       reason = describePaymentFailure(reasonOpt.some)
     }
     console.warn('[LDK Event] PaymentFailed:', paymentHash, reason)
+    void updatePaymentStatus(paymentIdHex, 'failed', null, reason)
     onPaymentEvent?.({ type: 'failed', paymentHash: paymentIdHex, reason })
     return
   }
@@ -397,6 +414,12 @@ function handleEvent(
       '[LDK Event] DiscardFunding:',
       bytesToHex(event.channel_id.write()).substring(0, 16) + '...',
     )
+    return
+  }
+
+  // Payment path events — informational only, no action needed.
+  // Full payment outcome is handled by PaymentSent / PaymentFailed.
+  if (event instanceof Event_PaymentPathSuccessful || event instanceof Event_PaymentPathFailed) {
     return
   }
 

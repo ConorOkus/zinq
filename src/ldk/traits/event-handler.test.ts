@@ -80,6 +80,8 @@ vi.mock('lightningdevkit', () => {
     user_channel_id = BigInt(42)
   }
   class Event_BumpTransaction extends MockEvent {}
+  class Event_PaymentPathSuccessful extends MockEvent {}
+  class Event_PaymentPathFailed extends MockEvent {}
   class Event_OpenChannelRequest extends MockEvent {}
   class Event_DiscardFunding extends MockEvent {
     channel_id = { write: () => new Uint8Array([0xee, 0xff]) }
@@ -144,6 +146,8 @@ vi.mock('lightningdevkit', () => {
     Event_OpenChannelRequest,
     Event_ConnectionNeeded,
     Event_BumpTransaction,
+    Event_PaymentPathSuccessful,
+    Event_PaymentPathFailed,
     Event_DiscardFunding,
     Option_ThirtyTwoBytesZ_Some,
     Option_ThirtyTwoBytesZ_None,
@@ -175,6 +179,7 @@ vi.mock('../storage/idb', () => ({
   idbPut: vi.fn(() => Promise.resolve()),
   idbGet: () => mockIdbGet(),
   idbDelete: vi.fn(() => Promise.resolve()),
+  idbGetAll: vi.fn(() => Promise.resolve(new Map())),
 }))
 
 const mockExtractTxBytes = vi.fn((_psbt: string) => new Uint8Array([0xde, 0xad]))
@@ -247,6 +252,8 @@ const {
   Event_FundingGenerationReady,
   Event_FundingTxBroadcastSafe,
   Event_BumpTransaction,
+  Event_PaymentPathSuccessful,
+  Event_PaymentPathFailed,
   Event_OpenChannelRequest,
   Event_DiscardFunding,
   Option_ThirtyTwoBytesZ_None,
@@ -528,6 +535,16 @@ describe('createEventHandler', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('BumpTransaction'),
     )
+  })
+
+  it('silently handles PaymentPathSuccessful', () => {
+    handleEvent(new Event_PaymentPathSuccessful())
+    expect(logSpy).not.toHaveBeenCalled()
+  })
+
+  it('silently handles PaymentPathFailed', () => {
+    handleEvent(new Event_PaymentPathFailed())
+    expect(logSpy).not.toHaveBeenCalled()
   })
 
   it('logs OpenChannelRequest with timeout note', () => {

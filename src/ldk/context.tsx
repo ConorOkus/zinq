@@ -22,6 +22,7 @@ import { startSyncLoop } from './sync/chain-sync'
 import { connectToPeer as doConnectToPeer, type PeerConnection } from './peers/peer-connection'
 import { idbPut } from './storage/idb'
 import { getKnownPeers, putKnownPeer, deleteKnownPeer } from './storage/known-peers'
+import { persistPayment, loadAllPayments } from './storage/payment-history'
 import { bytesToHex } from './utils'
 import { msatToSatFloor } from '../utils/msat'
 
@@ -38,6 +39,14 @@ export function LdkProvider({
   const channelChangeCounterRef = useRef(0)
   const lastChannelSnapshotRef = useRef('')
   const activeConnections = useRef<Map<string, PeerConnection>>(new Map())
+
+  const refreshPaymentHistory = useCallback(async () => {
+    const all = await loadAllPayments()
+    const payments = Array.from(all.values())
+    setState((prev) =>
+      prev.status === 'ready' ? { ...prev, paymentHistory: payments } : prev,
+    )
+  }, [])
 
   const connectToPeer = useCallback(
     async (pubkey: string, host: string, port: number): Promise<void> => {
@@ -221,10 +230,26 @@ export function LdkProvider({
         throw new Error('Payment routing failed — no route found or duplicate payment')
       }
 
-      setPaymentResult(bytesToHex(paymentId), { status: 'pending' })
+      const paymentIdHex = bytesToHex(paymentId)
+      setPaymentResult(paymentIdHex, { status: 'pending' })
+
+      const invoiceAmountOpt = invoice.amount_milli_satoshis()
+      const resolvedMsat = invoiceAmountOpt instanceof Option_u64Z_Some
+        ? invoiceAmountOpt.some
+        : amountMsat ?? 0n
+      void persistPayment({
+        paymentHash: paymentIdHex,
+        direction: 'outbound',
+        amountMsat: resolvedMsat,
+        status: 'pending',
+        feePaidMsat: null,
+        createdAt: Date.now(),
+        failureReason: null,
+      }).then(() => void refreshPaymentHistory())
+
       return paymentId
     },
-    [],
+    [refreshPaymentHistory],
   )
 
   const sendBolt12Payment = useCallback(
@@ -253,10 +278,22 @@ export function LdkProvider({
         throw new Error('Failed to initiate offer payment')
       }
 
-      setPaymentResult(bytesToHex(paymentId), { status: 'pending' })
+      const paymentIdHex = bytesToHex(paymentId)
+      setPaymentResult(paymentIdHex, { status: 'pending' })
+
+      void persistPayment({
+        paymentHash: paymentIdHex,
+        direction: 'outbound',
+        amountMsat: amountMsat ?? 0n,
+        status: 'pending',
+        feePaidMsat: null,
+        createdAt: Date.now(),
+        failureReason: null,
+      }).then(() => void refreshPaymentHistory())
+
       return paymentId
     },
-    [],
+    [refreshPaymentHistory],
   )
 
   const sendBip353Payment = useCallback(
@@ -281,10 +318,22 @@ export function LdkProvider({
         throw new Error('Failed to initiate BIP 353 payment')
       }
 
-      setPaymentResult(bytesToHex(paymentId), { status: 'pending' })
+      const paymentIdHex = bytesToHex(paymentId)
+      setPaymentResult(paymentIdHex, { status: 'pending' })
+
+      void persistPayment({
+        paymentHash: paymentIdHex,
+        direction: 'outbound',
+        amountMsat: amountMsat,
+        status: 'pending',
+        feePaidMsat: null,
+        createdAt: Date.now(),
+        failureReason: null,
+      }).then(() => void refreshPaymentHistory())
+
       return paymentId
     },
-    [],
+    [refreshPaymentHistory],
   )
 
   const abandonPayment = useCallback((paymentId: Uint8Array): void => {
@@ -321,7 +370,7 @@ export function LdkProvider({
     let cleanupEventHandlerFn: (() => void) | null = null
 
     initializeLdk(ldkSeed)
-      .then(({ node, watchState, cleanupEventHandler, setBdkWallet, setPaymentCallback, setChannelClosedCallback }) => {
+      .then(async ({ node, watchState, cleanupEventHandler, setBdkWallet, setPaymentCallback, setChannelClosedCallback }) => {
         if (cancelled) return
 
         nodeRef.current = node
@@ -331,7 +380,7 @@ export function LdkProvider({
           ;(window as unknown as Record<string, unknown>).__ldkNode = node
         }
 
-        // Wire payment event callback to update the result store
+        // Wire payment event callback to update the result store and refresh history
         setPaymentCallback((event) => {
           if (event.type === 'sent') {
             setPaymentResult(event.paymentHash, {
@@ -339,12 +388,13 @@ export function LdkProvider({
               preimage: event.preimage,
               feePaidMsat: event.feePaidMsat,
             })
-          } else {
+          } else if (event.type === 'failed') {
             setPaymentResult(event.paymentHash, {
               status: 'failed',
               reason: event.reason,
             })
           }
+          void refreshPaymentHistory()
         })
 
         // Remove peer from known peers when their last channel closes,
@@ -447,6 +497,10 @@ export function LdkProvider({
         const initialBalanceSats = msatToSatFloor(initialCapacityMsat)
         lightningBalanceSatsRef.current = initialBalanceSats
 
+        // Load persisted Lightning payment history
+        const initialPayments = await loadAllPayments()
+        const initialPaymentHistory = Array.from(initialPayments.values())
+
         setState({
           status: 'ready',
           node,
@@ -471,6 +525,7 @@ export function LdkProvider({
           lightningBalanceSats: initialBalanceSats,
           channelChangeCounter: 0,
           peersReconnected: false,
+          paymentHistory: initialPaymentHistory,
         })
 
         // Auto-reconnect to known peers, then mark peersReconnected so
@@ -563,7 +618,7 @@ export function LdkProvider({
       activeConnections.current.clear()
       nodeRef.current = null
     }
-  }, [connectToPeer, forgetPeer, createChannel, closeChannel, forceCloseChannel, listChannels, createInvoice, sendBolt11Payment, sendBolt12Payment, sendBip353Payment, abandonPayment, getPaymentResult, listRecentPayments, outboundCapacityMsat, ldkSeed])
+  }, [connectToPeer, forgetPeer, createChannel, closeChannel, forceCloseChannel, listChannels, createInvoice, sendBolt11Payment, sendBolt12Payment, sendBip353Payment, abandonPayment, getPaymentResult, listRecentPayments, outboundCapacityMsat, refreshPaymentHistory, ldkSeed])
 
   return <LdkContext value={state}>{children}</LdkContext>
 }

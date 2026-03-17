@@ -97,6 +97,23 @@ export function OnchainProvider({
     }
   }, [ldk])
 
+  const listTransactions = useCallback(() => {
+    const wallet = walletRef.current
+    if (!wallet) return []
+    return wallet.transactions().map((wtx) => {
+      const sr = wallet.sent_and_received(wtx.tx)
+      const anchor = wtx.anchors[0]
+      return {
+        txid: wtx.txid.toString(),
+        sent: sr[0].to_sat(),
+        received: sr[1].to_sat(),
+        confirmationTime: anchor?.confirmation_time ?? null,
+        firstSeen: wtx.first_seen ?? null,
+        isConfirmed: wtx.chain_position.is_confirmed,
+      }
+    })
+  }, [])
+
   const generateAddress = useCallback((): string => {
     if (!walletRef.current) throw new Error('BDK wallet not initialized')
     const info = walletRef.current.next_unused_address('external')
@@ -289,6 +306,7 @@ export function OnchainProvider({
             setState({
               status: 'ready',
               balance,
+              listTransactions,
               generateAddress,
               estimateFee,
               estimateMaxSendable,
@@ -318,7 +336,7 @@ export function OnchainProvider({
       walletRef.current = null
       esploraRef.current = null
     }
-  }, [bdkDescriptors, generateAddress, estimateFee, estimateMaxSendable, sendToAddress, sendMax])
+  }, [bdkDescriptors, listTransactions, generateAddress, estimateFee, estimateMaxSendable, sendToAddress, sendMax])
 
   return <OnchainContext value={state}>{children}</OnchainContext>
 }
