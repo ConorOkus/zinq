@@ -11,12 +11,25 @@ function assertHex(value: string, label: string): void {
 
 export class EsploraClient {
   readonly baseUrl: string
+  private externalSignal: AbortSignal | undefined
+
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl
   }
 
+  /** Set an external abort signal (e.g. overall sync timeout) that cancels all requests. */
+  setSignal(signal: AbortSignal | undefined): void {
+    this.externalSignal = signal
+  }
+
+  private getSignal(): AbortSignal {
+    const perRequest = AbortSignal.timeout(FETCH_TIMEOUT_MS)
+    if (!this.externalSignal) return perRequest
+    return AbortSignal.any([this.externalSignal, perRequest])
+  }
+
   async getTipHash(): Promise<string> {
-    const res = await fetch(`${this.baseUrl}/blocks/tip/hash`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const res = await fetch(`${this.baseUrl}/blocks/tip/hash`, { signal: this.getSignal() })
     if (!res.ok) throw new Error(`[Esplora] GET /blocks/tip/hash failed: ${res.status}`)
     const hash = (await res.text()).trim()
     assertHex(hash, 'tipHash')
@@ -24,7 +37,7 @@ export class EsploraClient {
   }
 
   async getTipHeight(): Promise<number> {
-    const res = await fetch(`${this.baseUrl}/blocks/tip/height`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const res = await fetch(`${this.baseUrl}/blocks/tip/height`, { signal: this.getSignal() })
     if (!res.ok) throw new Error(`[Esplora] GET /blocks/tip/height failed: ${res.status}`)
     const height = parseInt(await res.text(), 10)
     if (!Number.isFinite(height) || height < 0) {
@@ -35,7 +48,7 @@ export class EsploraClient {
 
   async getBlockHeader(hash: string): Promise<Uint8Array> {
     assertHex(hash, 'blockHash')
-    const res = await fetch(`${this.baseUrl}/block/${hash}/header`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const res = await fetch(`${this.baseUrl}/block/${hash}/header`, { signal: this.getSignal() })
     if (!res.ok) throw new Error(`[Esplora] GET /block/${hash}/header failed: ${res.status}`)
     const hex = (await res.text()).trim()
     assertHex(hex, 'blockHeader')
@@ -44,7 +57,7 @@ export class EsploraClient {
 
   async getBlockStatus(hash: string): Promise<BlockStatus> {
     assertHex(hash, 'blockHash')
-    const res = await fetch(`${this.baseUrl}/block/${hash}/status`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const res = await fetch(`${this.baseUrl}/block/${hash}/status`, { signal: this.getSignal() })
     if (!res.ok) throw new Error(`[Esplora] GET /block/${hash}/status failed: ${res.status}`)
     const data: unknown = await res.json()
     if (typeof data !== 'object' || data === null || !('in_best_chain' in data)) {
@@ -55,7 +68,7 @@ export class EsploraClient {
 
   async getTxStatus(txid: string): Promise<TxStatus> {
     assertHex(txid, 'txid')
-    const res = await fetch(`${this.baseUrl}/tx/${txid}/status`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const res = await fetch(`${this.baseUrl}/tx/${txid}/status`, { signal: this.getSignal() })
     if (!res.ok) throw new Error(`[Esplora] GET /tx/${txid}/status failed: ${res.status}`)
     const data: unknown = await res.json()
     if (typeof data !== 'object' || data === null || !('confirmed' in data)) {
@@ -66,7 +79,7 @@ export class EsploraClient {
 
   async getTxHex(txid: string): Promise<Uint8Array> {
     assertHex(txid, 'txid')
-    const res = await fetch(`${this.baseUrl}/tx/${txid}/hex`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const res = await fetch(`${this.baseUrl}/tx/${txid}/hex`, { signal: this.getSignal() })
     if (!res.ok) throw new Error(`[Esplora] GET /tx/${txid}/hex failed: ${res.status}`)
     const hex = (await res.text()).trim()
     assertHex(hex, 'txHex')
@@ -75,7 +88,7 @@ export class EsploraClient {
 
   async getTxMerkleProof(txid: string): Promise<MerkleProof> {
     assertHex(txid, 'txid')
-    const res = await fetch(`${this.baseUrl}/tx/${txid}/merkle-proof`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const res = await fetch(`${this.baseUrl}/tx/${txid}/merkle-proof`, { signal: this.getSignal() })
     if (!res.ok)
       throw new Error(`[Esplora] GET /tx/${txid}/merkle-proof failed: ${res.status}`)
     const data: unknown = await res.json()
@@ -87,7 +100,7 @@ export class EsploraClient {
 
   async getOutspend(txid: string, vout: number): Promise<OutspendStatus> {
     assertHex(txid, 'txid')
-    const res = await fetch(`${this.baseUrl}/tx/${txid}/outspend/${vout}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const res = await fetch(`${this.baseUrl}/tx/${txid}/outspend/${vout}`, { signal: this.getSignal() })
     if (!res.ok)
       throw new Error(`[Esplora] GET /tx/${txid}/outspend/${vout} failed: ${res.status}`)
     const data: unknown = await res.json()

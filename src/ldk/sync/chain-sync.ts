@@ -18,8 +18,10 @@ export async function syncOnce(
   confirmables: Confirm[],
   watchState: WatchState,
   esplora: EsploraClient,
-  lastSyncTipHash: string | null
+  lastSyncTipHash: string | null,
+  signal?: AbortSignal,
 ): Promise<string> {
+  esplora.setSignal(signal)
   const tipHash = await esplora.getTipHash()
   if (tipHash === lastSyncTipHash) return tipHash
 
@@ -149,6 +151,7 @@ export interface SyncLoopConfig {
 
 const MAX_BACKOFF_MS = 5 * 60 * 1_000 // 5 minutes
 const STALE_THRESHOLD = 3 // consecutive errors before 'stale'
+const SYNC_TIMEOUT_MS = 60_000
 
 export function startSyncLoop(config: SyncLoopConfig): SyncLoopHandle {
   let lastTipHash: string | null = null
@@ -183,12 +186,24 @@ export function startSyncLoop(config: SyncLoopConfig): SyncLoopHandle {
       // Initialize RGS concurrently — don't block chain sync on gossip fetch
       void ensureRgs()
 
-      lastTipHash = await syncOnce(
-        config.confirmables,
-        config.watchState,
-        config.esplora,
-        lastTipHash,
-      )
+      const controller = new AbortController()
+      const syncTimeout = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS)
+      try {
+        lastTipHash = await syncOnce(
+          config.confirmables,
+          config.watchState,
+          config.esplora,
+          lastTipHash,
+          controller.signal,
+        )
+      } catch (err) {
+        // Reset lastTipHash on timeout to force full retry next tick
+        if (controller.signal.aborted) lastTipHash = null
+        throw err
+      } finally {
+        clearTimeout(syncTimeout)
+        config.esplora.setSignal(undefined)
+      }
 
       config.channelManager.timer_tick_occurred()
       config.chainMonitor.rebroadcast_pending_claims()
@@ -212,7 +227,7 @@ export function startSyncLoop(config: SyncLoopConfig): SyncLoopHandle {
 
       // Periodic RGS delta sync — persist graph immediately after to keep
       // timestamp and graph in sync (prevents data gap if browser crashes)
-      const rgsInterval = config.rgsSyncIntervalTicks ?? 20
+      const rgsInterval = config.rgsSyncIntervalTicks ?? 60
       if (rgsHandle && config.rgsUrl && (tickCount + 1) % rgsInterval === 0) {
         try {
           await syncRapidGossip(rgsHandle, config.rgsUrl)

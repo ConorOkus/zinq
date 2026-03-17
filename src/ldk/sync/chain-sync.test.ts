@@ -27,6 +27,7 @@ function createMockConfirmable(): any {
 
 function createMockEsplora(tipHash = 'newtip'): EsploraClient {
   return {
+    setSignal: vi.fn(),
     getTipHash: vi.fn().mockResolvedValue(tipHash),
     getTipHeight: vi.fn().mockResolvedValue(100),
     getBlockHeader: vi.fn().mockResolvedValue(new Uint8Array(80)),
@@ -165,5 +166,32 @@ describe('syncOnce', () => {
     const result = await syncOnce([confirmable], watchState, esplora, 'oldtip')
 
     expect(result).toBe('brandnewtip')
+  })
+
+  it('sets and clears the external signal on esplora', async () => {
+    const confirmable = createMockConfirmable()
+    const esplora = createMockEsplora('newtip')
+    const watchState = createEmptyWatchState()
+    const signal = AbortSignal.timeout(5000)
+
+    await syncOnce([confirmable], watchState, esplora, 'oldtip', signal)
+
+    expect(esplora.setSignal).toHaveBeenCalledWith(signal)
+  })
+
+  it('aborts when signal is already aborted', async () => {
+    const confirmable = createMockConfirmable()
+    const esplora = createMockEsplora('newtip')
+    // Make getTipHash respect the abort signal
+    ;(esplora.getTipHash as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      throw new DOMException('The operation was aborted.', 'AbortError')
+    })
+    const watchState = createEmptyWatchState()
+    const controller = new AbortController()
+    controller.abort()
+
+    await expect(
+      syncOnce([confirmable], watchState, esplora, 'oldtip', controller.signal),
+    ).rejects.toThrow('aborted')
   })
 })

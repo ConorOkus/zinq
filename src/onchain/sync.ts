@@ -35,6 +35,7 @@ export function startOnchainSyncLoop(
     }
   }
 
+  const BDK_SYNC_TIMEOUT_MS = 90_000
   const SYNC_NOW_RETRIES = 3
   const SYNC_NOW_RETRY_MS = 3_000
 
@@ -47,10 +48,12 @@ export function startOnchainSyncLoop(
     isSyncing = true
     try {
       const syncRequest = wallet.start_sync_with_revealed_spks()
-      const update = await esploraClient.sync(
-        syncRequest,
-        ONCHAIN_CONFIG.syncParallelRequests,
-      )
+      const update = await Promise.race([
+        esploraClient.sync(syncRequest, ONCHAIN_CONFIG.syncParallelRequests),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('BDK sync timeout')), BDK_SYNC_TIMEOUT_MS),
+        ),
+      ])
       wallet.apply_update(update)
 
       // Persist ChangeSet — take_staged() is destructive, so log on failure

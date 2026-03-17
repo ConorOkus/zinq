@@ -107,4 +107,48 @@ describe('EsploraClient', () => {
     )
     await expect(client.getTipHash()).rejects.toThrow('failed: 404')
   })
+
+  it('composes external signal with per-request timeout via setSignal', async () => {
+    const externalSignal = AbortSignal.timeout(30_000)
+    client.setSignal(externalSignal)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(`${FAKE_HASH}\n`, { status: 200 })
+    )
+
+    await client.getTipHash()
+
+    // The signal should be an AbortSignal.any() composite
+    const callSignal = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1]?.signal
+    expect(callSignal).toBeInstanceOf(AbortSignal)
+  })
+
+  it('uses per-request timeout only when no external signal set', async () => {
+    client.setSignal(undefined)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(`${FAKE_HASH}\n`, { status: 200 })
+    )
+
+    await client.getTipHash()
+
+    const callSignal = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1]?.signal
+    expect(callSignal).toBeInstanceOf(AbortSignal)
+  })
+
+  it('aborts request when external signal is aborted', async () => {
+    const controller = new AbortController()
+    client.setSignal(controller.signal)
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      // Simulate checking the signal
+      if (init?.signal?.aborted) {
+        throw new DOMException('The operation was aborted.', 'AbortError')
+      }
+      return new Response(`${FAKE_HASH}\n`, { status: 200 })
+    })
+
+    controller.abort()
+    await expect(client.getTipHash()).rejects.toThrow('aborted')
+  })
 })

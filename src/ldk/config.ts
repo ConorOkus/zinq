@@ -9,5 +9,5 @@ export const SIGNET_CONFIG = {
     'wss://p.mutinynet.com',
   peerTimerIntervalMs: 10_000,
   rgsUrl: 'https://rgs.mutinynet.com/snapshot',
-  rgsSyncIntervalTicks: 20, // ~10 min at 30s chain poll interval
+  rgsSyncIntervalTicks: 60, // ~30 min at 30s chain poll interval
 } as const
