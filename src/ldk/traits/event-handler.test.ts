@@ -80,6 +80,8 @@ vi.mock('lightningdevkit', () => {
     user_channel_id = BigInt(42)
   }
   class Event_BumpTransaction extends MockEvent {}
+  class Event_PaymentPathSuccessful extends MockEvent {}
+  class Event_PaymentPathFailed extends MockEvent {}
   class Event_OpenChannelRequest extends MockEvent {}
   class Event_DiscardFunding extends MockEvent {
     channel_id = { write: () => new Uint8Array([0xee, 0xff]) }
@@ -144,6 +146,8 @@ vi.mock('lightningdevkit', () => {
     Event_OpenChannelRequest,
     Event_ConnectionNeeded,
     Event_BumpTransaction,
+    Event_PaymentPathSuccessful,
+    Event_PaymentPathFailed,
     Event_DiscardFunding,
     Option_ThirtyTwoBytesZ_Some,
     Option_ThirtyTwoBytesZ_None,

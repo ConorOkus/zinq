@@ -15,6 +15,8 @@ import {
   Event_ConnectionNeeded,
   Event_BumpTransaction,
   Event_DiscardFunding,
+  Event_PaymentPathSuccessful,
+  Event_PaymentPathFailed,
   Option_ThirtyTwoBytesZ_Some,
   Option_u64Z_Some,
   Option_PaymentFailureReasonZ_Some,
@@ -410,6 +412,12 @@ function handleEvent(
       '[LDK Event] DiscardFunding:',
       bytesToHex(event.channel_id.write()).substring(0, 16) + '...',
     )
+    return
+  }
+
+  // Payment path events — informational only, no action needed.
+  // Full payment outcome is handled by PaymentSent / PaymentFailed.
+  if (event instanceof Event_PaymentPathSuccessful || event instanceof Event_PaymentPathFailed) {
     return
   }
 
