@@ -119,7 +119,7 @@ describe('EsploraClient', () => {
     await client.getTipHash()
 
     // The signal should be an AbortSignal.any() composite
-    const callSignal = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1]?.signal
+    const callSignal = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![1]?.signal
     expect(callSignal).toBeInstanceOf(AbortSignal)
   })
 
@@ -132,7 +132,7 @@ describe('EsploraClient', () => {
 
     await client.getTipHash()
 
-    const callSignal = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1]?.signal
+    const callSignal = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![1]?.signal
     expect(callSignal).toBeInstanceOf(AbortSignal)
   })
 
