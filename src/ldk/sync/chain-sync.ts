@@ -22,112 +22,116 @@ export async function syncOnce(
   signal?: AbortSignal,
 ): Promise<string> {
   esplora.setSignal(signal)
-  const tipHash = await esplora.getTipHash()
-  if (tipHash === lastSyncTipHash) return tipHash
+  try {
+    const tipHash = await esplora.getTipHash()
+    if (tipHash === lastSyncTipHash) return tipHash
 
-  // 1. Reorg detection: check get_relevant_txids() against chain
-  for (const confirmable of confirmables) {
-    const relevantTxids = confirmable.get_relevant_txids()
-    for (const tuple of relevantTxids) {
-      const txid = tuple.get_a()
-      const blockHashOpt = tuple.get_c()
-      if (blockHashOpt && blockHashOpt instanceof Uint8Array && blockHashOpt.length > 0) {
-        const blockHashHex = txidBytesToHex(blockHashOpt)
-        const status = await esplora.getBlockStatus(blockHashHex)
-        if (!status.in_best_chain) {
-          confirmable.transaction_unconfirmed(txid)
+    // 1. Reorg detection: check get_relevant_txids() against chain
+    for (const confirmable of confirmables) {
+      const relevantTxids = confirmable.get_relevant_txids()
+      for (const tuple of relevantTxids) {
+        const txid = tuple.get_a()
+        const blockHashOpt = tuple.get_c()
+        if (blockHashOpt && blockHashOpt instanceof Uint8Array && blockHashOpt.length > 0) {
+          const blockHashHex = txidBytesToHex(blockHashOpt)
+          const status = await esplora.getBlockStatus(blockHashHex)
+          if (!status.in_best_chain) {
+            confirmable.transaction_unconfirmed(txid)
+          }
         }
       }
     }
-  }
 
-  // 2. Update best block
-  const tipHeight = await esplora.getTipHeight()
-  const tipHeader = await esplora.getBlockHeader(tipHash)
-  for (const confirmable of confirmables) {
-    confirmable.best_block_updated(tipHeader, tipHeight)
-  }
-
-  // 3. Check watched txids for new confirmations (parallel)
-  const txidEntries = [...watchState.watchedTxids.entries()]
-  if (txidEntries.length > 0) {
-    const txResults = await Promise.allSettled(
-      txidEntries.map(async ([txidHex]) => {
-        const status = await esplora.getTxStatus(txidHex)
-        if (status.confirmed && status.block_hash && status.block_height != null) {
-          const header = await esplora.getBlockHeader(status.block_hash)
-          const rawTx = await esplora.getTxHex(txidHex)
-          const proof = await esplora.getTxMerkleProof(txidHex)
-          const txdata = [TwoTuple_usizeTransactionZ.constructor_new(proof.pos, rawTx)]
-          for (const confirmable of confirmables) {
-            confirmable.transactions_confirmed(header, txdata, status.block_height)
-          }
-        }
-      })
-    )
-    const failedTxChecks = txResults.filter((r) => r.status === 'rejected')
-    if (failedTxChecks.length > 0) {
-      console.warn(`[LDK Sync] ${failedTxChecks.length}/${txidEntries.length} txid checks failed`)
+    // 2. Update best block
+    const tipHeight = await esplora.getTipHeight()
+    const tipHeader = await esplora.getBlockHeader(tipHash)
+    for (const confirmable of confirmables) {
+      confirmable.best_block_updated(tipHeader, tipHeight)
     }
-  }
 
-  // 4. Check watched outputs for spends (parallel)
-  const outputEntries = [...watchState.watchedOutputs.entries()]
-  if (outputEntries.length > 0) {
-    const outputResults = await Promise.allSettled(
-      outputEntries.map(async ([key]) => {
-        const colonIdx = key.indexOf(':')
-        if (colonIdx === -1) {
-          console.error(`[LDK Sync] Malformed watched output key: ${key}`)
-          return
-        }
-        const txid = key.slice(0, colonIdx)
-        const vout = parseInt(key.slice(colonIdx + 1), 10)
-        if (isNaN(vout)) {
-          console.error(`[LDK Sync] Invalid vout in watched output key: ${key}`)
-          return
-        }
-        const spend = await esplora.getOutspend(txid, vout)
-        if (spend.spent && spend.txid) {
-          const status = await esplora.getTxStatus(spend.txid)
+    // 3. Check watched txids for new confirmations (parallel)
+    const txidEntries = [...watchState.watchedTxids.entries()]
+    if (txidEntries.length > 0) {
+      const txResults = await Promise.allSettled(
+        txidEntries.map(async ([txidHex]) => {
+          const status = await esplora.getTxStatus(txidHex)
           if (status.confirmed && status.block_hash && status.block_height != null) {
             const header = await esplora.getBlockHeader(status.block_hash)
-            const rawTx = await esplora.getTxHex(spend.txid)
-            const proof = await esplora.getTxMerkleProof(spend.txid)
+            const rawTx = await esplora.getTxHex(txidHex)
+            const proof = await esplora.getTxMerkleProof(txidHex)
             const txdata = [TwoTuple_usizeTransactionZ.constructor_new(proof.pos, rawTx)]
             for (const confirmable of confirmables) {
               confirmable.transactions_confirmed(header, txdata, status.block_height)
             }
           }
-        }
-      })
-    )
-    const failedOutputChecks = outputResults.filter((r) => r.status === 'rejected')
-    if (failedOutputChecks.length > 0) {
-      console.warn(`[LDK Sync] ${failedOutputChecks.length}/${outputEntries.length} output checks failed`)
+        })
+      )
+      const failedTxChecks = txResults.filter((r) => r.status === 'rejected')
+      if (failedTxChecks.length > 0) {
+        console.warn(`[LDK Sync] ${failedTxChecks.length}/${txidEntries.length} txid checks failed`)
+      }
     }
-  }
 
-  // 5. Prune confirmed items no longer tracked by LDK
-  const allRelevantTxids = new Set<string>()
-  for (const confirmable of confirmables) {
-    for (const tuple of confirmable.get_relevant_txids()) {
-      allRelevantTxids.add(txidBytesToHex(tuple.get_a()))
+    // 4. Check watched outputs for spends (parallel)
+    const outputEntries = [...watchState.watchedOutputs.entries()]
+    if (outputEntries.length > 0) {
+      const outputResults = await Promise.allSettled(
+        outputEntries.map(async ([key]) => {
+          const colonIdx = key.indexOf(':')
+          if (colonIdx === -1) {
+            console.error(`[LDK Sync] Malformed watched output key: ${key}`)
+            return
+          }
+          const txid = key.slice(0, colonIdx)
+          const vout = parseInt(key.slice(colonIdx + 1), 10)
+          if (isNaN(vout)) {
+            console.error(`[LDK Sync] Invalid vout in watched output key: ${key}`)
+            return
+          }
+          const spend = await esplora.getOutspend(txid, vout)
+          if (spend.spent && spend.txid) {
+            const status = await esplora.getTxStatus(spend.txid)
+            if (status.confirmed && status.block_hash && status.block_height != null) {
+              const header = await esplora.getBlockHeader(status.block_hash)
+              const rawTx = await esplora.getTxHex(spend.txid)
+              const proof = await esplora.getTxMerkleProof(spend.txid)
+              const txdata = [TwoTuple_usizeTransactionZ.constructor_new(proof.pos, rawTx)]
+              for (const confirmable of confirmables) {
+                confirmable.transactions_confirmed(header, txdata, status.block_height)
+              }
+            }
+          }
+        })
+      )
+      const failedOutputChecks = outputResults.filter((r) => r.status === 'rejected')
+      if (failedOutputChecks.length > 0) {
+        console.warn(`[LDK Sync] ${failedOutputChecks.length}/${outputEntries.length} output checks failed`)
+      }
     }
-  }
-  for (const txid of watchState.watchedTxids.keys()) {
-    if (!allRelevantTxids.has(txid)) {
-      watchState.watchedTxids.delete(txid)
+
+    // 5. Prune confirmed items no longer tracked by LDK
+    const allRelevantTxids = new Set<string>()
+    for (const confirmable of confirmables) {
+      for (const tuple of confirmable.get_relevant_txids()) {
+        allRelevantTxids.add(txidBytesToHex(tuple.get_a()))
+      }
     }
-  }
+    for (const txid of watchState.watchedTxids.keys()) {
+      if (!allRelevantTxids.has(txid)) {
+        watchState.watchedTxids.delete(txid)
+      }
+    }
 
-  // 6. Verify tip didn't change mid-sync
-  const postSyncTip = await esplora.getTipHash()
-  if (postSyncTip !== tipHash) {
-    console.warn('[LDK Sync] Tip changed during sync, will retry next tick')
-  }
+    // 6. Verify tip didn't change mid-sync
+    const postSyncTip = await esplora.getTipHash()
+    if (postSyncTip !== tipHash) {
+      console.warn('[LDK Sync] Tip changed during sync, will retry next tick')
+    }
 
-  return tipHash
+    return tipHash
+  } finally {
+    esplora.setSignal(undefined)
+  }
 }
 
 export interface SyncLoopHandle {
@@ -202,7 +206,6 @@ export function startSyncLoop(config: SyncLoopConfig): SyncLoopHandle {
         throw err
       } finally {
         clearTimeout(syncTimeout)
-        config.esplora.setSignal(undefined)
       }
 
       config.channelManager.timer_tick_occurred()
