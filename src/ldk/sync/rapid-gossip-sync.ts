@@ -64,9 +64,10 @@ async function applyRgsUpdate(
   const url = `${rgsUrl}/${lastSyncTimestamp}`
   console.log(`[RGS] Fetching snapshot from ${url}`)
 
+  const RGS_FETCH_TIMEOUT_MS = 30_000
   const MAX_RGS_RESPONSE_BYTES = 50 * 1024 * 1024 // 50 MB
 
-  const response = await fetch(url)
+  const response = await fetch(url, { signal: AbortSignal.timeout(RGS_FETCH_TIMEOUT_MS) })
   if (!response.ok) {
     throw new Error(`[RGS] HTTP ${response.status}: ${response.statusText}`)
   }
