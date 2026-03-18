@@ -243,6 +243,19 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
     }
     channelManager = result.res.get_b()
 
+    const restoredChannels = channelManager.list_channels()
+    console.log(
+      `[LDK Init] Restored ChannelManager from IDB with ${restoredMonitors.length} monitor(s) and ${restoredChannels.length} channel(s)`,
+    )
+    for (const ch of restoredChannels) {
+      console.log(
+        `[LDK Init]   channel ${bytesToHex(ch.get_channel_id().write()).substring(0, 16)}... ` +
+          `peer=${bytesToHex(ch.get_counterparty().get_node_id()).substring(0, 16)}... ` +
+          `ready=${ch.get_is_channel_ready()} usable=${ch.get_is_usable()} ` +
+          `capacity=${ch.get_channel_value_satoshis()} sats`,
+      )
+    }
+
     // Register restored monitors with ChainMonitor
     const watch = chainMonitor.as_Watch()
     for (const monitor of restoredMonitors) {
@@ -282,6 +295,7 @@ async function doInitializeLdk(ldkSeed: Uint8Array): Promise<InitResult> {
       chainParams,
       Math.floor(Date.now() / 1000)
     )
+    console.log('[LDK Init] Created fresh ChannelManager (no persisted state found in IDB)')
   }
 
   // 10. Create P2PGossipSync for routing message handling.

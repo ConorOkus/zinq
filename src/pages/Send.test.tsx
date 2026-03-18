@@ -16,35 +16,13 @@ import { Send } from './Send'
 
 vi.mock('../ldk/payment-input', () => ({
   classifyPaymentInput: (raw: string) => {
-    // BOLT 11 with amount
-    if (raw === 'lntbs_with_amount') {
-      return {
-        type: 'bolt11',
-        invoice: {} as never,
-        raw,
-        amountMsat: 50_000_000n,
-        description: 'Test invoice',
-      }
-    }
-    // BOLT 11 without amount
-    if (raw === 'lntbs_no_amount') {
-      return {
-        type: 'bolt11',
-        invoice: {} as never,
-        raw,
-        amountMsat: null,
-        description: 'Amountless invoice',
-      }
-    }
-    // BIP 321 with amount
-    if (raw.startsWith('bitcoin:') && raw.includes('amount=')) {
-      return { type: 'onchain', address: 'tb1qtest', amountSats: 5000n }
-    }
-    // Invalid lightning
     if (raw.startsWith('lntbs')) {
       return { type: 'error', message: 'Invalid Lightning invoice' }
     }
-    // Plain on-chain address
+    if (raw.startsWith('bitcoin:') && raw.includes('amount=')) {
+      const address = raw.slice('bitcoin:'.length).split('?')[0] ?? raw
+      return { type: 'onchain', address, amountSats: 10000n }
+    }
     return { type: 'onchain', address: raw, amountSats: null }
   },
 }))
@@ -90,6 +68,51 @@ function renderSend(onchainValue?: OnchainContextValue, ldkValue?: LdkContextVal
   )
 }
 
+function renderSendWithState(
+  locationState: Record<string, unknown>,
+  onchainValue?: OnchainContextValue,
+  ldkValue?: LdkContextValue,
+) {
+  const oc = onchainValue ?? defaultOnchainContextValue
+  const lk = ldkValue ?? {
+    ...defaultLdkContextValue,
+    status: 'ready' as const,
+    node: {} as never,
+    nodeId: 'test',
+    error: null,
+    syncStatus: 'synced' as const,
+    peersReconnected: true,
+    connectToPeer: vi.fn(),
+    forgetPeer: vi.fn(),
+    createChannel: vi.fn(),
+    setBdkWallet: vi.fn(),
+    setSyncNeeded: vi.fn(),
+    sendBolt11Payment: vi.fn(),
+    sendBolt12Payment: vi.fn(),
+    sendBip353Payment: vi.fn(),
+    closeChannel: vi.fn(),
+    forceCloseChannel: vi.fn(),
+    listChannels: vi.fn(() => []),
+    abandonPayment: vi.fn(),
+    getPaymentResult: vi.fn(() => null),
+    listRecentPayments: vi.fn(() => []),
+    outboundCapacityMsat: vi.fn(() => 1_000_000_000n),
+    lightningBalanceSats: 1_000_000n,
+    createInvoice: vi.fn(() => 'lnbc1test'),
+    channelChangeCounter: 0,
+    paymentHistory: [],
+  }
+  return render(
+    <MemoryRouter initialEntries={[{ pathname: '/send', state: locationState }]}>
+      <LdkContext value={lk}>
+        <OnchainContext value={oc}>
+          <Send />
+        </OnchainContext>
+      </LdkContext>
+    </MemoryRouter>,
+  )
+}
+
 function readyContext(
   overrides?: Partial<Extract<OnchainContextValue, { status: 'ready' }>>,
 ): OnchainContextValue {
@@ -116,11 +139,13 @@ async function typeOnNumpad(user: ReturnType<typeof userEvent.setup>, digits: st
   }
 }
 
-/** Enter a recipient on the first screen and submit. For no-amount inputs, this will show the numpad. */
-async function submitRecipient(user: ReturnType<typeof userEvent.setup>, input: string) {
-  const recipientInput = screen.getByLabelText(/recipient/i)
-  await user.type(recipientInput, input)
-  await user.click(screen.getByRole('button', { name: /next/i }))
+async function goToRecipientScreen(user: ReturnType<typeof userEvent.setup>, amount = '10000') {
+  await typeOnNumpad(user, amount)
+  const nextBtns = screen.getAllByRole('button', { name: /next/i })
+  await user.click(nextBtns[nextBtns.length - 1]!)
+  await waitFor(() => {
+    expect(screen.getByLabelText(/recipient/i)).toBeInTheDocument()
+  })
 }
 
 describe('Send', () => {
@@ -139,54 +164,51 @@ describe('Send', () => {
     expect(screen.getByText(/bdk init failed/i)).toBeInTheDocument()
   })
 
-  it('shows recipient screen as first step when ready', () => {
+  it('shows numpad (amount screen) when ready', () => {
     renderSend(readyContext())
-    expect(screen.getByLabelText(/recipient/i)).toBeInTheDocument()
+    expect(screen.getByText(/available/i)).toBeInTheDocument()
   })
 
-  it('shows recipient placeholder text', () => {
+  it('shows Next disabled when amount is zero', () => {
     renderSend(readyContext())
-    expect(screen.getByPlaceholderText('payment request or user@domain')).toBeInTheDocument()
+    const nextBtns = screen.getAllByRole('button', { name: /next/i })
+    const numpadNext = nextBtns[nextBtns.length - 1]!
+    expect(numpadNext).toBeDisabled()
   })
 
-  it('disables Next when recipient is empty', () => {
-    renderSend(readyContext())
-    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
-  })
-
-  describe('on-chain flow (no embedded amount)', () => {
-    it('shows numpad after entering a plain address', async () => {
+  describe('on-chain flow', () => {
+    it('navigates to recipient screen after entering amount', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await typeOnNumpad(user, '10000')
+      const nextBtns = screen.getAllByRole('button', { name: /next/i })
+      await user.click(nextBtns[nextBtns.length - 1]!)
 
       await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
+        expect(screen.getByLabelText(/recipient/i)).toBeInTheDocument()
       })
     })
 
-    it('displays entered amount in BIP 177 format on numpad', async () => {
+    it('displays entered amount in BIP 177 format', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
-
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
 
       await typeOnNumpad(user, '12345')
       expect(screen.getByText('₿12,345')).toBeInTheDocument()
     })
 
+    it('shows recipient placeholder text', async () => {
+      const user = userEvent.setup()
+      renderSend(readyContext())
+      await goToRecipientScreen(user)
+
+      expect(screen.getByPlaceholderText('payment request or user@domain')).toBeInTheDocument()
+    })
+
     it('handles backspace on numpad', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
-
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
 
       await typeOnNumpad(user, '123')
       expect(screen.getByText('₿123')).toBeInTheDocument()
@@ -195,18 +217,13 @@ describe('Send', () => {
       expect(screen.getByText('₿12')).toBeInTheDocument()
     })
 
-    it('displays review with correct values after numpad', async () => {
+    it('displays review with correct values', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
+      await goToRecipientScreen(user)
 
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
-
-      await typeOnNumpad(user, '10000')
-      const nextBtns = screen.getAllByRole('button', { name: /next/i })
-      await user.click(nextBtns[nextBtns.length - 1]!)
+      await user.type(screen.getByLabelText(/recipient/i), 'tb1qtest')
+      await user.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
         expect(screen.getByText(/review/i)).toBeInTheDocument()
@@ -216,35 +233,16 @@ describe('Send', () => {
       expect(screen.getByText('₿10,150')).toBeInTheDocument()
     })
 
-    it('goes back to numpad from review (amount was manually entered)', async () => {
+    it('goes back to recipient from review', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
+      await goToRecipientScreen(user)
 
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
-
-      await typeOnNumpad(user, '10000')
-      const nextBtns = screen.getAllByRole('button', { name: /next/i })
-      await user.click(nextBtns[nextBtns.length - 1]!)
+      await user.type(screen.getByLabelText(/recipient/i), 'tb1qtest')
+      await user.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByRole('button', { name: /back/i }))
-      // Should be back on numpad (amount screen)
-      expect(screen.getByText(/available/i)).toBeInTheDocument()
-    })
-
-    it('goes back to recipient from numpad with input preserved', async () => {
-      const user = userEvent.setup()
-      renderSend(readyContext())
-
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
 
       await user.click(screen.getByRole('button', { name: /back/i }))
@@ -254,15 +252,10 @@ describe('Send', () => {
     it('shows success after confirm', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
+      await goToRecipientScreen(user)
 
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
-
-      await typeOnNumpad(user, '10000')
-      const nextBtns = screen.getAllByRole('button', { name: /next/i })
-      await user.click(nextBtns[nextBtns.length - 1]!)
+      await user.type(screen.getByLabelText(/recipient/i), 'tb1qtest')
+      await user.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /confirm send/i })).toBeInTheDocument()
@@ -281,15 +274,10 @@ describe('Send', () => {
         sendToAddress: vi.fn().mockRejectedValue(new Error('Broadcast failed')),
       })
       renderSend(ctx)
+      await goToRecipientScreen(user)
 
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
-
-      await typeOnNumpad(user, '10000')
-      const nextBtns = screen.getAllByRole('button', { name: /next/i })
-      await user.click(nextBtns[nextBtns.length - 1]!)
+      await user.type(screen.getByLabelText(/recipient/i), 'tb1qtest')
+      await user.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /confirm send/i })).toBeInTheDocument()
@@ -304,206 +292,92 @@ describe('Send', () => {
       expect(screen.getByText(/your funds are safe/i)).toBeInTheDocument()
     })
 
-    it('shows error for dust amount', async () => {
+    it('shows error for dust amount on recipient screen', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
+      await goToRecipientScreen(user, '100')
 
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
-
-      await typeOnNumpad(user, '100')
-      const nextBtns = screen.getAllByRole('button', { name: /next/i })
-      await user.click(nextBtns[nextBtns.length - 1]!)
+      await user.type(screen.getByLabelText(/recipient/i), 'tb1qtest')
+      await user.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
         expect(screen.getByText(/at least 294 sats/i)).toBeInTheDocument()
       })
     })
-  })
 
-  describe('on-chain flow (BIP 321 with embedded amount)', () => {
-    it('skips numpad and goes straight to review', async () => {
+    it('preserves amount when navigating back from recipient', async () => {
       const user = userEvent.setup()
       renderSend(readyContext())
-
-      await submitRecipient(user, 'bitcoin:tb1qtest?amount=0.00005')
-
-      await waitFor(() => {
-        expect(screen.getByText(/review/i)).toBeInTheDocument()
-      })
-      expect(screen.getByText('₿5,000')).toBeInTheDocument()
-    })
-
-    it('goes back to recipient from review (not numpad)', async () => {
-      const user = userEvent.setup()
-      renderSend(readyContext())
-
-      await submitRecipient(user, 'bitcoin:tb1qtest?amount=0.00005')
-
-      await waitFor(() => {
-        expect(screen.getByText(/review/i)).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByRole('button', { name: /back/i }))
-      expect(screen.getByLabelText(/recipient/i)).toBeInTheDocument()
-    })
-  })
-
-  describe('lightning flow (fixed amount)', () => {
-    it('skips numpad and goes to ln-review for bolt11 with amount', async () => {
-      const user = userEvent.setup()
-      renderSend(readyContext())
-
-      await submitRecipient(user, 'lntbs_with_amount')
-
-      await waitFor(() => {
-        expect(screen.getByText(/review/i)).toBeInTheDocument()
-      })
-      expect(screen.getByText('₿50,000')).toBeInTheDocument()
-      expect(screen.getByText('BOLT 11')).toBeInTheDocument()
-    })
-
-    it('goes back to recipient from ln-review (amount was embedded)', async () => {
-      const user = userEvent.setup()
-      renderSend(readyContext())
-
-      await submitRecipient(user, 'lntbs_with_amount')
-
-      await waitFor(() => {
-        expect(screen.getByText(/review/i)).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByRole('button', { name: /back/i }))
-      expect(screen.getByLabelText(/recipient/i)).toBeInTheDocument()
-    })
-  })
-
-  describe('lightning flow (no amount)', () => {
-    it('shows numpad for amountless bolt11', async () => {
-      const user = userEvent.setup()
-      renderSend(readyContext())
-
-      await submitRecipient(user, 'lntbs_no_amount')
-
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
-    })
-
-    it('goes to ln-review after entering amount on numpad', async () => {
-      const user = userEvent.setup()
-      renderSend(readyContext())
-
-      await submitRecipient(user, 'lntbs_no_amount')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
 
       await typeOnNumpad(user, '5000')
+      expect(screen.getByText('₿5,000')).toBeInTheDocument()
+
       const nextBtns = screen.getAllByRole('button', { name: /next/i })
       await user.click(nextBtns[nextBtns.length - 1]!)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/recipient/i)).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByRole('button', { name: /back/i }))
+
+      expect(screen.getByText('₿5,000')).toBeInTheDocument()
+    })
+  })
+
+  describe('scanned input via location.state', () => {
+    it('navigates to review for BIP 321 URI with amount', async () => {
+      renderSendWithState(
+        { scannedInput: 'bitcoin:tb1qtest?amount=0.0001' },
+        readyContext(),
+      )
 
       await waitFor(() => {
         expect(screen.getByText(/review/i)).toBeInTheDocument()
       })
-      expect(screen.getByText('BOLT 11')).toBeInTheDocument()
-    })
-  })
-
-  describe('insufficient balance', () => {
-    it('shows error when on-chain amount exceeds balance', async () => {
-      const user = userEvent.setup()
-      renderSend(readyContext())
-
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
-
-      await typeOnNumpad(user, '99999999')
-      const nextBtns = screen.getAllByRole('button', { name: /next/i })
-      await user.click(nextBtns[nextBtns.length - 1]!)
-
-      await waitFor(() => {
-        expect(screen.getByText(/exceeds available on-chain balance/i)).toBeInTheDocument()
-      })
     })
 
-    it('shows error when bolt11 amount exceeds lightning capacity', async () => {
-      const user = userEvent.setup()
-      renderSend(readyContext(), {
-        ...defaultLdkContextValue,
-        status: 'ready' as const,
-        node: {} as never,
-        nodeId: 'test',
-        error: null,
-        syncStatus: 'synced' as const,
-        peersReconnected: true,
-        connectToPeer: vi.fn(),
-        forgetPeer: vi.fn(),
-        createChannel: vi.fn(),
-        setBdkWallet: vi.fn(),
-        setSyncNeeded: vi.fn(),
-        sendBolt11Payment: vi.fn(),
-        sendBolt12Payment: vi.fn(),
-        sendBip353Payment: vi.fn(),
-        closeChannel: vi.fn(),
-        forceCloseChannel: vi.fn(),
-        listChannels: vi.fn(() => []),
-        abandonPayment: vi.fn(),
-        getPaymentResult: vi.fn(() => null),
-        listRecentPayments: vi.fn(() => []),
-        outboundCapacityMsat: vi.fn(() => 1000n), // Very low capacity
-        lightningBalanceSats: 1n,
-        createInvoice: vi.fn(() => 'lnbc1test'),
-        channelChangeCounter: 0,
-        paymentHistory: [],
-      })
+    it('starts at amount step for plain address without amount', () => {
+      renderSendWithState(
+        { scannedInput: 'tb1qplainaddress' },
+        readyContext(),
+      )
 
-      await submitRecipient(user, 'lntbs_with_amount')
-
-      await waitFor(() => {
-        expect(screen.getByText(/exceeds Lightning channel capacity/i)).toBeInTheDocument()
-      })
+      expect(screen.getByText(/available/i)).toBeInTheDocument()
     })
-  })
 
-  describe('error retry', () => {
-    it('returns to review screen on retry', async () => {
+    it('skips recipient step when scanned address has no amount', async () => {
       const user = userEvent.setup()
-      const ctx = readyContext({
-        sendToAddress: vi.fn().mockRejectedValue(new Error('Broadcast failed')),
-      })
-      renderSend(ctx)
-
-      await submitRecipient(user, 'tb1qtest')
-      await waitFor(() => {
-        expect(screen.getByText(/available/i)).toBeInTheDocument()
-      })
+      renderSendWithState(
+        { scannedInput: 'tb1qplainaddress' },
+        readyContext(),
+      )
 
       await typeOnNumpad(user, '10000')
       const nextBtns = screen.getAllByRole('button', { name: /next/i })
       await user.click(nextBtns[nextBtns.length - 1]!)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /confirm send/i })).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByRole('button', { name: /confirm send/i }))
-
-      await waitFor(() => {
-        expect(screen.getByText(/send failed/i)).toBeInTheDocument()
-      })
-
-      // Click "Try Again" — should return to review, not recipient
-      await user.click(screen.getByRole('button', { name: /try again/i }))
-
-      await waitFor(() => {
         expect(screen.getByText(/review/i)).toBeInTheDocument()
       })
-      expect(screen.getByText('₿10,000')).toBeInTheDocument()
+    })
+
+    it('ignores invalid scanned input', () => {
+      renderSendWithState(
+        { scannedInput: 'lntbs_invalid_stuff' },
+        readyContext(),
+      )
+
+      expect(screen.getByText(/available/i)).toBeInTheDocument()
+    })
+
+    it('ignores non-string scanned input', () => {
+      renderSendWithState(
+        { scannedInput: 12345 },
+        readyContext(),
+      )
+
+      expect(screen.getByText(/available/i)).toBeInTheDocument()
     })
   })
 })

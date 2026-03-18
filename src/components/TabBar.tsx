@@ -19,9 +19,9 @@ export function TabBar() {
       aria-label="Main navigation"
     >
       <button
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-accent opacity-40"
-        disabled
-        aria-label="Scan QR code (coming soon)"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-accent"
+        onClick={() => void navigate('/scan')}
+        aria-label="Scan QR code"
       >
         <ScanIcon className="h-[22px] w-[22px]" />
       </button>

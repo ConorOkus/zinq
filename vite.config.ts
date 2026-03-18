@@ -15,7 +15,7 @@ export default defineConfig({
       'X-Frame-Options': 'DENY',
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'no-referrer',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      'Permissions-Policy': 'camera=(self), microphone=(), geolocation=()',
     },
   },
 })

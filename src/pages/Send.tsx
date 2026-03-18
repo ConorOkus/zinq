@@ -20,10 +20,10 @@ import {
 // --- State machine ---
 
 type SendStep =
-  // Recipient entry (first screen)
+  // Amount entry (first screen)
+  | { step: 'amount' }
+  // Recipient entry (second screen)
   | { step: 'recipient' }
-  // Amount entry (shown only when input has no embedded amount)
-  | { step: 'amount'; parsedInput: ParsedPaymentInput; rawInput: string }
   // On-chain flow
   | {
       step: 'oc-review'
@@ -32,7 +32,6 @@ type SendStep =
       fee: bigint
       feeRate: bigint
       isSendMax: boolean
-      fromStep: 'recipient' | 'amount'
     }
   | { step: 'oc-broadcasting' }
   | { step: 'oc-success'; txid: string; amount: bigint }
@@ -41,7 +40,6 @@ type SendStep =
       step: 'ln-review'
       parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }
       amountMsat: bigint
-      fromStep: 'recipient' | 'amount'
     }
   | {
       step: 'ln-sending'
@@ -51,9 +49,7 @@ type SendStep =
     }
   | { step: 'ln-success'; preimage: Uint8Array; amountMsat: bigint }
   // Shared
-  | { step: 'error'; message: string; retryStep: ReviewStep | null }
-
-type ReviewStep = Extract<SendStep, { step: 'oc-review' } | { step: 'ln-review' }>
+  | { step: 'error'; message: string; canRetry: boolean }
 
 const MIN_DUST_SATS = 294n
 const TXID_RE = /^[0-9a-f]{64}$/i
@@ -104,17 +100,15 @@ export function Send() {
   const onchain = useOnchain()
   const ldk = useLdk()
   const unified = useUnifiedBalance()
-  const [sendStep, setSendStep] = useState<SendStep>({ step: 'recipient' })
+  const [sendStep, setSendStep] = useState<SendStep>({ step: 'amount' })
   const [inputValue, setInputValue] = useState('')
   const [amountDigits, setAmountDigits] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
   const [isSendMax, setIsSendMax] = useState(false)
-  const [pendingQrInput, setPendingQrInput] = useState<string | null>(null)
+  const [scannedInput, setScannedInput] = useState<string | null>(null)
   const sendingRef = useRef(false)
   const processingRef = useRef(false)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  // Store amount step data so we can restore it when navigating back from review
-  const amountStepDataRef = useRef<{ parsedInput: ParsedPaymentInput; rawInput: string } | null>(null)
 
   const onchainBalance =
     onchain.status === 'ready'
@@ -129,10 +123,35 @@ export function Send() {
     }
   }, [])
 
+  // Consume scanned input from location.state (set by /scan route)
+  useEffect(() => {
+    const state = location.state as Record<string, unknown> | null
+    const raw = typeof state?.scannedInput === 'string' ? state.scannedInput : null
+    if (!raw) return
+
+    // Clear location.state to prevent re-processing on back/forward
+    void navigate('/send', { replace: true, state: null })
+
+    const parsed = classifyPaymentInput(raw)
+    if (parsed.type === 'error') return
+
+    const hasAmount =
+      (parsed.type === 'onchain' && parsed.amountSats !== null) ||
+      ((parsed.type === 'bolt11' || parsed.type === 'bolt12') && parsed.amountMsat !== null)
+
+    if (hasAmount) {
+      // processRecipientInput derives the amount from the parsed input directly,
+      // so no need to pre-fill amountDigits or defer with setTimeout
+      setInputValue(raw)
+      void processRecipientInput(raw)
+    } else {
+      setScannedInput(raw)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // --- Numpad handlers ---
   const handleNumpadKey = useCallback((key: NumpadKey) => {
     setIsSendMax(false)
-    setInputError(null)
     setAmountDigits((prev) => {
       if (key === 'backspace') return prev.slice(0, -1)
       if (prev.length >= MAX_DIGITS) return prev
@@ -152,8 +171,8 @@ export function Send() {
     setIsSendMax(true)
   }, [unified.total])
 
-  // --- Process input: classify and route to review or amount step ---
-  const processRecipientInput = useCallback(async (value: string, fromStep: 'recipient' | 'amount') => {
+  // --- Recipient: process input (shared by paste and Next button) ---
+  const processRecipientInput = useCallback(async (value: string) => {
     if (processingRef.current) return
     const trimmed = value.trim()
     if (!trimmed) {
@@ -172,22 +191,7 @@ export function Send() {
 
     setInputError(null)
 
-    // Save amount step data for back navigation from review
-    if (fromStep === 'amount') {
-      amountStepDataRef.current = { parsedInput: parsed, rawInput: trimmed }
-    } else {
-      amountStepDataRef.current = null
-    }
-
     if (parsed.type === 'onchain') {
-      const hasEmbeddedAmount = parsed.amountSats !== null
-
-      // If no amount and coming from recipient, go to numpad
-      if (!hasEmbeddedAmount && fromStep === 'recipient') {
-        setSendStep({ step: 'amount', parsedInput: parsed, rawInput: trimmed })
-        return
-      }
-
       // Use parsed amount if present (BIP 321 URI with ?amount=), otherwise use numpad amount
       const effectiveAmount = parsed.amountSats ?? amountSats
       const effectiveIsSendMax = parsed.amountSats ? false : isSendMax
@@ -215,7 +219,6 @@ export function Send() {
             fee: estimate.fee,
             feeRate: estimate.feeRate,
             isSendMax: true,
-            fromStep,
           })
         } catch (err) {
           const message = classifyEstimateError(err)
@@ -239,7 +242,6 @@ export function Send() {
           fee: estimate.fee,
           feeRate: estimate.feeRate,
           isSendMax: false,
-          fromStep,
         })
       } catch (err) {
         const message = classifyEstimateError(err)
@@ -249,33 +251,32 @@ export function Send() {
     }
 
     // Lightning types (bolt11, bolt12, bip353)
-    // Fixed-amount: use embedded amount, skip numpad
-    if (parsed.type !== 'bip353' && parsed.amountMsat !== null) {
-      if (parsed.amountMsat > lnCapacityMsat) {
-        setInputError('Amount exceeds Lightning channel capacity')
-        return
-      }
-      setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat, fromStep })
-      return
-    }
-
-    // No embedded amount — need numpad
-    if (fromStep === 'recipient') {
-      setSendStep({ step: 'amount', parsedInput: parsed, rawInput: trimmed })
-      return
-    }
-
-    // Coming from numpad — use user-entered amount
-    const effectiveMsat = amountSats * 1000n
+    // Fixed-amount inputs use their own amount, discarding numpad amount
+    const effectiveMsat = (parsed.type !== 'bip353' && parsed.amountMsat !== null)
+      ? parsed.amountMsat
+      : amountSats * 1000n
     if (effectiveMsat > lnCapacityMsat) {
       setInputError('Amount exceeds Lightning channel capacity')
       return
     }
-    setSendStep({ step: 'ln-review', parsed, amountMsat: effectiveMsat, fromStep })
+    setSendStep({ step: 'ln-review', parsed, amountMsat: effectiveMsat })
     } finally {
       processingRef.current = false
     }
   }, [amountSats, isSendMax, onchain, onchainBalance, lnCapacityMsat])
+
+  // --- Amount screen: Next ---
+  const handleAmountNext = useCallback(() => {
+    if (amountSats <= 0n) return
+    // If recipient was pre-filled by QR scan, skip to processing
+    if (scannedInput) {
+      const input = scannedInput
+      setScannedInput(null)
+      void processRecipientInput(input)
+      return
+    }
+    setSendStep({ step: 'recipient' })
+  }, [amountSats, scannedInput, processRecipientInput])
 
   // --- Recipient: paste handler ---
   const handlePaste = useCallback(
@@ -285,52 +286,15 @@ export function Send() {
 
       e.preventDefault()
       setInputValue(pasted)
-      void processRecipientInput(pasted, 'recipient')
+      void processRecipientInput(pasted)
     },
     [processRecipientInput],
   )
 
   // --- Recipient: Next button ---
   const handleRecipientNext = useCallback(() => {
-    void processRecipientInput(inputValue, 'recipient')
+    void processRecipientInput(inputValue)
   }, [inputValue, processRecipientInput])
-
-  // --- Amount screen: Next (process the stored recipient input with user-entered amount) ---
-  const handleAmountNext = useCallback(() => {
-    if (amountSats <= 0n) return
-    if (sendStep.step !== 'amount') return
-    void processRecipientInput(sendStep.rawInput, 'amount')
-  }, [amountSats, sendStep, processRecipientInput])
-
-  // QR scanner integration: consume scannedInput from location.state
-  useEffect(() => {
-    const state = location.state as Record<string, unknown> | null
-    const raw = typeof state?.scannedInput === 'string' ? state.scannedInput : null
-    if (!raw || raw.length > 2000) return
-    void navigate('/send', { replace: true, state: null })
-    setPendingQrInput(raw)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Process pending QR input once wallet is ready
-  useEffect(() => {
-    if (!pendingQrInput) return
-    if (onchain.status !== 'ready') return
-    const raw = pendingQrInput
-    setPendingQrInput(null)
-    setInputValue(raw)
-    void processRecipientInput(raw, 'recipient')
-  }, [pendingQrInput, onchain.status, processRecipientInput])
-
-  // --- Review: Back navigation (shared by oc-review and ln-review) ---
-  const handleReviewBack = useCallback(() => {
-    if (sendStep.step !== 'oc-review' && sendStep.step !== 'ln-review') return
-    if (sendStep.fromStep === 'amount' && amountStepDataRef.current) {
-      setSendStep({ step: 'amount', ...amountStepDataRef.current })
-    } else {
-      setSendStep({ step: 'recipient' })
-    }
-  }, [sendStep])
 
   // --- On-chain: Confirm send ---
   const handleOcConfirm = useCallback(async () => {
@@ -339,7 +303,6 @@ export function Send() {
 
     sendingRef.current = true
     const sentAmount = sendStep.amount
-    const reviewStep = sendStep
     setSendStep({ step: 'oc-broadcasting' })
 
     try {
@@ -349,7 +312,7 @@ export function Send() {
       setSendStep({ step: 'oc-success', txid, amount: sentAmount })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      setSendStep({ step: 'error', message, retryStep: reviewStep })
+      setSendStep({ step: 'error', message, canRetry: true })
     } finally {
       sendingRef.current = false
     }
@@ -398,7 +361,7 @@ export function Send() {
         // Timeout after 5 minutes
         if (Date.now() - startTime > MAX_POLL_DURATION_MS) {
           stopPolling()
-          setSendStep({ step: 'error', message: 'Payment timed out', retryStep: null })
+          setSendStep({ step: 'error', message: 'Payment timed out', canRetry: false })
           return
         }
 
@@ -411,7 +374,7 @@ export function Send() {
         }
         if (result && result.status === 'failed') {
           stopPolling()
-          setSendStep({ step: 'error', message: result.reason, retryStep: null })
+          setSendStep({ step: 'error', message: result.reason, canRetry: false })
           return
         }
 
@@ -428,7 +391,7 @@ export function Send() {
           }
           if (p instanceof RecentPaymentDetails_Abandoned && bytesToHex(p.payment_id) === paymentIdHex) {
             stopPolling()
-            setSendStep({ step: 'error', message: 'Payment was abandoned', retryStep: null })
+            setSendStep({ step: 'error', message: 'Payment was abandoned', canRetry: false })
             return
           }
         }
@@ -437,7 +400,7 @@ export function Send() {
     } catch (err) {
       sendingRef.current = false
       const message = err instanceof Error ? err.message : String(err)
-      setSendStep({ step: 'error', message, retryStep: null })
+      setSendStep({ step: 'error', message, canRetry: false })
     }
   }, [ldk, sendStep])
 
@@ -450,7 +413,7 @@ export function Send() {
       pollTimerRef.current = null
     }
     sendingRef.current = false
-    setSendStep({ step: 'error', message: 'Payment cancelled', retryStep: null })
+    setSendStep({ step: 'error', message: 'Payment cancelled', canRetry: false })
   }, [ldk, sendStep])
 
   // --- Loading / error gates ---
@@ -559,14 +522,14 @@ export function Send() {
         <button
           className="mt-4 h-14 w-full max-w-[280px] rounded-xl bg-white font-display text-lg font-bold text-dark transition-transform active:scale-[0.98]"
           onClick={() => {
-            if (sendStep.retryStep) {
-              setSendStep(sendStep.retryStep)
+            if (sendStep.canRetry) {
+              setSendStep({ step: 'recipient' })
             } else {
               void navigate('/')
             }
           }}
         >
-          {sendStep.retryStep ? 'Try Again' : 'Done'}
+          {sendStep.canRetry ? 'Try Again' : 'Done'}
         </button>
       </div>
     )
@@ -623,7 +586,7 @@ export function Send() {
     const total = sendStep.amount + sendStep.fee
     return (
       <div className="flex min-h-dvh flex-col justify-between bg-dark text-on-dark">
-        <ScreenHeader title="Review" onBack={handleReviewBack} />
+        <ScreenHeader title="Review" onBack={() => setSendStep({ step: 'recipient' })} />
         <div className="flex flex-1 flex-col gap-6 px-6 pt-8">
           <div className="flex justify-between">
             <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">To</span>
@@ -664,7 +627,10 @@ export function Send() {
     const { parsed, amountMsat } = sendStep
     return (
       <div className="flex min-h-dvh flex-col justify-between bg-dark text-on-dark">
-        <ScreenHeader title="Review" onBack={handleReviewBack} />
+        <ScreenHeader
+          title="Review"
+          onBack={() => setSendStep({ step: 'recipient' })}
+        />
         <div className="flex flex-1 flex-col gap-6 px-6 pt-8">
           <div className="flex justify-between">
             <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">To</span>
@@ -695,75 +661,75 @@ export function Send() {
     )
   }
 
-  // --- Amount screen (shown only when input has no embedded amount) ---
-  if (sendStep.step === 'amount') {
+  // --- Recipient screen (second step) ---
+  if (sendStep.step === 'recipient') {
     return (
-      <div className="flex min-h-dvh flex-col justify-between bg-dark text-on-dark">
-        <ScreenHeader title="Send" onBack={() => setSendStep({ step: 'recipient' })} />
-        <div className="flex flex-1 flex-col items-center justify-center gap-2">
-          <button
-            className="text-sm text-[var(--color-on-dark-muted)] transition-colors hover:text-on-dark"
-            onClick={handleApproxSendMax}
-          >
-            {formatBtc(unified.total)} available
-          </button>
-          <div
-            className={`font-display font-bold leading-none tracking-tight ${
-              amountDigits.length > 5 ? 'text-5xl' : 'text-7xl'
-            }`}
-            aria-live="polite"
-          >
-            {formatBtc(amountSats)}
+      <div className="flex min-h-dvh flex-col bg-dark text-on-dark">
+        <ScreenHeader title="Send" onBack={() => setSendStep({ step: 'amount' })} />
+        <div className="flex flex-1 flex-col gap-5 px-6 pt-6">
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="send-input"
+              className="text-sm font-medium text-[var(--color-on-dark-muted)]"
+            >
+              Recipient
+            </label>
+            <input
+              id="send-input"
+              type="text"
+              value={inputValue}
+              onChange={(e) => {
+                setInputValue(e.target.value)
+                setInputError(null)
+              }}
+              onPaste={handlePaste}
+              placeholder="payment request or user@domain"
+              maxLength={2000}
+              className="w-full rounded-xl border border-dark-border bg-dark-elevated px-4 py-3 font-mono text-sm text-on-dark placeholder:text-[var(--color-on-dark-muted)] focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+            {inputError && <p className="text-sm text-red-400">{inputError}</p>}
           </div>
-          {inputError && <p className="mt-2 text-sm text-red-400">{inputError}</p>}
         </div>
-        <Numpad
-          onKey={handleNumpadKey}
-          onNext={handleAmountNext}
-          nextDisabled={amountSats <= 0n}
-        />
+        <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
+          <button
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-white font-display text-lg font-bold uppercase tracking-wider text-dark transition-transform disabled:cursor-not-allowed disabled:opacity-30 active:scale-[0.98]"
+            onClick={handleRecipientNext}
+            disabled={!inputValue.trim()}
+          >
+            Next
+            <ArrowRight className="h-5 w-5" />
+          </button>
+        </div>
       </div>
     )
   }
 
-  // --- Recipient screen (first step, default) ---
+  // --- Amount screen (first step, default) ---
   return (
-    <div className="flex min-h-dvh flex-col bg-dark text-on-dark">
+    <div className="flex min-h-dvh flex-col justify-between bg-dark text-on-dark">
       <ScreenHeader title="Send" backTo="/" />
-      <div className="flex flex-1 flex-col gap-5 px-6 pt-6">
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="send-input"
-            className="text-sm font-medium text-[var(--color-on-dark-muted)]"
-          >
-            Recipient
-          </label>
-          <input
-            id="send-input"
-            type="text"
-            value={inputValue}
-            onChange={(e) => {
-              setInputValue(e.target.value)
-              setInputError(null)
-            }}
-            onPaste={handlePaste}
-            placeholder="payment request or user@domain"
-            maxLength={2000}
-            className="w-full rounded-xl border border-dark-border bg-dark-elevated px-4 py-3 font-mono text-sm text-on-dark placeholder:text-[var(--color-on-dark-muted)] focus:outline-none focus:ring-2 focus:ring-accent"
-          />
-          {inputError && <p className="text-sm text-red-400">{inputError}</p>}
-        </div>
-      </div>
-      <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
+      <div className="flex flex-1 flex-col items-center justify-center gap-2">
         <button
-          className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-white font-display text-lg font-bold uppercase tracking-wider text-dark transition-transform disabled:cursor-not-allowed disabled:opacity-30 active:scale-[0.98]"
-          onClick={handleRecipientNext}
-          disabled={!inputValue.trim()}
+          className="text-sm text-[var(--color-on-dark-muted)] transition-colors hover:text-on-dark"
+          onClick={handleApproxSendMax}
         >
-          Next
-          <ArrowRight className="h-5 w-5" />
+          {formatBtc(unified.total)} available
         </button>
+        <div
+          className={`font-display font-bold leading-none tracking-tight ${
+            amountDigits.length > 5 ? 'text-5xl' : 'text-7xl'
+          }`}
+          aria-live="polite"
+        >
+          {formatBtc(amountSats)}
+        </div>
+
       </div>
+      <Numpad
+        onKey={handleNumpadKey}
+        onNext={handleAmountNext}
+        nextDisabled={amountSats <= 0n}
+      />
     </div>
   )
 }
