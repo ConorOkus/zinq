@@ -196,7 +196,7 @@ export class VssClient {
     try {
       return await fetch(`${this.#baseUrl}/${endpoint}`, {
         method: 'POST',
-        body,
+        body: body as unknown as BodyInit,
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/octet-stream',
