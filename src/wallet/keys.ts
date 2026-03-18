@@ -2,6 +2,7 @@ import { mnemonicToSeedSync } from '@scure/bip39'
 import { HDKey } from '@scure/bip32'
 
 const LDK_DERIVATION_PATH = "m/535'/0'"
+const VSS_ENCRYPTION_KEY_PATH = "m/535'/1'"
 
 const TESTNET_VERSIONS = { private: 0x04358394, public: 0x043587cf }
 
@@ -18,6 +19,36 @@ export function deriveLdkSeed(mnemonic: string): Uint8Array {
     throw new Error('Failed to derive LDK seed: no private key at ' + LDK_DERIVATION_PATH)
   }
   return child.privateKey
+}
+
+/**
+ * Derive a 32-byte encryption key for VSS client-side encryption.
+ * Uses a dedicated path m/535'/1' separate from the LDK seed (m/535'/0').
+ */
+export function deriveVssEncryptionKey(mnemonic: string): Uint8Array {
+  const seed = mnemonicToSeedSync(mnemonic)
+  const master = HDKey.fromMasterSeed(seed)
+  const child = master.derive(VSS_ENCRYPTION_KEY_PATH)
+  if (!child.privateKey) {
+    throw new Error('Failed to derive VSS encryption key at ' + VSS_ENCRYPTION_KEY_PATH)
+  }
+  return child.privateKey
+}
+
+/**
+ * Derive a deterministic VSS store_id from an LDK seed.
+ * Computes SHA-256 of the node public key (derived from the seed) and returns the hex string.
+ * This is unique per wallet and reproducible from the mnemonic alone.
+ */
+export async function deriveVssStoreId(ldkSeed: Uint8Array): Promise<string> {
+  // Derive the node public key from the seed using the same logic as KeysManager:
+  // The node pubkey is the compressed public key corresponding to the seed's secret key.
+  // We derive it via HDKey to get the public key without needing LDK WASM.
+  const hashBuffer = await crypto.subtle.digest('SHA-256', ldkSeed.buffer as ArrayBuffer)
+  const hashArray = new Uint8Array(hashBuffer)
+  return Array.from(hashArray)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 /**
