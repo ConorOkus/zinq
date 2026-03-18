@@ -1,0 +1,8 @@
+version: v2
+plugins:
+  - local: protoc-gen-es
+    out: src/ldk/storage/proto
+    opt:
+      - target=ts
+inputs:
+  - directory: src/ldk/storage/proto

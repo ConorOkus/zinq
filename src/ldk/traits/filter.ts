@@ -14,11 +14,14 @@ export function createFilter(): { filter: Filter; watchState: WatchState } {
 
   const filter = Filter.new_impl({
     register_tx(txid: Uint8Array, script_pubkey: Uint8Array): void {
-      watchState.watchedTxids.set(txidBytesToHex(txid), script_pubkey)
+      const txidHex = txidBytesToHex(txid)
+      console.log(`[LDK Filter] register_tx: ${txidHex}`)
+      watchState.watchedTxids.set(txidHex, script_pubkey)
     },
     register_output(output: WatchedOutput): void {
       const outpoint = output.get_outpoint()
       const key = `${txidBytesToHex(outpoint.get_txid())}:${outpoint.get_index()}`
+      console.log(`[LDK Filter] register_output: ${key}`)
       watchState.watchedOutputs.set(key, output)
     },
   })
