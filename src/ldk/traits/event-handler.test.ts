@@ -171,6 +171,7 @@ vi.mock('lightningdevkit', () => {
     Result_NoneReplayEventZ: {
       constructor_ok: vi.fn(() => ({ is_ok: () => true })),
     },
+    Result_NoneAPIErrorZ_Err: class {},
   }
 })
 
@@ -205,6 +206,7 @@ const mockPsbt = {
   toString: () => 'base64psbt',
 }
 const mockTxBuilder = {
+  nlocktime: vi.fn(() => mockTxBuilder),
   add_recipient: vi.fn(() => mockTxBuilder),
   finish: vi.fn(() => mockPsbt),
 }
@@ -505,6 +507,7 @@ describe('createEventHandler', () => {
 
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining('funding_transaction_generated failed'),
+      expect.anything(),
     )
     result.cleanup()
   })

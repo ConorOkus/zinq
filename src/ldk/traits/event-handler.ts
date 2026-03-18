@@ -22,6 +22,7 @@ import {
   Option_PaymentFailureReasonZ_Some,
   PaymentFailureReason,
   Result_NoneReplayEventZ,
+  Result_NoneAPIErrorZ_Err,
   type ClosureReason,
   ClosureReason_CounterpartyForceClosed,
   ClosureReason_HolderForceClosed,
@@ -347,8 +348,10 @@ function handleEvent(
       const amount = Amount.from_sat(event.channel_value_satoshis)
       const recipient = new Recipient(scriptPubkey, amount)
 
-      // TxBuilder methods consume self — must chain calls
-      const psbt = bdkWallet.build_tx().add_recipient(recipient).finish()
+      // TxBuilder methods consume self — must chain calls.
+      // nlocktime(0) required: LDK rejects funding txs with non-final locktime,
+      // and BDK defaults to current block height for anti-fee-sniping.
+      const psbt = bdkWallet.build_tx().nlocktime(0).add_recipient(recipient).finish()
       bdkWallet.sign(psbt, new SignOptions())
 
       // Extract raw tx bytes from the signed PSBT via native BDK API
@@ -361,8 +364,10 @@ function handleEvent(
         rawTxBytes,
       )
       if (!result.is_ok()) {
+        const apiErr = result instanceof Result_NoneAPIErrorZ_Err ? result.err : null
         console.error(
-          '[LDK Event] FundingGenerationReady: funding_transaction_generated failed',
+          '[LDK Event] FundingGenerationReady: funding_transaction_generated failed:',
+          apiErr?.err ?? 'unknown error',
         )
         return
       }
