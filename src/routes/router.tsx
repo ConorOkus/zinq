@@ -12,6 +12,7 @@ import { OpenChannel } from '../pages/OpenChannel'
 import { CloseChannel } from '../pages/CloseChannel'
 import { Balance } from '../pages/Balance'
 import { Scan } from '../pages/Scan'
+import { Restore } from '../pages/Restore'
 
 export const router = createBrowserRouter([
   {
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: 'activity', element: <Activity /> },
       { path: 'settings', element: <Settings /> },
       { path: 'settings/backup', element: <Backup /> },
+      { path: 'settings/restore', element: <Restore /> },
       { path: 'settings/advanced', element: <Advanced /> },
       { path: 'settings/advanced/balance', element: <Balance /> },
       { path: 'settings/advanced/peers', element: <Peers /> },

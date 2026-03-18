@@ -288,13 +288,13 @@ Add "Restore from backup" in Settings.
 
 **Tasks:**
 
-- [ ] Add "Restore from backup" UI in Settings page (`src/pages/settings/`)
-- [ ] Recovery flow:
+- [x] Add "Restore from backup" UI in Settings page (`src/pages/Restore.tsx`)
+- [x] Recovery flow:
   1. User enters 12-word mnemonic
   2. Derive `ldkSeed`, `vssEncryptionKey`, `vssStoreId` from mnemonic
   3. Connect to VSS server and call `listKeyVersions` to verify data exists
   4. If no data found: show error "No backup found for this wallet"
-  5. Fetch all objects via `getObject` for each key
+  5. Fetch all objects via `getObject` for each key (CM only — monitor recovery requires Phase 2 manifest key)
   6. Decrypt all values
   7. Clear ALL existing IDB stores (all 12 stores)
   8. Write `wallet_mnemonic`, `ldk_seed` (re-derived from mnemonic)
@@ -302,8 +302,8 @@ Add "Restore from backup" in Settings.
   10. Write all `ldk_channel_monitors`
   11. Full page reload — releases Web Lock, clears WASM state, resets `initPromise`
   12. Normal init path picks up restored IDB data
-- [ ] Confirm dialog before destructive operation: "This will replace your current wallet. Are you sure?"
-- [ ] Progress indicator during fetch/decrypt/write
+- [x] Confirm dialog before destructive operation: "This will replace your current wallet. Are you sure?"
+- [x] Progress indicator during fetch/decrypt/write
 
 **Recovery ordering constraint** (from `src/ldk/init.ts:268-274`):
 The init function throws if monitors exist without a ChannelManager. The recovery flow MUST write the ChannelManager before any ChannelMonitors.

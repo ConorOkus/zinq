@@ -120,6 +120,23 @@ export async function idbDeleteBatch(store: StoreName, keys: string[]): Promise<
   })
 }
 
+/**
+ * Clear all data from every IDB object store. Used by the recovery flow
+ * to wipe existing wallet state before writing restored data.
+ */
+export async function clearAllStores(): Promise<void> {
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([...STORES], 'readwrite')
+    for (const store of STORES) {
+      tx.objectStore(store).clear()
+    }
+    tx.oncomplete = () => resolve()
+    tx.onerror = () =>
+      reject(new Error(`IndexedDB clearAllStores failed: ${tx.error?.message ?? 'unknown'}`))
+  })
+}
+
 export function closeDb(): void {
   if (dbInstance) {
     dbInstance.close()
