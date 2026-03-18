@@ -48,6 +48,7 @@ function readyLdk(overrides?: Partial<Extract<LdkContextValue, { status: 'ready'
     channelChangeCounter: 0,
     peersReconnected: true,
     paymentHistory: [],
+    vssStatus: 'ok',
     ...overrides,
   }
 }

@@ -8,34 +8,107 @@ import {
 } from 'lightningdevkit'
 import { idbPut, idbDelete } from '../storage/idb'
 import { bytesToHex } from '../utils'
+import { VssError, type VssClient } from '../storage/vss-client'
+import { ErrorCode } from '../storage/proto/vss_pb'
 
 function outpointKey(outpoint: OutPoint): string {
   return `${bytesToHex(outpoint.get_txid())}:${outpoint.get_index().toString()}`
 }
 
-const MAX_PERSIST_RETRIES = 3
-const RETRY_DELAY_MS = 500
+const INITIAL_BACKOFF_MS = 500
+const MAX_BACKOFF_MS = 60_000
+const DEGRADED_THRESHOLD_MS = 10_000
 
+function isVssConflict(err: unknown): err is VssError {
+  return err instanceof VssError && err.errorCode === ErrorCode.CONFLICT_EXCEPTION
+}
+
+/**
+ * Persist monitor data to VSS (if available) then IDB with indefinite exponential backoff.
+ *
+ * Write ordering: VSS first (durable remote), then IDB (fast local).
+ * If VSS write fails, we retry indefinitely — channel operations are halted
+ * because channel_monitor_updated is never called until both writes succeed.
+ */
 async function persistWithRetry(
   store: 'ldk_channel_monitors',
   key: string,
-  data: Uint8Array
+  data: Uint8Array,
+  vssClient: VssClient | null,
+  versionCache: Map<string, number>,
+  onVssUnavailable: (() => void) | null,
+  onVssRecovered: (() => void) | null,
 ): Promise<void> {
-  for (let attempt = 1; attempt <= MAX_PERSIST_RETRIES; attempt++) {
+  let backoff = INITIAL_BACKOFF_MS
+  let totalWaitMs = 0
+  let degradedNotified = false
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- intentional indefinite retry
+  while (true) {
     try {
+      // VSS first (durable remote)
+      if (vssClient) {
+        const version = versionCache.get(key) ?? 0
+        const newVersion = await vssClient.putObject(key, data, version)
+        versionCache.set(key, newVersion)
+      }
+
+      // IDB second (fast local)
       await idbPut(store, key, data)
+
+      // If we were in a degraded state, signal recovery
+      if (degradedNotified) {
+        onVssRecovered?.()
+      }
       return
     } catch (err: unknown) {
-      console.error(
-        `[LDK Persist] Write attempt ${attempt}/${MAX_PERSIST_RETRIES} failed:`,
-        err
-      )
-      if (attempt < MAX_PERSIST_RETRIES) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * attempt))
+      // Version conflict: re-fetch server version, compare, retry
+      if (vssClient && isVssConflict(err)) {
+        console.warn(`[LDK Persist] Version conflict for ${key}, resolving...`)
+        try {
+          const serverObj = await vssClient.getObject(key)
+          if (serverObj) {
+            // Update local version cache to server's version
+            versionCache.set(key, serverObj.version)
+            // Check if server already has the same data
+            if (arraysEqual(serverObj.value, data)) {
+              console.log(`[LDK Persist] Conflict resolved: server has same data for ${key}`)
+              await idbPut(store, key, data)
+              if (degradedNotified) onVssRecovered?.()
+              return
+            }
+            // Different data — log critical but use server version for next write attempt
+            console.error(
+              `[LDK Persist] CRITICAL: True version conflict for ${key}. ` +
+              `Server version: ${serverObj.version}. Retrying with corrected version.`
+            )
+          }
+        } catch (resolveErr: unknown) {
+          console.error('[LDK Persist] Failed to resolve version conflict:', resolveErr)
+        }
+        // Retry immediately with corrected version (no backoff for conflicts)
+        continue
+      }
+
+      console.error(`[LDK Persist] Write failed for ${key}:`, err)
+      await new Promise((resolve) => setTimeout(resolve, backoff))
+      totalWaitMs += backoff
+      backoff = Math.min(backoff * 2, MAX_BACKOFF_MS)
+
+      if (!degradedNotified && totalWaitMs >= DEGRADED_THRESHOLD_MS) {
+        degradedNotified = true
+        onVssUnavailable?.()
       }
     }
   }
-  throw new Error(`[LDK Persist] Failed to persist after ${MAX_PERSIST_RETRIES} attempts`)
+}
+
+function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
 }
 
 export interface PersistError {
@@ -43,13 +116,25 @@ export interface PersistError {
   error: Error
 }
 
-export function createPersister(): {
+export interface PersisterOptions {
+  vssClient?: VssClient | null
+  onVssUnavailable?: () => void
+  onVssRecovered?: () => void
+}
+
+export function createPersister(options: PersisterOptions = {}): {
   persist: Persist
   setChainMonitor: (cm: ChainMonitor) => void
   onPersistFailure: (handler: (err: PersistError) => void) => void
+  versionCache: Map<string, number>
 } {
+  const vssClient = options.vssClient ?? null
+  const onVssUnavailable = options.onVssUnavailable ?? null
+  const onVssRecovered = options.onVssRecovered ?? null
+
   let chainMonitorRef: ChainMonitor | null = null
   let failureHandler: ((err: PersistError) => void) | null = null
+  const versionCache = new Map<string, number>()
 
   function handlePersist(
     channel_funding_outpoint: OutPoint,
@@ -59,7 +144,15 @@ export function createPersister(): {
     const data = monitor.write()
     const updateId = monitor.get_latest_update_id()
 
-    persistWithRetry('ldk_channel_monitors', key, data)
+    persistWithRetry(
+      'ldk_channel_monitors',
+      key,
+      data,
+      vssClient,
+      versionCache,
+      onVssUnavailable,
+      onVssRecovered,
+    )
       .then(() => {
         if (chainMonitorRef) {
           chainMonitorRef.channel_monitor_updated(channel_funding_outpoint, updateId)
@@ -94,11 +187,22 @@ export function createPersister(): {
     },
 
     archive_persisted_channel(channel_funding_outpoint: OutPoint): void {
-      // LDK calls this "archive" but we delete — no need to retain closed channel monitors
       const key = outpointKey(channel_funding_outpoint)
-      idbDelete('ldk_channel_monitors', key).catch((err: unknown) => {
-        console.error('[LDK Persist] Failed to delete archived channel monitor:', err)
-      })
+
+      // Delete from VSS first, then IDB
+      const deleteVss = vssClient
+        ? vssClient.deleteObject(key, versionCache.get(key) ?? 0)
+            .then(() => { versionCache.delete(key) })
+            .catch((err: unknown) => {
+              console.error(`[LDK Persist] Failed to delete ${key} from VSS:`, err)
+            })
+        : Promise.resolve()
+
+      deleteVss
+        .then(() => idbDelete('ldk_channel_monitors', key))
+        .catch((err: unknown) => {
+          console.error('[LDK Persist] Failed to delete archived channel monitor:', err)
+        })
     },
   })
 
@@ -110,5 +214,6 @@ export function createPersister(): {
     onPersistFailure: (handler: (err: PersistError) => void) => {
       failureHandler = handler
     },
+    versionCache,
   }
 }

@@ -78,6 +78,7 @@ function renderSend(onchainValue?: OnchainContextValue, ldkValue?: LdkContextVal
     createInvoice: vi.fn(() => 'lnbc1test'),
     channelChangeCounter: 0,
     paymentHistory: [],
+    vssStatus: 'ok' as const,
   }
   return render(
     <MemoryRouter>
@@ -460,6 +461,7 @@ describe('Send', () => {
         createInvoice: vi.fn(() => 'lnbc1test'),
         channelChangeCounter: 0,
         paymentHistory: [],
+        vssStatus: 'ok' as const,
       })
 
       await submitRecipient(user, 'lntbs_with_amount')
