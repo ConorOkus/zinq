@@ -125,33 +125,26 @@ export function Send() {
 
   // Consume scanned input from location.state (set by /scan route)
   useEffect(() => {
-    const state = location.state as { scannedInput?: string } | null
-    if (!state?.scannedInput) return
+    const state = location.state as Record<string, unknown> | null
+    const raw = typeof state?.scannedInput === 'string' ? state.scannedInput : null
+    if (!raw) return
 
-    const raw = state.scannedInput
     // Clear location.state to prevent re-processing on back/forward
     void navigate('/send', { replace: true, state: null })
 
     const parsed = classifyPaymentInput(raw)
+    if (parsed.type === 'error') return
 
-    // If it has an embedded amount, auto-process the full input
-    if (parsed.type === 'onchain' && parsed.amountSats !== null) {
-      setAmountDigits(parsed.amountSats.toString())
-      setInputValue(raw)
-      // Defer processRecipientInput until next tick so state is settled
-      setTimeout(() => void processRecipientInput(raw), 0)
-      return
-    }
-    if ((parsed.type === 'bolt11' || parsed.type === 'bolt12') && parsed.amountMsat !== null) {
-      const sats = (parsed.amountMsat + 999n) / 1000n
-      setAmountDigits(sats.toString())
-      setInputValue(raw)
-      setTimeout(() => void processRecipientInput(raw), 0)
-      return
-    }
+    const hasAmount =
+      (parsed.type === 'onchain' && parsed.amountSats !== null) ||
+      ((parsed.type === 'bolt11' || parsed.type === 'bolt12') && parsed.amountMsat !== null)
 
-    // No amount — start at amount step with recipient pre-filled
-    if (parsed.type !== 'error') {
+    if (hasAmount) {
+      // processRecipientInput derives the amount from the parsed input directly,
+      // so no need to pre-fill amountDigits or defer with setTimeout
+      setInputValue(raw)
+      void processRecipientInput(raw)
+    } else {
       setScannedInput(raw)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -277,7 +270,9 @@ export function Send() {
     if (amountSats <= 0n) return
     // If recipient was pre-filled by QR scan, skip to processing
     if (scannedInput) {
-      void processRecipientInput(scannedInput)
+      const input = scannedInput
+      setScannedInput(null)
+      void processRecipientInput(input)
       return
     }
     setSendStep({ step: 'recipient' })

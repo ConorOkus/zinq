@@ -8,6 +8,7 @@ type ScanError =
   | { kind: 'permission-denied' }
   | { kind: 'not-found' }
   | { kind: 'in-use' }
+  | { kind: 'unknown'; message: string }
   | { kind: 'invalid-qr'; message: string }
 
 function errorMessage(error: ScanError): string {
@@ -18,6 +19,8 @@ function errorMessage(error: ScanError): string {
       return 'No camera found on this device.'
     case 'in-use':
       return 'Camera is being used by another app.'
+    case 'unknown':
+      return error.message
     case 'invalid-qr':
       return error.message
   }
@@ -28,7 +31,7 @@ function classifyCameraError(err: unknown): ScanError {
   if (msg === 'NotAllowedError') return { kind: 'permission-denied' }
   if (msg === 'NotFoundError') return { kind: 'not-found' }
   if (msg === 'NotReadableError') return { kind: 'in-use' }
-  return { kind: 'permission-denied' }
+  return { kind: 'unknown', message: 'Could not access camera' }
 }
 
 export function Scan() {
@@ -80,7 +83,7 @@ export function Scan() {
     return () => clearTimeout(timer)
   }, [error])
 
-  const isPersistentError = error && error.kind !== 'invalid-qr'
+  const isPersistentError = error !== null && error.kind !== 'invalid-qr'
 
   return (
     <div className="flex min-h-dvh flex-col bg-black text-on-dark">
@@ -103,7 +106,7 @@ export function Scan() {
           <div className="pointer-events-none relative z-10 flex flex-col items-center gap-6">
             {/* Viewfinder frame */}
             <div className="h-64 w-64 rounded-2xl border-2 border-white/60" />
-            <p className="text-sm text-white/70">Point your camera at a QR code</p>
+            <p className="text-sm text-white/70">Position the QR Code in view to activate</p>
           </div>
         )}
 

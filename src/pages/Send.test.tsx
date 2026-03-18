@@ -19,6 +19,10 @@ vi.mock('../ldk/payment-input', () => ({
     if (raw.startsWith('lntbs')) {
       return { type: 'error', message: 'Invalid Lightning invoice' }
     }
+    if (raw.startsWith('bitcoin:') && raw.includes('amount=')) {
+      const address = raw.slice('bitcoin:'.length).split('?')[0] ?? raw
+      return { type: 'onchain', address, amountSats: 10000n }
+    }
     return { type: 'onchain', address: raw, amountSats: null }
   },
 }))
@@ -55,6 +59,51 @@ function renderSend(onchainValue?: OnchainContextValue, ldkValue?: LdkContextVal
   }
   return render(
     <MemoryRouter>
+      <LdkContext value={lk}>
+        <OnchainContext value={oc}>
+          <Send />
+        </OnchainContext>
+      </LdkContext>
+    </MemoryRouter>,
+  )
+}
+
+function renderSendWithState(
+  locationState: Record<string, unknown>,
+  onchainValue?: OnchainContextValue,
+  ldkValue?: LdkContextValue,
+) {
+  const oc = onchainValue ?? defaultOnchainContextValue
+  const lk = ldkValue ?? {
+    ...defaultLdkContextValue,
+    status: 'ready' as const,
+    node: {} as never,
+    nodeId: 'test',
+    error: null,
+    syncStatus: 'synced' as const,
+    peersReconnected: true,
+    connectToPeer: vi.fn(),
+    forgetPeer: vi.fn(),
+    createChannel: vi.fn(),
+    setBdkWallet: vi.fn(),
+    setSyncNeeded: vi.fn(),
+    sendBolt11Payment: vi.fn(),
+    sendBolt12Payment: vi.fn(),
+    sendBip353Payment: vi.fn(),
+    closeChannel: vi.fn(),
+    forceCloseChannel: vi.fn(),
+    listChannels: vi.fn(() => []),
+    abandonPayment: vi.fn(),
+    getPaymentResult: vi.fn(() => null),
+    listRecentPayments: vi.fn(() => []),
+    outboundCapacityMsat: vi.fn(() => 1_000_000_000n),
+    lightningBalanceSats: 1_000_000n,
+    createInvoice: vi.fn(() => 'lnbc1test'),
+    channelChangeCounter: 0,
+    paymentHistory: [],
+  }
+  return render(
+    <MemoryRouter initialEntries={[{ pathname: '/send', state: locationState }]}>
       <LdkContext value={lk}>
         <OnchainContext value={oc}>
           <Send />
@@ -273,6 +322,62 @@ describe('Send', () => {
       await user.click(screen.getByRole('button', { name: /back/i }))
 
       expect(screen.getByText('₿5,000')).toBeInTheDocument()
+    })
+  })
+
+  describe('scanned input via location.state', () => {
+    it('navigates to review for BIP 321 URI with amount', async () => {
+      renderSendWithState(
+        { scannedInput: 'bitcoin:tb1qtest?amount=0.0001' },
+        readyContext(),
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/review/i)).toBeInTheDocument()
+      })
+    })
+
+    it('starts at amount step for plain address without amount', () => {
+      renderSendWithState(
+        { scannedInput: 'tb1qplainaddress' },
+        readyContext(),
+      )
+
+      expect(screen.getByText(/available/i)).toBeInTheDocument()
+    })
+
+    it('skips recipient step when scanned address has no amount', async () => {
+      const user = userEvent.setup()
+      renderSendWithState(
+        { scannedInput: 'tb1qplainaddress' },
+        readyContext(),
+      )
+
+      await typeOnNumpad(user, '10000')
+      const nextBtns = screen.getAllByRole('button', { name: /next/i })
+      await user.click(nextBtns[nextBtns.length - 1]!)
+
+      await waitFor(() => {
+        expect(screen.getByText(/review/i)).toBeInTheDocument()
+      })
+    })
+
+    it('ignores invalid scanned input', () => {
+      renderSendWithState(
+        { scannedInput: 'lntbs_invalid_stuff' },
+        readyContext(),
+      )
+
+      expect(screen.getByText(/available/i)).toBeInTheDocument()
+    })
+
+    it('ignores non-string scanned input', () => {
+      renderSendWithState(
+        { scannedInput: 12345 },
+        readyContext(),
+      )
+
+      expect(screen.getByText(/available/i)).toBeInTheDocument()
     })
   })
 })
