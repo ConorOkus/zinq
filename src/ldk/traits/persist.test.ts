@@ -357,6 +357,71 @@ describe('createPersister', () => {
         expect(versionCache.get(key!)).toBe(6)
         expect(mockChainMonitor.channel_monitor_updated).toHaveBeenCalled()
       })
+
+      it('falls back to exponential backoff after conflict retry cap exhausted', async () => {
+        const conflictError = new VssError('conflict', ErrorCode.CONFLICT_EXCEPTION, 409)
+        const serverData = new Uint8Array([9, 9, 9])
+
+        // putObject always conflicts, getObject always returns different data
+        const vssClient = makeVssClient({
+          putObject: vi.fn().mockRejectedValue(conflictError),
+          getObject: vi.fn().mockResolvedValue({ value: serverData, version: 10 }),
+        })
+
+        const { persist } = createTestPersister({ vssClient })
+        const outpoint = makeOutpoint('abcd', 0)
+        const monitor = makeMonitor(new Uint8Array([1, 2, 3]), 1n)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(persist as any).persist_new_channel(outpoint, monitor)
+
+        // First 5 conflicts resolve immediately (no backoff), then falls to exponential
+        await vi.advanceTimersByTimeAsync(0)
+
+        // After 5 conflict retries, should enter exponential backoff (500ms)
+        // putObject: 1 initial + 5 conflict retries = 6 calls so far
+        const callsAfterFirstBatch = vi.mocked(vssClient.putObject).mock.calls.length
+        expect(callsAfterFirstBatch).toBe(6)
+
+        // Advance through first backoff (500ms) — triggers another batch
+        // (1 attempt + 5 conflict retries = 6 more calls)
+        await vi.advanceTimersByTimeAsync(500)
+        expect(vssClient.putObject).toHaveBeenCalledTimes(12)
+      })
+
+      it('resets version to 0 when getObject returns null during conflict', async () => {
+        const conflictError = new VssError('conflict', ErrorCode.CONFLICT_EXCEPTION, 409)
+
+        const vssClient = makeVssClient({
+          putObject: vi.fn()
+            .mockRejectedValueOnce(conflictError)
+            .mockResolvedValueOnce(1), // succeeds after version reset
+          getObject: vi.fn().mockResolvedValue(null), // key deleted on server
+        })
+
+        const { persist, versionCache, mockChainMonitor } = createTestPersister({ vssClient })
+        const outpoint = makeOutpoint('abcd', 0)
+
+        // Pre-seed with a stale version
+        const key = `${Array.from(outpoint.get_txid()).map((b) => b.toString(16).padStart(2, '0')).join('')}:0`
+        versionCache.set(key, 5)
+
+        const monitor = makeMonitor(new Uint8Array([1, 2, 3]), 1n)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(persist as any).persist_new_channel(outpoint, monitor)
+        await vi.advanceTimersByTimeAsync(0)
+
+        // Should have retried with version 0 after getObject returned null
+        expect(vssClient.putObject).toHaveBeenCalledTimes(2)
+        expect(vssClient.putObject).toHaveBeenNthCalledWith(
+          2,
+          expect.any(String),
+          expect.any(Uint8Array),
+          0, // reset to 0 because key not found on server
+        )
+        expect(mockChainMonitor.channel_monitor_updated).toHaveBeenCalled()
+      })
     })
 
     describe('archive_persisted_channel', () => {
