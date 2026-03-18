@@ -588,6 +588,7 @@ export function LdkProvider({
           channelChangeCounter: 0,
           peersReconnected: false,
           paymentHistory: initialPaymentHistory,
+          vssStatus: 'ok',
         })
 
         // Auto-reconnect to known peers, then mark peersReconnected so

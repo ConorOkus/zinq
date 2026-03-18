@@ -60,6 +60,7 @@ function readyLdkContext(): LdkContextValue {
     lightningBalanceSats: 1_000_000n,
     channelChangeCounter: 0,
     paymentHistory: [],
+    vssStatus: 'ok' as const,
   }
 }
 

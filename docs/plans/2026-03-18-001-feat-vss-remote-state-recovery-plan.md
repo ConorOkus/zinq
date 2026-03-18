@@ -181,16 +181,16 @@ Wire VSS into the ChannelMonitor persistence hot path.
 
 **Tasks:**
 
-- [ ] Refactor `persistWithRetry()` in `src/ldk/traits/persist.ts` to accept an optional `VssClient`
-- [ ] Change write ordering: VSS write first, then IDB write
-- [ ] Replace 3-attempt linear backoff with indefinite exponential backoff (capped at 60s)
-- [ ] Add in-memory version cache: `Map<string, number>` keyed by `txid:vout`, tracking the last-known VSS version per monitor
-- [ ] On `persist_new_channel`: write to VSS with version 0, then IDB. On success, cache version 1.
-- [ ] On `update_persisted_channel`: write to VSS with cached version, then IDB. On success, increment cached version.
-- [ ] On VSS `CONFLICT_EXCEPTION`: execute version conflict resolution (see above)
-- [ ] On `archive_persisted_channel`: delete from VSS (with cached version), then delete from IDB
-- [ ] Add `onVssUnavailable` callback to surface outage state to the UI
-- [ ] Wire `onVssUnavailable` into `LdkContext` to show a degradation banner
+- [x] Refactor `persistWithRetry()` in `src/ldk/traits/persist.ts` to accept an optional `VssClient`
+- [x] Change write ordering: VSS write first, then IDB write
+- [x] Replace 3-attempt linear backoff with indefinite exponential backoff (capped at 60s)
+- [x] Add in-memory version cache: `Map<string, number>` keyed by `txid:vout`, tracking the last-known VSS version per monitor
+- [x] On `persist_new_channel`: write to VSS with version 0, then IDB. On success, cache version 1.
+- [x] On `update_persisted_channel`: write to VSS with cached version, then IDB. On success, increment cached version.
+- [x] On VSS `CONFLICT_EXCEPTION`: execute version conflict resolution (see above)
+- [x] On `archive_persisted_channel`: delete from VSS (with cached version), then delete from IDB
+- [x] Add `onVssUnavailable` callback to surface outage state to the UI
+- [x] Wire `onVssUnavailable` into `LdkContext` to show a degradation banner
 
 **Key changes to `src/ldk/traits/persist.ts`:**
 ```typescript

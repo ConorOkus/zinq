@@ -7,6 +7,8 @@ import type { PersistedPayment } from './storage/payment-history'
 
 export type SyncStatus = 'syncing' | 'synced' | 'stale'
 
+export type VssStatus = 'ok' | 'degraded'
+
 export type PaymentResult =
   | { status: 'pending' }
   | { status: 'sent'; preimage: Uint8Array; feePaidMsat: bigint | null }
@@ -45,6 +47,8 @@ export type LdkContextValue =
       peersReconnected: boolean
       /** Persisted Lightning payment history (inbound + outbound). */
       paymentHistory: PersistedPayment[]
+      /** VSS backup service status. 'degraded' means writes are failing and Lightning ops are paused. */
+      vssStatus: VssStatus
     }
   | { status: 'error'; node: null; nodeId: null; error: Error }
 
