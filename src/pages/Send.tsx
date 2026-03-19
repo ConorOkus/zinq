@@ -167,24 +167,22 @@ export function Send() {
     const controller = new AbortController()
     resolveAbortRef.current = controller
 
-    const timeoutId = setTimeout(() => controller.abort(), RESOLVE_TIMEOUT_MS)
-
     setSendStep({ step: 'resolving', raw })
 
     try {
-      // Try BIP 353 via DoH first
-      const bip353Result = await resolveBip353(user, domain, controller.signal)
+      // Each resolution step gets its own timeout so a slow DoH response
+      // doesn't eat into the LNURL timeout budget
+      const bip353Signal = AbortSignal.any([controller.signal, AbortSignal.timeout(RESOLVE_TIMEOUT_MS)])
+      const bip353Result = await resolveBip353(user, domain, bip353Signal)
 
       if (bip353Result && bip353Result.type !== 'error') {
-        clearTimeout(timeoutId)
-        // Route the resolved payment input through normal flow with the original label
         routeResolvedInput(bip353Result, raw)
         return
       }
 
-      // Fall back to LNURL-pay
-      const lnurlResult = await resolveLnurlPay(user, domain, controller.signal)
-      clearTimeout(timeoutId)
+      // Fall back to LNURL-pay with a fresh timeout
+      const lnurlSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(RESOLVE_TIMEOUT_MS)])
+      const lnurlResult = await resolveLnurlPay(user, domain, lnurlSignal)
 
       if (lnurlResult) {
         // Round min up (ceil) so we never send less than the server requires;
@@ -211,7 +209,6 @@ export function Send() {
       setSendStep({ step: 'error', message: `Could not resolve ${raw}`, retryStep: null })
     } catch (err) {
       if (controller.signal.aborted) return
-      clearTimeout(timeoutId)
       const message = err instanceof Error ? err.message : String(err)
       setSendStep({ step: 'error', message, retryStep: null })
     }
