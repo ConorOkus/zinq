@@ -221,44 +221,57 @@ export function Receive() {
           />
         </div>
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center gap-8 px-8">
-          {addressError && (
-            <p className="text-sm text-red-400">{addressError}</p>
-          )}
-          {invoiceError && (
-            <p className="text-sm text-red-400">{invoiceError}</p>
-          )}
+        <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col items-center justify-center gap-8 px-8">
+            {addressError && (
+              <p className="text-sm text-red-400">{addressError}</p>
+            )}
+            {invoiceError && (
+              <p className="text-sm text-red-400">{invoiceError}</p>
+            )}
+            {address && (
+              <>
+                {confirmedAmountSats > 0n && (
+                  <button
+                    className="text-sm text-accent transition-colors active:text-accent/80"
+                    onClick={handleEditAmount}
+                  >
+                    <span className="font-display text-lg font-bold text-on-dark">{formatBtc(confirmedAmountSats)}</span>
+                  </button>
+                )}
+
+                <div
+                  className="flex h-[260px] w-[260px] items-center justify-center rounded-2xl bg-white p-5"
+                  aria-label={`QR code for Bitcoin address ${address}${confirmedAmountSats > 0n ? `, amount ${formatBtc(confirmedAmountSats)}` : ''}`}
+                >
+                  <QRCodeSVG value={qrValue} size={220} />
+                </div>
+
+                <div className="flex max-w-full items-center gap-3 rounded-full bg-dark-elevated px-5 py-3">
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm text-[var(--color-on-dark-muted)]">
+                    {truncated}
+                  </span>
+                  <button
+                    className="shrink-0 rounded-full bg-accent px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-transform active:scale-95"
+                    onClick={() => void handleCopy()}
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           {address && (
-            <>
+            <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
               <button
                 ref={amountButtonRef}
-                className="text-sm text-accent transition-colors active:text-accent/80"
+                className="flex h-14 w-full items-center justify-center rounded-xl bg-dark-elevated text-sm font-semibold text-accent transition-transform active:scale-[0.98]"
                 onClick={handleEditAmount}
               >
-                {confirmedAmountSats > 0n
-                  ? <span className="font-display text-lg font-bold text-on-dark">{formatBtc(confirmedAmountSats)}</span>
-                  : 'Add amount'}
+                {confirmedAmountSats > 0n ? 'Edit amount' : 'Add amount'}
               </button>
-
-              <div
-                className="flex h-[260px] w-[260px] items-center justify-center rounded-2xl bg-white p-5"
-                aria-label={`QR code for Bitcoin address ${address}${confirmedAmountSats > 0n ? `, amount ${formatBtc(confirmedAmountSats)}` : ''}`}
-              >
-                <QRCodeSVG value={qrValue} size={220} />
-              </div>
-
-              <div className="flex max-w-full items-center gap-3 rounded-full bg-dark-elevated px-5 py-3">
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm text-[var(--color-on-dark-muted)]">
-                  {truncated}
-                </span>
-                <button
-                  className="shrink-0 rounded-full bg-accent px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-transform active:scale-95"
-                  onClick={() => void handleCopy()}
-                >
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-            </>
+            </div>
           )}
         </div>
       )}

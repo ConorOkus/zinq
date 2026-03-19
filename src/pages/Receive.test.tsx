@@ -145,8 +145,8 @@ describe('Receive', () => {
       renderReceive(readyContext())
 
       const backButton = screen.getByRole('button', { name: /back/i })
-      const copyButton = screen.getByRole('button', { name: /copy/i })
-      copyButton.focus()
+      const addAmountButton = screen.getByRole('button', { name: /add amount/i })
+      addAmountButton.focus()
       await user.keyboard('{Tab}')
       expect(backButton).toHaveFocus()
     })
@@ -158,8 +158,8 @@ describe('Receive', () => {
       const backButton = screen.getByRole('button', { name: /back/i })
       backButton.focus()
       await user.keyboard('{Shift>}{Tab}{/Shift}')
-      const copyButton = screen.getByRole('button', { name: /copy/i })
-      expect(copyButton).toHaveFocus()
+      const addAmountButton = screen.getByRole('button', { name: /add amount/i })
+      expect(addAmountButton).toHaveFocus()
     })
   })
 
@@ -224,7 +224,7 @@ describe('Receive', () => {
       expect(screen.getByLabelText(/qr code/i)).toBeInTheDocument()
     })
 
-    it('tapping displayed amount re-opens numpad with pre-populated digits', async () => {
+    it('tapping "Edit amount" re-opens numpad with pre-populated digits', async () => {
       const user = userEvent.setup()
       renderReceive()
 
@@ -235,11 +235,12 @@ describe('Receive', () => {
       await user.click(screen.getByRole('button', { name: '0' }))
       await user.click(screen.getByRole('button', { name: /done/i }))
 
-      // Amount should be displayed
+      // Amount should be displayed above QR, and button says "Edit amount"
       expect(screen.getByText('₿500')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /edit amount/i })).toBeInTheDocument()
 
-      // Tap amount to re-edit
-      await user.click(screen.getByText('₿500'))
+      // Tap "Edit amount" to re-edit
+      await user.click(screen.getByRole('button', { name: /edit amount/i }))
 
       // Should show numpad with the amount displayed
       expect(screen.getByText('₿500')).toBeInTheDocument()
@@ -259,7 +260,7 @@ describe('Receive', () => {
       await user.click(screen.getByRole('button', { name: /done/i }))
 
       // Now edit and remove
-      await user.click(screen.getByText('₿100'))
+      await user.click(screen.getByRole('button', { name: /edit amount/i }))
       await user.click(screen.getByRole('button', { name: /remove amount/i }))
 
       // Should be back to "Add amount" label
