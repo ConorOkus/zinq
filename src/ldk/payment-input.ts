@@ -8,12 +8,15 @@ import {
   Amount_Bitcoin,
   Result_Bolt11InvoiceParseOrSemanticErrorZ_OK,
   Result_OfferBolt12ParseErrorZ_OK,
+  Result_HumanReadableNameNoneZ_OK,
 } from 'lightningdevkit'
+import type { LnurlPayMetadata } from '../lnurl/resolve-lnurl'
 
 export type ParsedPaymentInput =
   | { type: 'bolt11'; invoice: Bolt11Invoice; raw: string; amountMsat: bigint | null; description: string | null }
   | { type: 'bolt12'; offer: Offer; raw: string; amountMsat: bigint | null; description: string | null }
   | { type: 'bip353'; name: HumanReadableName; raw: string }
+  | { type: 'lnurl'; domain: string; user: string; metadata: LnurlPayMetadata; raw: string }
   | { type: 'onchain'; address: string; amountSats: bigint | null }
   | { type: 'error'; message: string }
 
@@ -126,18 +129,13 @@ function parseBolt12Offer(raw: string): ParsedPaymentInput {
   return { type: 'bolt12', offer, raw, amountMsat, description }
 }
 
-function parseBip353(_raw: string): ParsedPaymentInput {
-  // BIP 353 requires bLIP 32 DNS resolver nodes which are not yet available on signet.
-  // Disable until resolvers are configured to avoid confusing timeout failures.
-  return { type: 'error', message: 'BIP 353 addresses (user@domain) are not yet supported on this network' }
-
-  // When bLIP 32 resolvers become available, uncomment:
-  // const cleaned = raw.replace(/^\u20bf/, '')
-  // const result = HumanReadableName.constructor_from_encoded(cleaned)
-  // if (!(result instanceof Result_HumanReadableNameNoneZ_OK)) {
-  //   return { type: 'error', message: 'Invalid Bitcoin address format' }
-  // }
-  // return { type: 'bip353', name: result.res, raw: cleaned }
+function parseBip353(raw: string): ParsedPaymentInput {
+  const cleaned = raw.replace(/^\u20bf/, '')
+  const result = HumanReadableName.constructor_from_encoded(cleaned)
+  if (!(result instanceof Result_HumanReadableNameNoneZ_OK)) {
+    return { type: 'error', message: 'Invalid address format' }
+  }
+  return { type: 'bip353', name: result.res, raw: cleaned }
 }
 
 /**

@@ -12,7 +12,6 @@ import {
   type ChannelId,
   type Bolt11Invoice,
   type Offer,
-  type HumanReadableName,
 } from 'lightningdevkit'
 import { initializeLdk, type LdkNode } from './init'
 import { VssClient, FixedHeaderProvider } from './storage/vss-client'
@@ -307,46 +306,6 @@ export function LdkProvider({
     [refreshPaymentHistory],
   )
 
-  const sendBip353Payment = useCallback(
-    (name: HumanReadableName, amountMsat: bigint): Uint8Array => {
-      const node = nodeRef.current
-      if (!node) throw new Error('Node not initialized')
-
-      const paymentId = crypto.getRandomValues(new Uint8Array(32))
-
-      // BIP 353 requires DNS resolver nodes (bLIP 32). Currently no resolvers configured
-      // for Mutinynet — this will fail gracefully with a timeout.
-      const result = node.channelManager.pay_for_offer_from_human_readable_name(
-        name,
-        amountMsat,
-        paymentId,
-        Retry.constructor_attempts(3),
-        Option_u64Z.constructor_none(), // max routing fee
-        [], // dns_resolvers — empty until bLIP 32 resolvers are available on signet
-      )
-
-      if (!result.is_ok()) {
-        throw new Error('Failed to initiate BIP 353 payment')
-      }
-
-      const paymentIdHex = bytesToHex(paymentId)
-      setPaymentResult(paymentIdHex, { status: 'pending' })
-
-      void persistPayment({
-        paymentHash: paymentIdHex,
-        direction: 'outbound',
-        amountMsat: amountMsat,
-        status: 'pending',
-        feePaidMsat: null,
-        createdAt: Date.now(),
-        failureReason: null,
-      }).then(() => void refreshPaymentHistory())
-
-      return paymentId
-    },
-    [refreshPaymentHistory],
-  )
-
   const abandonPayment = useCallback((paymentId: Uint8Array): void => {
     const node = nodeRef.current
     if (!node) throw new Error('Node not initialized')
@@ -605,7 +564,6 @@ export function LdkProvider({
           createInvoice,
           sendBolt11Payment,
           sendBolt12Payment,
-          sendBip353Payment,
           abandonPayment,
           getPaymentResult,
           listRecentPayments,
@@ -704,7 +662,7 @@ export function LdkProvider({
       activeConnections.current.clear()
       nodeRef.current = null
     }
-  }, [connectToPeer, forgetPeer, createChannel, closeChannel, forceCloseChannel, listChannels, createInvoice, sendBolt11Payment, sendBolt12Payment, sendBip353Payment, abandonPayment, getPaymentResult, listRecentPayments, outboundCapacityMsat, refreshPaymentHistory, ldkSeed, vssEncryptionKey, vssStoreId])
+  }, [connectToPeer, forgetPeer, createChannel, closeChannel, forceCloseChannel, listChannels, createInvoice, sendBolt11Payment, sendBolt12Payment, abandonPayment, getPaymentResult, listRecentPayments, outboundCapacityMsat, refreshPaymentHistory, ldkSeed, vssEncryptionKey, vssStoreId])
 
   return <LdkContext value={state}>{children}</LdkContext>
 }

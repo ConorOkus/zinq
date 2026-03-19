@@ -4,8 +4,11 @@ import { useOnchain } from '../onchain/use-onchain'
 import { useLdk } from '../ldk/use-ldk'
 import { useUnifiedBalance } from '../hooks/use-unified-balance'
 import { classifyPaymentInput, type ParsedPaymentInput } from '../ldk/payment-input'
+import { resolveBip353 } from '../ldk/resolve-bip353'
+import { resolveLnurlPay, fetchLnurlInvoice } from '../lnurl/resolve-lnurl'
 import { ONCHAIN_CONFIG } from '../onchain/config'
 import { formatBtc } from '../utils/format-btc'
+import { msatToSatCeil, msatToSatFloor } from '../utils/msat'
 import { bytesToHex } from '../ldk/utils'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { Numpad, type NumpadKey } from '../components/Numpad'
@@ -22,8 +25,10 @@ import {
 type SendStep =
   // Recipient entry (first screen)
   | { step: 'recipient' }
+  // Resolving user@domain address (BIP 353 / LNURL)
+  | { step: 'resolving'; raw: string }
   // Amount entry (shown only when input has no embedded amount)
-  | { step: 'amount'; parsedInput: ParsedPaymentInput; rawInput: string }
+  | { step: 'amount'; parsedInput: ParsedPaymentInput; rawInput: string; minSat?: bigint; maxSat?: bigint }
   // On-chain flow
   | {
       step: 'oc-review'
@@ -33,19 +38,21 @@ type SendStep =
       feeRate: bigint
       isSendMax: boolean
       fromStep: 'recipient' | 'amount'
+      label?: string
     }
   | { step: 'oc-broadcasting' }
   | { step: 'oc-success'; txid: string; amount: bigint }
   // Lightning flow
   | {
       step: 'ln-review'
-      parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }
+      parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' }
       amountMsat: bigint
       fromStep: 'recipient' | 'amount'
+      label?: string
     }
   | {
       step: 'ln-sending'
-      parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }
+      parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' }
       amountMsat: bigint
       paymentId: Uint8Array
     }
@@ -60,6 +67,7 @@ const TXID_RE = /^[0-9a-f]{64}$/i
 const MAX_DIGITS = 8
 const PAYMENT_POLL_MS = 1_000
 const MAX_POLL_DURATION_MS = 5 * 60 * 1_000
+const RESOLVE_TIMEOUT_MS = 5_000
 
 function classifyEstimateError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err)
@@ -72,29 +80,25 @@ function classifyEstimateError(err: unknown): string {
   return msg
 }
 
-/** Convert millisatoshis to satoshis, rounding up. */
-function msatToSat(msat: bigint): bigint {
-  return (msat + 999n) / 1000n
-}
+/** Convert millisatoshis to satoshis, rounding up. Alias for display calculations. */
+const msatToSat = msatToSatCeil
 
 /** Get a display label for a Lightning payment recipient. */
-function recipientLabel(parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }): string {
+function recipientLabel(parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' }, label?: string): string {
+  if (label) return label
   switch (parsed.type) {
     case 'bolt11':
       return parsed.description ?? 'Lightning Invoice'
     case 'bolt12':
       return parsed.description ?? 'Lightning Offer'
-    case 'bip353':
-      return parsed.raw
   }
 }
 
 /** Get a short badge label for the payment type. */
-function typeBadge(parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }): string {
+function typeBadge(parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' }): string {
   switch (parsed.type) {
     case 'bolt11': return 'BOLT 11'
     case 'bolt12': return 'BOLT 12'
-    case 'bip353': return 'BIP 353'
   }
 }
 
@@ -113,8 +117,9 @@ export function Send() {
   const sendingRef = useRef(false)
   const processingRef = useRef(false)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const resolveAbortRef = useRef<AbortController | null>(null)
   // Store amount step data so we can restore it when navigating back from review
-  const amountStepDataRef = useRef<{ parsedInput: ParsedPaymentInput; rawInput: string } | null>(null)
+  const amountStepDataRef = useRef<{ parsedInput: ParsedPaymentInput; rawInput: string; minSat?: bigint; maxSat?: bigint } | null>(null)
 
   const onchainBalance =
     onchain.status === 'ready'
@@ -122,10 +127,11 @@ export function Send() {
       : 0n
   const lnCapacityMsat = ldk.status === 'ready' ? ldk.outboundCapacityMsat() : 0n
 
-  // Cleanup polling on unmount
+  // Cleanup polling and abort on unmount
   useEffect(() => {
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current)
+      resolveAbortRef.current?.abort()
     }
   }, [])
 
@@ -147,10 +153,115 @@ export function Send() {
 
   // --- Amount screen: Send max approximation ---
   const handleApproxSendMax = useCallback(() => {
-    if (unified.total <= 0n) return
-    setAmountDigits(unified.total.toString())
+    if (sendStep.step !== 'amount') return
+    // For LNURL with maxSat constraint, cap at maxSat
+    const maxAvailable = sendStep.maxSat ? (sendStep.maxSat < unified.total ? sendStep.maxSat : unified.total) : unified.total
+    if (maxAvailable <= 0n) return
+    setAmountDigits(maxAvailable.toString())
     setIsSendMax(true)
-  }, [unified.total])
+  }, [unified.total, sendStep])
+
+  // --- Resolve user@domain: BIP 353 (DoH) then LNURL fallback ---
+  const resolveAddress = useCallback(async (raw: string, user: string, domain: string): Promise<void> => {
+    resolveAbortRef.current?.abort()
+    const controller = new AbortController()
+    resolveAbortRef.current = controller
+
+    const timeoutId = setTimeout(() => controller.abort(), RESOLVE_TIMEOUT_MS)
+
+    setSendStep({ step: 'resolving', raw })
+
+    try {
+      // Try BIP 353 via DoH first
+      const bip353Result = await resolveBip353(user, domain, controller.signal)
+
+      if (bip353Result && bip353Result.type !== 'error') {
+        clearTimeout(timeoutId)
+        // Route the resolved payment input through normal flow with the original label
+        routeResolvedInput(bip353Result, raw)
+        return
+      }
+
+      // Fall back to LNURL-pay
+      const lnurlResult = await resolveLnurlPay(user, domain, controller.signal)
+      clearTimeout(timeoutId)
+
+      if (lnurlResult) {
+        // Round min up (ceil) so we never send less than the server requires;
+        // round max down (floor) so we never exceed the server's limit
+        const minSat = msatToSatCeil(lnurlResult.minSendableMsat)
+        const maxSat = msatToSatFloor(lnurlResult.maxSendableMsat)
+
+        // If min === max, it's a fixed-amount LNURL — skip numpad
+        if (minSat === maxSat) {
+          await fetchAndRouteInvoice(lnurlResult.callback, lnurlResult.minSendableMsat, raw)
+          return
+        }
+
+        setSendStep({
+          step: 'amount',
+          parsedInput: { type: 'lnurl', domain, user, metadata: lnurlResult, raw },
+          rawInput: raw,
+          minSat,
+          maxSat,
+        })
+        return
+      }
+
+      setSendStep({ step: 'error', message: `Could not resolve ${raw}`, retryStep: null })
+    } catch (err) {
+      if (controller.signal.aborted) return
+      clearTimeout(timeoutId)
+      const message = err instanceof Error ? err.message : String(err)
+      setSendStep({ step: 'error', message, retryStep: null })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- routeResolvedInput and fetchAndRouteInvoice are stable setState wrappers
+  }, [])
+
+  // Route a resolved ParsedPaymentInput to the appropriate review/amount step
+  const routeResolvedInput = useCallback((parsed: ParsedPaymentInput, label: string) => {
+    if (parsed.type === 'onchain') {
+      setSendStep({ step: 'amount', parsedInput: parsed, rawInput: label })
+      return
+    }
+
+    if (parsed.type === 'bolt11' || parsed.type === 'bolt12') {
+      // Fixed-amount: go directly to review
+      if (parsed.amountMsat !== null) {
+        setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat, fromStep: 'recipient', label })
+        return
+      }
+      // No amount: need numpad
+      setSendStep({ step: 'amount', parsedInput: parsed, rawInput: label })
+      return
+    }
+
+    setSendStep({ step: 'error', message: 'Unexpected resolved type', retryStep: null })
+  }, [])
+
+  // Fetch LNURL invoice and route to ln-review
+  const fetchAndRouteInvoice = useCallback(async (callback: string, amountMsat: bigint, label: string) => {
+    const controller = resolveAbortRef.current
+    try {
+      setSendStep({ step: 'resolving', raw: label })
+      const invoiceStr = await fetchLnurlInvoice(callback, amountMsat, controller?.signal)
+      const parsed = classifyPaymentInput(invoiceStr)
+      if (parsed.type === 'bolt11') {
+        // Verify invoice amount matches what we requested
+        if (parsed.amountMsat !== null && parsed.amountMsat !== amountMsat) {
+          setSendStep({ step: 'error', message: 'Invoice amount does not match requested amount', retryStep: null })
+          return
+        }
+        setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat ?? amountMsat, fromStep: 'amount', label })
+      } else {
+        setSendStep({ step: 'error', message: 'Invalid invoice from Lightning Address provider', retryStep: null })
+      }
+    } catch (err) {
+      if (controller?.signal.aborted) return
+      const message = err instanceof Error ? err.message : String(err)
+      setSendStep({ step: 'error', message, retryStep: null })
+    }
+  }, [])
 
   // --- Process input: classify and route to review or amount step ---
   const processRecipientInput = useCallback(async (value: string, fromStep: 'recipient' | 'amount') => {
@@ -171,6 +282,15 @@ export function Send() {
       }
 
       setInputError(null)
+
+      // BIP 353 / Lightning Address: trigger async resolution
+      if (parsed.type === 'bip353') {
+        const atIndex = parsed.raw.indexOf('@')
+        const user = parsed.raw.slice(0, atIndex)
+        const domain = parsed.raw.slice(atIndex + 1)
+        void resolveAddress(parsed.raw, user, domain)
+        return
+      }
 
       // Save amount step data for back navigation from review
       if (fromStep === 'amount') {
@@ -248,9 +368,9 @@ export function Send() {
         return
       }
 
-      // Lightning types (bolt11, bolt12, bip353)
+      // Lightning types (bolt11, bolt12)
       // Fixed-amount: use embedded amount, skip numpad
-      if (parsed.type !== 'bip353' && parsed.amountMsat !== null) {
+      if (parsed.type !== 'lnurl' && parsed.amountMsat !== null) {
         if (parsed.amountMsat > lnCapacityMsat) {
           setInputError('Amount exceeds Lightning channel capacity')
           return
@@ -266,6 +386,13 @@ export function Send() {
       }
 
       // Coming from numpad — use user-entered amount
+      if (parsed.type === 'lnurl') {
+        // LNURL: fetch invoice from callback
+        const effectiveMsat = amountSats * 1000n
+        void fetchAndRouteInvoice(parsed.metadata.callback, effectiveMsat, parsed.raw)
+        return
+      }
+
       const effectiveMsat = amountSats * 1000n
       if (effectiveMsat > lnCapacityMsat) {
         setInputError('Amount exceeds Lightning channel capacity')
@@ -275,7 +402,7 @@ export function Send() {
     } finally {
       processingRef.current = false
     }
-  }, [amountSats, isSendMax, onchain, onchainBalance, lnCapacityMsat])
+  }, [amountSats, isSendMax, onchain, onchainBalance, lnCapacityMsat, resolveAddress, fetchAndRouteInvoice])
 
   // --- Recipient: paste handler ---
   const handlePaste = useCallback(
@@ -299,6 +426,17 @@ export function Send() {
   const handleAmountNext = useCallback(() => {
     if (amountSats <= 0n) return
     if (sendStep.step !== 'amount') return
+
+    // Validate LNURL min/max constraints
+    if (sendStep.minSat !== undefined && amountSats < sendStep.minSat) {
+      setInputError(`Minimum amount is ${formatBtc(sendStep.minSat)}`)
+      return
+    }
+    if (sendStep.maxSat !== undefined && amountSats > sendStep.maxSat) {
+      setInputError(`Maximum amount is ${formatBtc(sendStep.maxSat)}`)
+      return
+    }
+
     void processRecipientInput(sendStep.rawInput, 'amount')
   }, [amountSats, sendStep, processRecipientInput])
 
@@ -382,9 +520,6 @@ export function Send() {
             parsed.offer,
             parsed.amountMsat === null ? amountMsat : undefined,
           )
-          break
-        case 'bip353':
-          paymentId = ldk.sendBip353Payment(parsed.name, amountMsat)
           break
       }
 
@@ -473,6 +608,25 @@ export function Send() {
         <p className="mt-2 text-sm text-red-400">{onchain.error.message}</p>
         <button className="mt-6 text-sm text-accent" onClick={() => void navigate('/')}>
           Back to Home
+        </button>
+      </div>
+    )
+  }
+
+  // --- Resolving address ---
+  if (sendStep.step === 'resolving') {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-dark">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        <p className="text-[var(--color-on-dark-muted)]">Resolving {sendStep.raw}...</p>
+        <button
+          className="mt-4 text-sm text-red-400 transition-colors hover:text-red-300"
+          onClick={() => {
+            resolveAbortRef.current?.abort()
+            setSendStep({ step: 'recipient' })
+          }}
+        >
+          Cancel
         </button>
       </div>
     )
@@ -632,7 +786,7 @@ export function Send() {
           <div className="flex justify-between">
             <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">To</span>
             <span className="max-w-[60%] break-all text-right font-mono text-sm font-semibold">
-              {sendStep.address.slice(0, 12)}...{sendStep.address.slice(-8)}
+              {sendStep.label ?? `${sendStep.address.slice(0, 12)}...${sendStep.address.slice(-8)}`}
             </span>
           </div>
           <div className="flex justify-between">
@@ -673,7 +827,7 @@ export function Send() {
           <div className="flex justify-between">
             <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">To</span>
             <span className="max-w-[60%] break-all text-right text-sm font-semibold">
-              {recipientLabel(parsed)}
+              {recipientLabel(parsed, sendStep.label)}
             </span>
           </div>
           <div className="flex justify-between">
@@ -701,6 +855,7 @@ export function Send() {
 
   // --- Amount screen (shown only when input has no embedded amount) ---
   if (sendStep.step === 'amount') {
+    const hasConstraints = sendStep.minSat !== undefined || sendStep.maxSat !== undefined
     return (
       <div className="flex min-h-dvh flex-col justify-between bg-dark text-on-dark">
         <ScreenHeader title="Send" onBack={() => setSendStep({ step: 'recipient' })} />
@@ -719,6 +874,13 @@ export function Send() {
           >
             {formatBtc(amountSats)}
           </div>
+          {hasConstraints && (
+            <p className="text-xs text-[var(--color-on-dark-muted)]">
+              {sendStep.minSat !== undefined && `Min ${formatBtc(sendStep.minSat)}`}
+              {sendStep.minSat !== undefined && sendStep.maxSat !== undefined && ' · '}
+              {sendStep.maxSat !== undefined && `Max ${formatBtc(sendStep.maxSat)}`}
+            </p>
+          )}
           {inputError && <p className="mt-2 text-sm text-red-400">{inputError}</p>}
         </div>
         <Numpad

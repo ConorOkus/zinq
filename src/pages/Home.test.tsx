@@ -39,7 +39,6 @@ function readyLdk(overrides?: Partial<Extract<LdkContextValue, { status: 'ready'
     setSyncNeeded: () => {},
     sendBolt11Payment: () => new Uint8Array(),
     sendBolt12Payment: () => new Uint8Array(),
-    sendBip353Payment: () => new Uint8Array(),
     abandonPayment: () => {},
     getPaymentResult: () => null,
     listRecentPayments: () => [],

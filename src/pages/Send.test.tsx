@@ -66,7 +66,7 @@ function renderSend(onchainValue?: OnchainContextValue, ldkValue?: LdkContextVal
     setSyncNeeded: vi.fn(),
     sendBolt11Payment: vi.fn(),
     sendBolt12Payment: vi.fn(),
-    sendBip353Payment: vi.fn(),
+
     closeChannel: vi.fn(),
     forceCloseChannel: vi.fn(),
     listChannels: vi.fn(() => []),
@@ -449,7 +449,7 @@ describe('Send', () => {
         setSyncNeeded: vi.fn(),
         sendBolt11Payment: vi.fn(),
         sendBolt12Payment: vi.fn(),
-        sendBip353Payment: vi.fn(),
+    
         closeChannel: vi.fn(),
         forceCloseChannel: vi.fn(),
         listChannels: vi.fn(() => []),

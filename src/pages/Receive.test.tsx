@@ -49,7 +49,6 @@ function readyLdkContext(): LdkContextValue {
     createInvoice: vi.fn(() => 'lntbs1fakeinvoice'),
     sendBolt11Payment: vi.fn(),
     sendBolt12Payment: vi.fn(),
-    sendBip353Payment: vi.fn(),
     closeChannel: vi.fn(),
     forceCloseChannel: vi.fn(),
     listChannels: vi.fn(() => []),
