@@ -8,14 +8,17 @@ export interface LnurlPayMetadata {
 }
 
 /**
- * Build a fetch URL for an LNURL endpoint.
- * In development, routes through the Vite CORS proxy to avoid broken CORS headers.
+ * Route an HTTPS URL through the Vite CORS proxy in development.
+ * In production, returns the URL unchanged.
  */
-function lnurlFetchUrl(domain: string, path: string): string {
-  if (import.meta.env.DEV) {
-    return `/__lnurl_proxy/${domain}${path}`
+function proxyUrl(httpsUrl: string): string {
+  if (!import.meta.env.DEV) return httpsUrl
+  try {
+    const u = new URL(httpsUrl)
+    return `/__lnurl_proxy/${u.hostname}${u.pathname}${u.search}`
+  } catch {
+    return httpsUrl
   }
-  return `https://${domain}${path}`
 }
 
 /**
@@ -30,7 +33,7 @@ export async function resolveLnurlPay(
   domain: string,
   signal?: AbortSignal,
 ): Promise<LnurlPayMetadata | null> {
-  const url = lnurlFetchUrl(domain, `/.well-known/lnurlp/${user}`)
+  const url = proxyUrl(`https://${domain}/.well-known/lnurlp/${user}`)
 
   let response: Response
   try {
@@ -78,14 +81,14 @@ export async function resolveLnurlPay(
   }
 
   // Validate callback domain matches the original LNURL domain
+  let callbackHost: string
   try {
-    const callbackHost = new URL(callback).hostname
-    if (callbackHost !== domain && !callbackHost.endsWith('.' + domain)) {
-      throw new Error('Lightning Address callback domain mismatch')
-    }
-  } catch (err) {
-    if (err instanceof Error && err.message.includes('mismatch')) throw err
+    callbackHost = new URL(callback).hostname
+  } catch {
     throw new Error('Lightning Address has invalid callback URL')
+  }
+  if (callbackHost !== domain && !callbackHost.endsWith('.' + domain)) {
+    throw new Error('Lightning Address callback domain mismatch')
   }
 
   let description: string
@@ -116,19 +119,7 @@ export async function fetchLnurlInvoice(
   signal?: AbortSignal,
 ): Promise<string> {
   const separator = callback.includes('?') ? '&' : '?'
-
-  // In dev, route callback through the CORS proxy
-  let fetchUrl: string
-  if (import.meta.env.DEV) {
-    try {
-      const parsed = new URL(callback)
-      fetchUrl = `/__lnurl_proxy/${parsed.hostname}${parsed.pathname}${parsed.search}${separator}amount=${amountMsat}`
-    } catch {
-      fetchUrl = `${callback}${separator}amount=${amountMsat}`
-    }
-  } else {
-    fetchUrl = `${callback}${separator}amount=${amountMsat}`
-  }
+  const fetchUrl = proxyUrl(`${callback}${separator}amount=${amountMsat}`)
 
   const response = await fetch(fetchUrl, { signal })
   if (!response.ok) throw new Error('Failed to fetch invoice')
