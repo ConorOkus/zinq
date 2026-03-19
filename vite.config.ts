@@ -1,4 +1,4 @@
-import { defineConfig, type PluginOption, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type PluginOption, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import wasm from 'vite-plugin-wasm'
@@ -45,25 +45,28 @@ function lnurlCorsProxy(): Plugin {
   }
 }
 
-export default defineConfig({
-  plugins: [react(), tailwindcss(), wasm(), topLevelAwait(), lnurlCorsProxy()],
-  worker: {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    plugins: (): PluginOption[] => [wasm(), topLevelAwait()],
-  },
-  server: {
-    headers: {
-      'X-Frame-Options': 'DENY',
-      'X-Content-Type-Options': 'nosniff',
-      'Referrer-Policy': 'no-referrer',
-      'Permissions-Policy': 'camera=(self), microphone=(), geolocation=()',
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  return {
+    plugins: [react(), tailwindcss(), wasm(), topLevelAwait(), lnurlCorsProxy()],
+    worker: {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      plugins: (): PluginOption[] => [wasm(), topLevelAwait()],
     },
-    proxy: {
-      '/__vss_proxy': {
-        target: process.env.VSS_PROXY_TARGET ?? 'http://localhost:8080',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/__vss_proxy/, ''),
+    server: {
+      headers: {
+        'X-Frame-Options': 'DENY',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'no-referrer',
+        'Permissions-Policy': 'camera=(self), microphone=(), geolocation=()',
+      },
+      proxy: {
+        '/__vss_proxy': {
+          target: env.VSS_PROXY_TARGET ?? 'http://localhost:8080',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/__vss_proxy/, ''),
+        },
       },
     },
-  },
+  }
 })

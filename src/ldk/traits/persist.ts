@@ -15,6 +15,8 @@ function outpointKey(outpoint: OutPoint): string {
   return `${bytesToHex(outpoint.get_txid())}:${outpoint.get_index().toString()}`
 }
 
+export const MONITOR_MANIFEST_KEY = '_monitor_keys'
+
 const INITIAL_BACKOFF_MS = 500
 const MAX_BACKOFF_MS = 60_000
 const DEGRADED_THRESHOLD_MS = 10_000
@@ -41,6 +43,7 @@ export interface PersisterOptions {
   vssClient?: VssClient | null
   onVssUnavailable?: () => void
   onVssRecovered?: () => void
+  initialMonitorKeys?: string[]
 }
 
 export function createPersister(options: PersisterOptions = {}): {
@@ -56,6 +59,32 @@ export function createPersister(options: PersisterOptions = {}): {
   let chainMonitorRef: ChainMonitor | null = null
   let failureHandler: ((err: PersistError) => void) | null = null
   const versionCache = new Map<string, number>()
+  const monitorKeys = new Set<string>(options.initialMonitorKeys)
+
+  // Serialize manifest writes so each one reads the correct version after the previous completes.
+  let manifestWriteChain: Promise<void> = Promise.resolve()
+
+  function writeManifest(): void {
+    if (!vssClient) return
+    const client = vssClient
+    manifestWriteChain = manifestWriteChain.then(async () => {
+      const manifest = new TextEncoder().encode(JSON.stringify([...monitorKeys]))
+      const version = versionCache.get(MONITOR_MANIFEST_KEY) ?? 0
+      try {
+        const newVersion = await client.putObject(MONITOR_MANIFEST_KEY, manifest, version)
+        versionCache.set(MONITOR_MANIFEST_KEY, newVersion)
+      } catch (err: unknown) {
+        // On version conflict, re-fetch server version so the next write can succeed
+        if (isVssConflict(err)) {
+          try {
+            const serverObj = await client.getObject(MONITOR_MANIFEST_KEY)
+            if (serverObj) versionCache.set(MONITOR_MANIFEST_KEY, serverObj.version)
+          } catch { /* best-effort version correction */ }
+        }
+        console.warn('[LDK Persist] Failed to write monitor manifest:', err)
+      }
+    })
+  }
 
   /**
    * Persist monitor data to VSS (if available) then IDB with indefinite exponential backoff.
@@ -174,6 +203,9 @@ export function createPersister(options: PersisterOptions = {}): {
       channel_funding_outpoint: OutPoint,
       monitor: ChannelMonitor
     ): ChannelMonitorUpdateStatus {
+      const key = outpointKey(channel_funding_outpoint)
+      monitorKeys.add(key)
+      writeManifest()
       handlePersist(channel_funding_outpoint, monitor)
       return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_InProgress
     },
@@ -189,6 +221,8 @@ export function createPersister(options: PersisterOptions = {}): {
 
     archive_persisted_channel(channel_funding_outpoint: OutPoint): void {
       const key = outpointKey(channel_funding_outpoint)
+      monitorKeys.delete(key)
+      writeManifest()
 
       // Delete from VSS first, then IDB.
       // Archive is fire-and-forget (no retry): orphaned VSS keys waste storage
