@@ -36,8 +36,9 @@ describe('resolveLnurlPay', () => {
     expect(result!.maxSendableMsat).toBe(100000000n)
     expect(result!.description).toBe('Pay alice')
 
+    // In test/dev mode, requests route through the LNURL CORS proxy
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://example.com/.well-known/lnurlp/alice',
+      '/__lnurl_proxy/example.com/.well-known/lnurlp/alice',
       expect.any(Object),
     )
   })
@@ -158,8 +159,9 @@ describe('fetchLnurlInvoice', () => {
     )
     expect(invoice).toBe('lntbs100n1pj...')
 
+    // In test/dev mode, callback routes through the LNURL CORS proxy
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://example.com/lnurlp/alice/callback?amount=50000',
+      '/__lnurl_proxy/example.com/lnurlp/alice/callback?amount=50000',
       expect.any(Object),
     )
   })
@@ -176,7 +178,7 @@ describe('fetchLnurlInvoice', () => {
     )
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://example.com/callback?key=val&amount=50000',
+      '/__lnurl_proxy/example.com/callback?key=val&amount=50000',
       expect.any(Object),
     )
   })

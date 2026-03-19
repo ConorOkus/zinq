@@ -8,6 +8,17 @@ export interface LnurlPayMetadata {
 }
 
 /**
+ * Build a fetch URL for an LNURL endpoint.
+ * In development, routes through the Vite CORS proxy to avoid broken CORS headers.
+ */
+function lnurlFetchUrl(domain: string, path: string): string {
+  if (import.meta.env.DEV) {
+    return `/__lnurl_proxy/${domain}${path}`
+  }
+  return `https://${domain}${path}`
+}
+
+/**
  * Resolve a Lightning Address (LUD-16) to LNURL-pay metadata.
  * Fetches `https://domain/.well-known/lnurlp/user` and validates the response.
  *
@@ -19,7 +30,7 @@ export async function resolveLnurlPay(
   domain: string,
   signal?: AbortSignal,
 ): Promise<LnurlPayMetadata | null> {
-  const url = `https://${domain}/.well-known/lnurlp/${user}`
+  const url = lnurlFetchUrl(domain, `/.well-known/lnurlp/${user}`)
 
   let response: Response
   try {
@@ -105,9 +116,21 @@ export async function fetchLnurlInvoice(
   signal?: AbortSignal,
 ): Promise<string> {
   const separator = callback.includes('?') ? '&' : '?'
-  const url = `${callback}${separator}amount=${amountMsat}`
 
-  const response = await fetch(url, { signal })
+  // In dev, route callback through the CORS proxy
+  let fetchUrl: string
+  if (import.meta.env.DEV) {
+    try {
+      const parsed = new URL(callback)
+      fetchUrl = `/__lnurl_proxy/${parsed.hostname}${parsed.pathname}${parsed.search}${separator}amount=${amountMsat}`
+    } catch {
+      fetchUrl = `${callback}${separator}amount=${amountMsat}`
+    }
+  } else {
+    fetchUrl = `${callback}${separator}amount=${amountMsat}`
+  }
+
+  const response = await fetch(fetchUrl, { signal })
   if (!response.ok) throw new Error('Failed to fetch invoice')
 
   const data = (await response.json()) as { status?: string; reason?: string; pr?: string }
