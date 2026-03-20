@@ -38,7 +38,7 @@ import { getSeed, storeDerivedSeed } from './storage/seed'
 import { createLogger } from './traits/logger'
 import { createFeeEstimator } from './traits/fee-estimator'
 import { createBroadcaster } from './traits/broadcaster'
-import { createPersister, MONITOR_MANIFEST_KEY, type PersisterOptions } from './traits/persist'
+import { createPersister, MONITOR_MANIFEST_KEY, parseMonitorManifest, type PersisterOptions } from './traits/persist'
 import { createFilter, type WatchState } from './traits/filter'
 import { createEventHandler, type PaymentEventCallback, type ChannelClosedCallback, type SyncNeededCallback } from './traits/event-handler'
 import { createBdkSignerProvider } from './traits/bdk-signer-provider'
@@ -46,8 +46,7 @@ import { SIGNET_CONFIG } from './config'
 import { idbGet, idbGetAll, idbPut, idbDelete, idbDeleteBatch } from './storage/idb'
 import { bytesToHex, hexToBytes } from './utils'
 import { EsploraClient } from './sync/esplora-client'
-import { VssError, type VssClient } from './storage/vss-client'
-import { ErrorCode } from './storage/proto/vss_pb'
+import type { VssClient } from './storage/vss-client'
 import type { CmPersistContext } from './storage/persist-cm'
 
 export interface LdkNode {
@@ -167,7 +166,9 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   const broadcaster = createBroadcaster(SIGNET_CONFIG.esploraUrl)
 
   // 3.5 VSS Recovery: if IDB is empty but VSS has data, download state
-  let recoveredMonitorKeys: string[] = []
+  let initialMonitorKeys: string[] = []
+  const recoveredVersions = new Map<string, number>()
+  let initialCmVersion = 0
   if (vssClient) {
     const idbMonitors = await idbGetAll('ldk_channel_monitors')
     const idbCm = await idbGet('ldk_channel_manager', 'primary')
@@ -178,21 +179,24 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
       try {
         const manifest = await vssClient.getObject(MONITOR_MANIFEST_KEY)
         if (manifest) {
-          const monitorKeys: string[] = JSON.parse(new TextDecoder().decode(manifest.value)) as string[]
+          const monitorKeys = parseMonitorManifest(new TextDecoder().decode(manifest.value))
 
           for (const key of monitorKeys) {
             const obj = await vssClient.getObject(key)
             if (!obj) throw new Error(`Monitor "${key}" listed in manifest but missing from VSS`)
             await idbPut('ldk_channel_monitors', key, obj.value)
             writtenMonitorKeys.push(key)
+            recoveredVersions.set(key, obj.version)
           }
 
           const cm = await vssClient.getObject('channel_manager')
           if (!cm) throw new Error('ChannelManager missing from VSS')
           await idbPut('ldk_channel_manager', 'primary', cm.value)
           wroteChannelManager = true
+          initialCmVersion = cm.version
 
-          recoveredMonitorKeys = monitorKeys
+          recoveredVersions.set(MONITOR_MANIFEST_KEY, manifest.version)
+          initialMonitorKeys = monitorKeys
           console.log(`[LDK Init] Recovered ${monitorKeys.length} monitor(s) + CM from VSS`)
         }
       } catch (err: unknown) {
@@ -202,44 +206,28 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
           await idbDeleteBatch('ldk_channel_monitors', writtenMonitorKeys).catch(() => {})
           if (wroteChannelManager) await idbDelete('ldk_channel_manager', 'primary').catch(() => {})
         }
+        recoveredVersions.clear()
+        initialCmVersion = 0
         console.warn('[LDK Init] VSS recovery failed, continuing with fresh state:', err)
       }
     } else {
-      // Seed manifest set from existing IDB monitors
-      recoveredMonitorKeys = [...idbMonitors.keys()]
+      initialMonitorKeys = [...idbMonitors.keys()]
     }
   }
 
-  const { persist: persister, setChainMonitor, onPersistFailure, versionCache } = createPersister({
+  const { persist: persister, setChainMonitor, onPersistFailure, backfillManifest, versionCache } = createPersister({
     ...persisterOptions,
-    initialMonitorKeys: recoveredMonitorKeys,
+    initialMonitorKeys,
   })
+
+  // Seed version cache from recovery so first post-recovery writes don't trigger conflicts
+  for (const [key, version] of recoveredVersions) {
+    versionCache.set(key, version)
+  }
 
   // Backfill manifest to VSS for wallets that predate the manifest feature.
   // Fire-and-forget: the persister's writeManifest will keep it in sync going forward.
-  if (vssClient && recoveredMonitorKeys.length > 0 && !versionCache.has(MONITOR_MANIFEST_KEY)) {
-    const backfillClient = vssClient
-    const manifest = new TextEncoder().encode(JSON.stringify(recoveredMonitorKeys))
-    backfillClient.putObject(MONITOR_MANIFEST_KEY, manifest, 0)
-      .then((v) => {
-        versionCache.set(MONITOR_MANIFEST_KEY, v)
-        console.log(`[LDK Init] Backfilled manifest with ${recoveredMonitorKeys.length} key(s) to VSS`)
-      })
-      .catch(async (err: unknown) => {
-        // Conflict means the manifest already exists — fetch its version so writes work
-        if (err instanceof VssError && err.errorCode === ErrorCode.CONFLICT_EXCEPTION) {
-          try {
-            const existing = await backfillClient.getObject(MONITOR_MANIFEST_KEY)
-            if (existing) {
-              versionCache.set(MONITOR_MANIFEST_KEY, existing.version)
-              console.log('[LDK Init] Manifest already exists in VSS, seeded version cache')
-              return
-            }
-          } catch { /* fall through to warning */ }
-        }
-        console.warn('[LDK Init] Manifest backfill failed (will retry next startup):', err)
-      })
-  }
+  backfillManifest()
 
   // 4. Create Filter + ChainMonitor
   const { filter, watchState } = createFilter()
@@ -448,18 +436,13 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
     setSignerBdkWallet(wallet)
   }
 
-  // ChannelManager VSS version ref — seeded below, updated by persistChannelManager
-  const cmVersionRef = { current: 0 }
+  // ChannelManager VSS version ref — seeded from recovery or migration, updated by persistChannelManager
+  const cmVersionRef = { current: initialCmVersion }
   const cmPersistCtx: CmPersistContext = {
     vssClient: vssClient ?? null,
     cmVersionRef,
   }
 
-  // Version cache starts empty — conflict resolution handles version sync.
-  // On first write after restart, version 0 is sent. If the server has a higher
-  // version, CONFLICT_EXCEPTION fires, the conflict resolution re-fetches the
-  // server's version, and proceeds. One extra round trip per key on first write.
-  //
   // Migration for existing users: if IDB has channel state but VSS has none,
   // upload existing state. listKeyVersions returns obfuscated keys, so we use
   // it only to detect whether VSS has any data for this wallet.
