@@ -1,5 +1,5 @@
 const DB_NAME = 'zinq-ldk'
-const DB_VERSION = 7
+const DB_VERSION = 8
 
 const STORES = [
   'ldk_seed',
@@ -14,6 +14,7 @@ const STORES = [
   'ldk_payment_history',
   'wallet_mnemonic',
   'bdk_changeset',
+  'ldk_bolt12_offer',
 ] as const
 
 export type StoreName = (typeof STORES)[number]
@@ -57,6 +58,9 @@ export function openDb(): Promise<IDBDatabase> {
         }
         console.warn('[IDB] Migrated from v%d→v3: cleared old LDK state for mnemonic migration', oldVersion)
       }
+
+      // v7→v8: Added ldk_bolt12_offer store for persisting BOLT 12 offers.
+      // No data migration needed — new store is created empty by the loop above.
     }
 
     request.onsuccess = () => {

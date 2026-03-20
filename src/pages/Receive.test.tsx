@@ -61,6 +61,7 @@ function readyLdkContext(
     lightningBalanceSats: 1_000_000n,
     channelChangeCounter: 0,
     paymentHistory: [],
+    bolt12Offer: null,
     vssStatus: 'ok' as const,
     ...overrides,
   }

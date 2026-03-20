@@ -47,6 +47,8 @@ export type LdkContextValue =
       peersReconnected: boolean
       /** Persisted Lightning payment history (inbound + outbound). */
       paymentHistory: PersistedPayment[]
+      /** BOLT 12 offer string for receiving payments. Null while loading or if creation failed. */
+      bolt12Offer: string | null
       /** VSS backup service status. 'degraded' means writes are failing and Lightning ops are paused. */
       vssStatus: VssStatus
     }

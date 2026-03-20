@@ -78,6 +78,7 @@ function renderSend(onchainValue?: OnchainContextValue, ldkValue?: LdkContextVal
     createInvoice: vi.fn(() => 'lnbc1test'),
     channelChangeCounter: 0,
     paymentHistory: [],
+    bolt12Offer: null,
     vssStatus: 'ok' as const,
   }
   return render(
@@ -461,6 +462,7 @@ describe('Send', () => {
         createInvoice: vi.fn(() => 'lnbc1test'),
         channelChangeCounter: 0,
         paymentHistory: [],
+        bolt12Offer: null,
         vssStatus: 'ok' as const,
       })
 

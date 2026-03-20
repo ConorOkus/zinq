@@ -26,6 +26,16 @@ const ADVANCED_ITEMS = [
     ),
     route: '/settings/advanced/peers',
   },
+  {
+    label: 'BOLT 12 Offer',
+    detail: 'Receive',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    ),
+    route: '/settings/advanced/bolt12-offer',
+  },
 ]
 
 export function Advanced() {

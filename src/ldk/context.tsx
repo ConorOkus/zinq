@@ -9,6 +9,8 @@ import {
   Option_StrZ,
   Result_C3Tuple_ThirtyTwoBytesRecipientOnionFieldsRouteParametersZNoneZ_OK,
   Result_Bolt11InvoiceSignOrCreationErrorZ_OK,
+  Result_OfferWithDerivedMetadataBuilderBolt12SemanticErrorZ_OK,
+  Result_OfferBolt12SemanticErrorZ_OK,
   type ChannelId,
   type Bolt11Invoice,
   type Offer,
@@ -23,6 +25,7 @@ import { connectToPeer as doConnectToPeer, type PeerConnection } from './peers/p
 import { idbPut } from './storage/idb'
 import { persistChannelManager, persistChannelManagerIdbOnly } from './storage/persist-cm'
 import { getKnownPeers, putKnownPeer, deleteKnownPeer } from './storage/known-peers'
+import { getPersistedOffer, putPersistedOffer } from './storage/offer'
 import { persistPayment, loadAllPayments } from './storage/payment-history'
 import { bytesToHex } from './utils'
 import { msatToSatFloor } from '../utils/msat'
@@ -340,6 +343,7 @@ export function LdkProvider({
     let syncHandle: { stop: () => void } | null = null
     let peerTimerId: ReturnType<typeof setInterval> | null = null
     let cleanupEventHandlerFn: (() => void) | null = null
+    let offerRetryTimer: ReturnType<typeof setTimeout> | null = null
 
     const vssDisabled = import.meta.env.VITE_DISABLE_VSS === 'true'
     const vssClient = vssDisabled
@@ -579,8 +583,62 @@ export function LdkProvider({
           channelChangeCounter: 0,
           peersReconnected: false,
           paymentHistory: initialPaymentHistory,
+          bolt12Offer: null,
           vssStatus: 'ok',
         })
+
+        // Load or create the BOLT 12 offer after peers reconnect.
+        // Retries with backoff because create_offer_builder needs the
+        // DefaultMessageRouter to find blinding paths through the network
+        // graph, which may not be populated until RGS sync completes.
+        const MAX_OFFER_RETRIES = 5
+        let offerCreationStarted = false
+        const loadOrCreateOffer = async (attempt = 0) => {
+          if (cancelled) return
+          if (attempt === 0) {
+            if (offerCreationStarted) return
+            offerCreationStarted = true
+          }
+          try {
+            const existing = attempt === 0 ? await getPersistedOffer() : undefined
+            if (existing) {
+              setState((prev) =>
+                prev.status === 'ready' ? { ...prev, bolt12Offer: existing } : prev,
+              )
+              return
+            }
+
+            const builderResult = node.channelManager.create_offer_builder(
+              Option_u64Z.constructor_none(), // no expiry
+            )
+            if (!(builderResult instanceof Result_OfferWithDerivedMetadataBuilderBolt12SemanticErrorZ_OK)) {
+              if (attempt < MAX_OFFER_RETRIES) {
+                const delayMs = 3000 * 2 ** attempt // 3s, 6s, 12s, 24s, 48s
+                console.warn(`[ldk] create_offer_builder failed (attempt ${attempt + 1}/${MAX_OFFER_RETRIES + 1}), retrying in ${delayMs / 1000}s`)
+                offerRetryTimer = setTimeout(() => void loadOrCreateOffer(attempt + 1), delayMs)
+                return
+              }
+              console.error('[ldk] create_offer_builder failed after retries:', builderResult)
+              return
+            }
+            const builder = builderResult.res
+            builder.chain(SIGNET_CONFIG.network)
+            builder.description('zinq wallet')
+            const offerResult = builder.build()
+            if (!(offerResult instanceof Result_OfferBolt12SemanticErrorZ_OK)) {
+              console.error('[ldk] offer build failed:', offerResult)
+              return
+            }
+            const offerStr = offerResult.res.to_str()
+            await putPersistedOffer(offerStr)
+            setState((prev) =>
+              prev.status === 'ready' ? { ...prev, bolt12Offer: offerStr } : prev,
+            )
+            console.log('[ldk] BOLT 12 offer created and persisted')
+          } catch (err) {
+            console.error('[ldk] Failed to load/create BOLT 12 offer:', err)
+          }
+        }
 
         // Auto-reconnect to known peers, then mark peersReconnected so
         // the Home screen knows the lightning balance is now accurate.
@@ -590,6 +648,7 @@ export function LdkProvider({
               setState((prev) =>
                 prev.status === 'ready' ? { ...prev, peersReconnected: true } : prev,
               )
+              void loadOrCreateOffer()
               return
             }
             console.log(`[ldk] reconnecting to ${peers.size} known peer(s)`)
@@ -623,6 +682,7 @@ export function LdkProvider({
                 ? { ...prev, lightningBalanceSats: bal, peersReconnected: true }
                 : prev,
             )
+            void loadOrCreateOffer()
           })
           .catch((err: unknown) => {
             console.warn('[ldk] failed to read known peers:', err)
@@ -630,6 +690,7 @@ export function LdkProvider({
             setState((prev) =>
               prev.status === 'ready' ? { ...prev, peersReconnected: true } : prev,
             )
+            void loadOrCreateOffer()
           })
       })
       .catch((err: unknown) => {
@@ -663,6 +724,7 @@ export function LdkProvider({
       syncHandle?.stop()
       cleanupEventHandlerFn?.()
       if (peerTimerId !== null) clearInterval(peerTimerId)
+      if (offerRetryTimer !== null) clearTimeout(offerRetryTimer)
       for (const [, conn] of activeConnections.current) {
         conn.disconnect()
       }

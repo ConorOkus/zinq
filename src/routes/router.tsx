@@ -13,6 +13,7 @@ import { CloseChannel } from '../pages/CloseChannel'
 import { Balance } from '../pages/Balance'
 import { Scan } from '../pages/Scan'
 import { Restore } from '../pages/Restore'
+import { Bolt12Offer } from '../pages/Bolt12Offer'
 
 export const router = createBrowserRouter([
   {
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
       { path: 'settings/advanced', element: <Advanced /> },
       { path: 'settings/advanced/balance', element: <Balance /> },
       { path: 'settings/advanced/peers', element: <Peers /> },
+      { path: 'settings/advanced/bolt12-offer', element: <Bolt12Offer /> },
       { path: 'settings/advanced/peers/open-channel', element: <OpenChannel /> },
       { path: 'settings/advanced/peers/close-channel', element: <CloseChannel /> },
     ],
