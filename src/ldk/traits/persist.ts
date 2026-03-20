@@ -17,6 +17,28 @@ function outpointKey(outpoint: OutPoint): string {
 
 export const MONITOR_MANIFEST_KEY = '_monitor_keys'
 
+const MONITOR_KEY_PATTERN = /^[0-9a-f]{64}:\d+$/
+const MAX_MANIFEST_ENTRIES = 100
+
+/** Parse and validate a monitor manifest from VSS. Throws on invalid data. */
+export function parseMonitorManifest(json: string): string[] {
+  const parsed: unknown = JSON.parse(json)
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error('Monitor manifest is not a non-empty array')
+  }
+  if (parsed.length > MAX_MANIFEST_ENTRIES) {
+    throw new Error(`Monitor manifest has ${parsed.length} entries, exceeds max of ${MAX_MANIFEST_ENTRIES}`)
+  }
+  const seen = new Set<string>()
+  for (const entry of parsed) {
+    if (typeof entry !== 'string' || !MONITOR_KEY_PATTERN.test(entry)) {
+      throw new Error(`Invalid monitor key in manifest: ${String(entry).slice(0, 80)}`)
+    }
+    seen.add(entry)
+  }
+  return [...seen]
+}
+
 const INITIAL_BACKOFF_MS = 500
 const MAX_BACKOFF_MS = 60_000
 const DEGRADED_THRESHOLD_MS = 10_000
@@ -50,6 +72,7 @@ export function createPersister(options: PersisterOptions = {}): {
   persist: Persist
   setChainMonitor: (cm: ChainMonitor) => void
   onPersistFailure: (handler: (err: PersistError) => void) => void
+  backfillManifest: () => void
   versionCache: Map<string, number>
 } {
   const vssClient = options.vssClient ?? null
@@ -74,12 +97,23 @@ export function createPersister(options: PersisterOptions = {}): {
         const newVersion = await client.putObject(MONITOR_MANIFEST_KEY, manifest, version)
         versionCache.set(MONITOR_MANIFEST_KEY, newVersion)
       } catch (err: unknown) {
-        // On version conflict, re-fetch server version so the next write can succeed
         if (isVssConflict(err)) {
+          // Re-fetch server version, merge server keys into local set, then retry once
           try {
             const serverObj = await client.getObject(MONITOR_MANIFEST_KEY)
-            if (serverObj) versionCache.set(MONITOR_MANIFEST_KEY, serverObj.version)
-          } catch { /* best-effort version correction */ }
+            if (serverObj) {
+              versionCache.set(MONITOR_MANIFEST_KEY, serverObj.version)
+              // Merge server keys so we never drop a monitor tracked by another device
+              try {
+                const serverKeys = parseMonitorManifest(new TextDecoder().decode(serverObj.value))
+                for (const k of serverKeys) monitorKeys.add(k)
+              } catch (e) { console.warn('[LDK Persist] Server manifest parse failed, overwriting with local keys:', e) }
+              const merged = new TextEncoder().encode(JSON.stringify([...monitorKeys]))
+              const newVersion = await client.putObject(MONITOR_MANIFEST_KEY, merged, serverObj.version)
+              versionCache.set(MONITOR_MANIFEST_KEY, newVersion)
+              return
+            }
+          } catch { /* retry failed, fall through to warning */ }
         }
         console.warn('[LDK Persist] Failed to write monitor manifest:', err)
       }
@@ -250,6 +284,11 @@ export function createPersister(options: PersisterOptions = {}): {
     },
     onPersistFailure: (handler: (err: PersistError) => void) => {
       failureHandler = handler
+    },
+    backfillManifest: () => {
+      if (monitorKeys.size > 0 && !versionCache.has(MONITOR_MANIFEST_KEY)) {
+        writeManifest()
+      }
     },
     versionCache,
   }
