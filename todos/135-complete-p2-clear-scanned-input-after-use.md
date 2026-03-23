@@ -39,9 +39,9 @@ if (scannedInput) {
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
-| 2026-03-18 | Created from PR #33 code review | — |
+| Date       | Action                          | Learnings |
+| ---------- | ------------------------------- | --------- |
+| 2026-03-18 | Created from PR #33 code review | —         |
 
 ## Resources
 

@@ -31,7 +31,7 @@ function proxyUrl(httpsUrl: string): string {
 export async function resolveLnurlPay(
   user: string,
   domain: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<LnurlPayMetadata | null> {
   const url = proxyUrl(`https://${domain}/.well-known/lnurlp/${user}`)
 
@@ -116,7 +116,7 @@ export async function resolveLnurlPay(
 export async function fetchLnurlInvoice(
   callback: string,
   amountMsat: bigint,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<string> {
   const separator = callback.includes('?') ? '&' : '?'
   const fetchUrl = proxyUrl(`${callback}${separator}amount=${amountMsat}`)

@@ -6,7 +6,15 @@ const ADVANCED_ITEMS = [
     label: 'Balance',
     detail: 'Onchain · Lightning',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-[22px] w-[22px]"
+      >
         <rect x="2" y="4" width="20" height="16" rx="2" />
         <path d="M12 8v8M8 12h8" />
       </svg>
@@ -17,7 +25,15 @@ const ADVANCED_ITEMS = [
     label: 'Peers',
     detail: 'Connected',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-[22px] w-[22px]"
+      >
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
         <circle cx="9" cy="7" r="4" />
         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -30,7 +46,15 @@ const ADVANCED_ITEMS = [
     label: 'BOLT 12 Offer',
     detail: 'Receive',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-[22px] w-[22px]"
+      >
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
       </svg>
     ),
@@ -57,9 +81,7 @@ export function Advanced() {
               {item.icon}
             </div>
             <span className="flex-1 text-left font-semibold">{item.label}</span>
-            <span className="text-sm text-[var(--color-on-dark-muted)]">
-              {item.detail}
-            </span>
+            <span className="text-sm text-[var(--color-on-dark-muted)]">{item.detail}</span>
           </button>
         ))}
       </div>

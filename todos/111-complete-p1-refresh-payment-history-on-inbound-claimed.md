@@ -20,12 +20,15 @@ tags: [code-review, lightning, activity]
 ## Proposed Solutions
 
 ### Option A: Extend PaymentEventCallback with 'claimed' type
+
 Add `| { type: 'claimed'; paymentHash: string; amountMsat: bigint }` to the callback type. Fire it from `Event_PaymentClaimed`. Context calls `refreshPaymentHistory()` on claimed events.
+
 - Pros: Minimal change, reuses existing callback plumbing
 - Cons: Slightly expands callback type
 - Effort: Small
 
 ### Option B: Add separate onPaymentClaimed callback
+
 - Pros: Clean separation of concerns
 - Cons: Another callback to thread through
 - Effort: Small

@@ -1,5 +1,5 @@
 ---
-title: "feat: Add onchain wallet with BDK-WASM and unified BIP39 mnemonic"
+title: 'feat: Add onchain wallet with BDK-WASM and unified BIP39 mnemonic'
 type: feat
 status: completed
 date: 2026-03-12
@@ -52,10 +52,17 @@ src/
 ```
 
 **Provider nesting order** in `main.tsx`:
+
 ```tsx
-<WalletProvider>          {/* mnemonic lifecycle — must init first */}
-  <LdkProvider>           {/* Lightning — depends on derived seed */}
-    <OnchainProvider>     {/* BDK wallet — depends on derived descriptors */}
+<WalletProvider>
+  {' '}
+  {/* mnemonic lifecycle — must init first */}
+  <LdkProvider>
+    {' '}
+    {/* Lightning — depends on derived seed */}
+    <OnchainProvider>
+      {' '}
+      {/* BDK wallet — depends on derived descriptors */}
       <RouterProvider />
     </OnchainProvider>
   </LdkProvider>
@@ -71,6 +78,7 @@ src/
 Create `src/wallet/` module for shared seed management.
 
 **`src/wallet/mnemonic.ts`:**
+
 - `generateMnemonic()`: Generate 12-word BIP39 mnemonic via `@scure/bip39` (128-bit entropy)
 - `validateMnemonic(words: string): boolean`: Validate user-provided mnemonic
 - `getMnemonic(): Promise<string | undefined>`: Read from IDB store `wallet_mnemonic`
@@ -78,6 +86,7 @@ Create `src/wallet/` module for shared seed management.
 - Storage format: plaintext string in IDB (acceptable for Signet; encryption deferred to mainnet phase)
 
 **`src/wallet/keys.ts`:**
+
 - `deriveLdkSeed(mnemonic: string): Uint8Array`: Derive 32-byte LDK seed
   - `mnemonicToSeed(mnemonic)` → 64-byte BIP39 seed
   - `HDKey.fromMasterSeed(seed).derive("m/535'/0'")` → take `.privateKey` (32 bytes)
@@ -88,27 +97,32 @@ Create `src/wallet/` module for shared seed management.
   - Fingerprint = first 4 bytes of HASH160 of the master public key
 
 **IDB changes (`src/ldk/storage/idb.ts`):**
+
 - Add `'wallet_mnemonic'` and `'bdk_changeset'` to `STORES` array
 - Bump `DB_VERSION` from `2` to `3`
 - Existing `onupgradeneeded` handler automatically creates missing stores
 
 **Migration strategy:**
+
 - On `DB_VERSION` upgrade from 2 to 3: detect existing `ldk_seed` data
 - If existing seed found: log warning, clear all LDK state (seed, monitors, manager, graph, scorer, spendable outputs)
 - This is a destructive migration — acceptable for Signet-only stage
 - The `onupgradeneeded` handler in `idb.ts:23-30` runs before any app code reads state
 
 **Modify `src/ldk/storage/seed.ts`:**
+
 - Change `generateAndStoreSeed()` to `storeDerivedSeed(seed: Uint8Array)` — accepts externally derived seed
 - `getSeed()` remains unchanged
 - Remove `crypto.getRandomValues` generation
 
 **Modify `src/ldk/init.ts`:**
+
 - Remove direct seed generation (lines 119-122)
 - Accept `seed: Uint8Array` as parameter to `doInitializeLdk(seed)`
 - Caller (`WalletProvider`) derives seed from mnemonic before calling init
 
 **Tests (`src/wallet/mnemonic.test.ts`, `src/wallet/keys.test.ts`):**
+
 - Verify mnemonic generation produces valid 12-word phrases
 - Verify LDK seed derivation is deterministic (same mnemonic → same 32 bytes)
 - Verify BDK descriptor format matches BIP84 standard
@@ -120,16 +134,18 @@ Create `src/wallet/` module for shared seed management.
 Create `src/onchain/` module.
 
 **`src/onchain/config.ts`:**
+
 ```typescript
 export const ONCHAIN_CONFIG = {
-  esploraUrl: 'https://mutinynet.com/api',  // shared with LDK
-  syncIntervalMs: 30_000,                    // same as LDK chain poll
-  fullScanGapLimit: 20,                      // BDK default
+  esploraUrl: 'https://mutinynet.com/api', // shared with LDK
+  syncIntervalMs: 30_000, // same as LDK chain poll
+  fullScanGapLimit: 20, // BDK default
   syncParallelRequests: 5,
 } as const
 ```
 
 **`src/onchain/init.ts`:**
+
 - `initializeBdkWallet(descriptors, network)`: Create or restore BDK `Wallet`
   - Load existing ChangeSet from IDB → `Wallet.load(changeset, external, internal)` if found
   - Otherwise → `Wallet.create(network, external, internal)` for fresh wallet
@@ -140,17 +156,20 @@ export const ONCHAIN_CONFIG = {
 - WASM init: BDK-WASM ships its own `init()` from wasm-pack. Use module-level promise dedup (same pattern as `src/ldk/init.ts:67-77`)
 
 **`src/onchain/storage/changeset.ts`:**
+
 - `getChangeset(): Promise<string | undefined>`: Read JSON string from IDB `bdk_changeset` store
 - `putChangeset(json: string): Promise<void>`: Write to IDB
 - Note on `take_staged()` semantics: this is a destructive read — if the IDB write fails after `take_staged()`, those changes are lost. Log prominently on failure. This matches the pattern documented in `docs/solutions/integration-issues/ldk-wasm-foundation-layer-patterns.md` for LDK's `get_and_clear_needs_persistence()`.
 
 **`src/onchain/sync.ts`:**
+
 - `startOnchainSyncLoop(wallet, esploraClient)`: Returns `{ stop: () => void }`
   - Uses recursive `setTimeout` (not `setInterval`) — same pattern as `src/ldk/sync/chain-sync.ts:130`
   - Each tick: `wallet.start_sync_with_revealed_spks()` → `esploraClient.sync(request, parallelRequests)` → `wallet.apply_update(update)` → `wallet.take_staged()` → persist ChangeSet
   - Error handling: log and continue on sync failure, don't crash the loop
 
 **`src/onchain/onchain-context.ts`:**
+
 ```typescript
 export type OnchainContextValue =
   | { status: 'loading'; balance: null; error: null }
@@ -164,14 +183,17 @@ export type OnchainContextValue =
 ```
 
 **`src/onchain/context.tsx`:**
+
 - `OnchainProvider` component — `useEffect` calls `initializeBdkWallet()`, starts sync loop
 - Updates balance on each sync tick
 - Cleanup on unmount: stop sync loop
 
 **`src/onchain/use-onchain.ts`:**
+
 - `useOnchain()` hook — thin `useContext` wrapper
 
 **Tests:**
+
 - ChangeSet persistence round-trip
 - Sync loop starts/stops cleanly
 - Fresh wallet vs restored wallet initialization paths
@@ -183,20 +205,28 @@ Wire BDK wallet into LDK event handlers.
 **`FundingGenerationReady` handler (`src/ldk/traits/event-handler.ts:190-194`):**
 
 Replace the stub with:
+
 ```typescript
 if (event instanceof Event_FundingGenerationReady) {
-  const { temporary_channel_id, counterparty_node_id, channel_value_satoshis, output_script } = event
+  const { temporary_channel_id, counterparty_node_id, channel_value_satoshis, output_script } =
+    event
   // BDK TxBuilder: build funding transaction
   const txBuilder = wallet.build_tx()
-  txBuilder.add_recipient(new Recipient(ScriptBuf.from_bytes(output_script), Amount.from_sat(channel_value_satoshis)))
-  const psbt = txBuilder.finish()   // sync WASM call — no async needed
+  txBuilder.add_recipient(
+    new Recipient(ScriptBuf.from_bytes(output_script), Amount.from_sat(channel_value_satoshis))
+  )
+  const psbt = txBuilder.finish() // sync WASM call — no async needed
   wallet.sign(psbt, new SignOptions())
   const tx = psbt.extract_tx()
-  channelManager.funding_transaction_generated(temporary_channel_id, counterparty_node_id, tx.to_bytes())
+  channelManager.funding_transaction_generated(
+    temporary_channel_id,
+    counterparty_node_id,
+    tx.to_bytes()
+  )
   // Persist wallet state after funding
   const changeset = wallet.take_staged()
   if (changeset && !changeset.is_empty()) {
-    void putChangeset(changeset.to_json()).catch(err =>
+    void putChangeset(changeset.to_json()).catch((err) =>
       console.error('[BDK] CRITICAL: failed to persist changeset after funding tx', err)
     )
   }
@@ -204,6 +234,7 @@ if (event instanceof Event_FundingGenerationReady) {
 ```
 
 Key considerations:
+
 - `TxBuilder.finish()` and `wallet.sign()` are **synchronous WASM calls** — they work inline in the sync event handler
 - If insufficient balance: `txBuilder.finish()` will throw. Catch and log: `[LDK Event] FundingGenerationReady: insufficient onchain balance`
 - The BDK `Wallet` instance must be accessible from the event handler. Pass it as a parameter to `createEventHandler()` or hold a module-level reference
@@ -211,6 +242,7 @@ Key considerations:
 **`SpendableOutputs` handler:**
 
 The existing handler persists `SpendableOutputDescriptor` data to `ldk_spendable_outputs` IDB store. Extend it to sweep funds to a BDK address:
+
 - Use LDK's `KeysManager.spend_spendable_outputs()` to build a PSBT spending the descriptors to a BDK-generated change address
 - Sign with `KeysManager`
 - Broadcast via Esplora
@@ -221,14 +253,17 @@ This keeps sweep logic in LDK's domain (it owns the signing keys for these outpu
 **`BumpTransaction` handling (anchor channels):**
 
 Check if `UserConfig.constructor_default()` enables anchor channels. If yes:
+
 - Implement `BumpTransaction` handler using BDK UTXOs for CPFP
 - If not feasible in this phase, explicitly disable anchors in `UserConfig` with a TODO comment
 
 **Web Lock scope:**
+
 - Rename lock from `ldk-wallet-lock` to `browser-wallet-lock` to cover both LDK and BDK
 - Single lock prevents multi-tab corruption of shared IDB state
 
 **Tests:**
+
 - FundingGenerationReady handler builds valid funding transaction
 - Insufficient balance produces graceful error (not crash)
 - SpendableOutputs sweep builds valid PSBT to BDK address
@@ -238,24 +273,28 @@ Check if `UserConfig.constructor_default()` enables anchor channels. If yes:
 Create the top-level `WalletProvider` that manages the mnemonic lifecycle.
 
 **`src/wallet/wallet-context.ts`:**
+
 ```typescript
 export type WalletContextValue =
-  | { status: 'new' }                              // no mnemonic — show create/import
-  | { status: 'backup'; mnemonic: string }          // mnemonic generated, awaiting backup confirmation
+  | { status: 'new' } // no mnemonic — show create/import
+  | { status: 'backup'; mnemonic: string } // mnemonic generated, awaiting backup confirmation
   | { status: 'ready'; ldkSeed: Uint8Array; bdkDescriptors: { external: string; internal: string } }
   | { status: 'error'; error: Error }
 ```
 
 **`src/wallet/context.tsx`:**
+
 - On mount: check IDB for existing mnemonic
 - If found: derive keys, set `status: 'ready'`
 - If not found: set `status: 'new'` — UI shows create/import screen
 - Expose `createWallet()` and `importWallet(mnemonic)` actions
 
 **`src/wallet/use-wallet.ts`:**
+
 - `useWallet()` hook
 
 **`src/main.tsx` update:**
+
 ```tsx
 <WalletProvider>
   <LdkProvider>
@@ -269,6 +308,7 @@ export type WalletContextValue =
 `LdkProvider` reads `ldkSeed` from `WalletContext`. `OnchainProvider` reads `bdkDescriptors` from `WalletContext`. Both only initialize when `WalletContext.status === 'ready'`.
 
 **First-launch flow:**
+
 1. `WalletProvider` detects no mnemonic → `status: 'new'`
 2. UI renders create/import screen
 3. User creates wallet → `generateMnemonic()` → `status: 'backup'`
@@ -277,6 +317,7 @@ export type WalletContextValue =
 6. `LdkProvider` and `OnchainProvider` initialize
 
 **Import flow:**
+
 1. User enters 12 words → `validateMnemonic()` → `storeMnemonic()`
 2. `status: 'ready'` → both providers init
 3. BDK runs `full_scan` (not just `sync`) to discover existing addresses/UTXOs
@@ -336,11 +377,11 @@ Channel funding: User action → `channelManager.create_channel()` → LDK negot
 
 ### New Dependencies
 
-| Package | Purpose | Size concern |
-|---------|---------|-------------|
-| `@bitcoindevkit/bdk-wallet-web` | BDK wallet + Esplora client (WASM) | ~2-3MB WASM binary |
-| `@scure/bip39` | BIP39 mnemonic generation/validation | ~50KB (includes wordlist) |
-| `@scure/bip32` | BIP32 HD key derivation | ~20KB |
+| Package                         | Purpose                              | Size concern              |
+| ------------------------------- | ------------------------------------ | ------------------------- |
+| `@bitcoindevkit/bdk-wallet-web` | BDK wallet + Esplora client (WASM)   | ~2-3MB WASM binary        |
+| `@scure/bip39`                  | BIP39 mnemonic generation/validation | ~50KB (includes wordlist) |
+| `@scure/bip32`                  | BIP32 HD key derivation              | ~20KB                     |
 
 ### Risks
 

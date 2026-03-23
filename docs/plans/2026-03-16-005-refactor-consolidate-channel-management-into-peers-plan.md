@@ -1,5 +1,5 @@
 ---
-title: "refactor: Consolidate channel management into Peers screen"
+title: 'refactor: Consolidate channel management into Peers screen'
 type: refactor
 status: completed
 date: 2026-03-16
@@ -36,6 +36,7 @@ Currently, channel management is spread across three separate screens under Adva
 Use React Router `state` to pass peer/channel data when navigating from the Peers screen to the sub-flows. Keep `OpenChannel.tsx` and `CloseChannel.tsx` as separate route components (not inline) to avoid bloating the Peers component.
 
 **New routes:**
+
 - `/settings/advanced/peers/open-channel` — receives `{ peerPubkey: string }` via route state
 - `/settings/advanced/peers/close-channel` — receives `{ channel: ChannelInfo }` via route state
 
@@ -48,9 +49,9 @@ The `ChannelInfo` interface in `Peers.tsx` (line 9-15) needs to be enriched to i
 ```typescript
 // src/pages/Peers.tsx
 interface ChannelInfo {
-  channelId: ChannelId        // NEW — needed for close
-  channelIdHex: string        // NEW — needed for close
-  counterpartyNodeId: Uint8Array  // NEW — needed for close
+  channelId: ChannelId // NEW — needed for close
+  channelIdHex: string // NEW — needed for close
+  counterpartyNodeId: Uint8Array // NEW — needed for close
   capacitySats: bigint
   outboundMsat: bigint
   inboundMsat: bigint
@@ -61,13 +62,13 @@ interface ChannelInfo {
 
 ### Back Navigation
 
-| Screen | Back goes to |
-|--------|-------------|
-| Open Channel → Amount step | `/settings/advanced/peers` |
-| Open Channel → Review step | Amount step (internal state) |
-| Close Channel → Confirm step | `/settings/advanced/peers` |
-| Success → "Done" button | `/` (Home) — matches current behavior |
-| Error → "Try Again" | Amount step (open) or Confirm step (close) — preserving peer/channel context |
+| Screen                       | Back goes to                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| Open Channel → Amount step   | `/settings/advanced/peers`                                                   |
+| Open Channel → Review step   | Amount step (internal state)                                                 |
+| Close Channel → Confirm step | `/settings/advanced/peers`                                                   |
+| Success → "Done" button      | `/` (Home) — matches current behavior                                        |
+| Error → "Try Again"          | Amount step (open) or Confirm step (close) — preserving peer/channel context |
 
 ### Disconnected Peer Handling
 
@@ -112,13 +113,13 @@ interface ChannelInfo {
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/pages/Peers.tsx` | Enrich `ChannelInfo`, add "Open Channel" / "Close Channel" buttons |
-| `src/pages/OpenChannel.tsx` | Remove peer selection step, accept peer from route state, update back navigation |
+| File                         | Change                                                                                 |
+| ---------------------------- | -------------------------------------------------------------------------------------- |
+| `src/pages/Peers.tsx`        | Enrich `ChannelInfo`, add "Open Channel" / "Close Channel" buttons                     |
+| `src/pages/OpenChannel.tsx`  | Remove peer selection step, accept peer from route state, update back navigation       |
 | `src/pages/CloseChannel.tsx` | Remove channel selection step, accept channel from route state, update back navigation |
-| `src/pages/Advanced.tsx` | Remove Open Channel and Close Channel menu items |
-| `src/routes/router.tsx` | Remove old routes, add new nested routes under peers |
+| `src/pages/Advanced.tsx`     | Remove Open Channel and Close Channel menu items                                       |
+| `src/routes/router.tsx`      | Remove old routes, add new nested routes under peers                                   |
 
 ## Sources & References
 

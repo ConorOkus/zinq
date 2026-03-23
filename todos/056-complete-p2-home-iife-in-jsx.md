@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "056"
+issue_id: '056'
 tags: [code-review, quality, readability]
 dependencies: []
 ---

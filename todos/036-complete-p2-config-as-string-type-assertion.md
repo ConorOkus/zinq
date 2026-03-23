@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "036"
+issue_id: '036'
 tags: [code-review, quality]
 dependencies: []
 ---
@@ -20,9 +20,11 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Remove assertion, use `??` (Recommended)
+
 ```typescript
 wsProxyUrl: import.meta.env.VITE_WS_PROXY_URL ?? 'wss://p.mutinynet.com',
 ```
+
 - **Effort:** Small — one-line change
 
 ## Acceptance Criteria

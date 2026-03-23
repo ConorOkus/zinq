@@ -1,5 +1,5 @@
 ---
-title: "feat: Add BOLT 12 offer creation and display in Advanced settings"
+title: 'feat: Add BOLT 12 offer creation and display in Advanced settings'
 type: feat
 status: completed
 date: 2026-03-19

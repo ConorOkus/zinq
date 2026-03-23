@@ -100,7 +100,7 @@ export default {
               server.close(1011, 'TCP connection error')
             }
           },
-        }),
+        })
       )
       .catch(() => {
         if (server.readyState === WebSocket.OPEN) {

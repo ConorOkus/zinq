@@ -1,5 +1,5 @@
 ---
-title: "feat: Add amount entry to request flow"
+title: 'feat: Add amount entry to request flow'
 type: feat
 status: completed
 date: 2026-03-19
@@ -39,16 +39,17 @@ createInvoice: (amountMsat?: bigint, description?: string) => string
 
 // context.tsx
 const createInvoice = (amountMsat?: bigint, description = 'Zinq Wallet'): string => {
-  const amountOption = amountMsat != null
-    ? Option_u64Z.constructor_some(amountMsat)
-    : Option_u64Z_None.constructor_none()
+  const amountOption =
+    amountMsat != null
+      ? Option_u64Z.constructor_some(amountMsat)
+      : Option_u64Z_None.constructor_none()
 
   const result = UtilMethods.constructor_create_invoice_from_channelmanager(
     node.channelManager,
     amountOption,
     description,
     3600,
-    Option_u16Z_None.constructor_none(),
+    Option_u16Z_None.constructor_none()
   )
   // ... existing error handling
 }
@@ -81,7 +82,7 @@ interface NumpadProps {
   onKey: (key: NumpadKey) => void
   onNext: () => void
   nextDisabled: boolean
-  nextLabel?: string  // NEW — defaults to "Next"
+  nextLabel?: string // NEW — defaults to "Next"
 }
 ```
 
@@ -92,17 +93,20 @@ Receive screen passes `nextLabel="Done"`. Send flow unchanged.
 **File:** `src/pages/Receive.tsx`
 
 **New state:**
+
 - `editingAmount: boolean` — controls QR vs numpad view
 - `amountDigits: string` — raw digit input (same pattern as Send flow)
 - Derived: `amountSats = amountDigits ? BigInt(amountDigits) : 0n`
 - Derived: `amountMsat = amountSats * 1000n`
 
 **Invoice generation changes:**
+
 - Current: single `useEffect` calls `createInvoice()` once on mount
 - New: call `createInvoice(amountMsat || undefined)` imperatively when the user confirms an amount, or via effect on initial load
 - Store invoice in state; regenerate when amount changes
 
 **URI construction:**
+
 - Zero amount (current): `bitcoin:${address}?lightning=${invoice}`
 - With amount: `bitcoin:${address}?amount=${satsToBtcString(amountSats)}&lightning=${invoice}`
 
@@ -113,6 +117,7 @@ Receive screen passes `nextLabel="Done"`. Send flow unchanged.
 **Pre-population on re-edit:** When tapping the amount to re-edit, pre-populate `amountDigits` with the current value so the user can make small adjustments.
 
 **Amount display pattern** (reused from Send flow):
+
 - `formatBtc(amountSats)` for the tappable label
 - Dynamic font sizing: `amountDigits.length > 5 ? 'text-5xl' : 'text-7xl'`
 - Replaces "Add amount" label when amount > 0
@@ -126,6 +131,7 @@ Receive screen passes `nextLabel="Done"`. Send flow unchanged.
 **File:** `src/pages/Receive.test.tsx`
 
 New test cases:
+
 - [ ] "Add amount" label is visible on initial render
 - [ ] Tapping "Add amount" shows the numpad and hides the QR
 - [ ] Entering digits and confirming regenerates the QR with updated URI
@@ -156,14 +162,14 @@ Update existing `createInvoice` mock to accept optional `amountMsat` parameter.
 
 ## Files Changed
 
-| File | Change |
-|------|--------|
-| `src/ldk/ldk-context.ts` | Update `createInvoice` type signature |
-| `src/ldk/context.tsx` | Accept optional `amountMsat` in `createInvoice` |
-| `src/onchain/bip21.ts` | Add `satsToBtcString` utility |
-| `src/components/Numpad.tsx` | Add optional `nextLabel` prop |
-| `src/pages/Receive.tsx` | Two-mode toggle, amount state, URI construction |
-| `src/pages/Receive.test.tsx` | New test cases for amount entry flows |
+| File                         | Change                                          |
+| ---------------------------- | ----------------------------------------------- |
+| `src/ldk/ldk-context.ts`     | Update `createInvoice` type signature           |
+| `src/ldk/context.tsx`        | Accept optional `amountMsat` in `createInvoice` |
+| `src/onchain/bip21.ts`       | Add `satsToBtcString` utility                   |
+| `src/components/Numpad.tsx`  | Add optional `nextLabel` prop                   |
+| `src/pages/Receive.tsx`      | Two-mode toggle, amount state, URI construction |
+| `src/pages/Receive.test.tsx` | New test cases for amount entry flows           |
 
 ## Sources & References
 

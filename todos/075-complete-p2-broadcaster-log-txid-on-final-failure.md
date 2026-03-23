@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "075"
+issue_id: '075'
 tags: [code-review, quality, observability]
 dependencies: []
 ---

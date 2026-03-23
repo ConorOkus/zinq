@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p1
-issue_id: "060"
+issue_id: '060'
 tags: [code-review, security]
 dependencies: []
 ---
@@ -25,6 +25,7 @@ Flagged by: kieran-typescript-reviewer, security-sentinel, architecture-strategi
 ## Proposed Solutions
 
 ### Option A: Fixed-point string parsing (Recommended)
+
 Split on decimal point, pad/truncate to 8 decimal places, convert to BigInt. No floating-point involved.
 
 ```typescript
@@ -43,6 +44,7 @@ function btcStringToSats(btcStr: string): bigint | null {
 - Risk: Low
 
 ### Option B: Add guards around parseFloat
+
 Keep parseFloat but validate the result is finite and within BTC supply range.
 
 - Pros: Minimal code change

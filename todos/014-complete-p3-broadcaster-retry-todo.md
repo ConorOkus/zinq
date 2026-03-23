@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "014"
+issue_id: '014'
 tags: [code-review, reliability, security]
 dependencies: []
 ---

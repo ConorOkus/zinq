@@ -9,8 +9,12 @@ vi.mock('lightningdevkit', () => {
       this._user = user
       this._domain = domain
     }
-    user() { return this._user }
-    domain() { return this._domain }
+    user() {
+      return this._user
+    }
+    domain() {
+      return this._domain
+    }
   }
 
   class Result_OK {

@@ -1,5 +1,5 @@
 ---
-title: "refactor: Harden sync loop timeouts and relax intervals"
+title: 'refactor: Harden sync loop timeouts and relax intervals'
 type: refactor
 status: completed
 date: 2026-03-17
@@ -88,7 +88,7 @@ Change `rgsSyncIntervalTicks` from `20` to `60`. At 30s chain poll interval, thi
 
 ## Technical Considerations
 
-- **AbortController propagation (item 1)**: `syncOnce` must accept and forward the signal to all Esplora calls. The existing `EsploraClient` already uses `AbortSignal.timeout(10_000)` per-request — the overall signal should be composed: abort if *either* the per-request timeout OR the overall timeout fires. Use `AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])` in `EsploraClient` methods.
+- **AbortController propagation (item 1)**: `syncOnce` must accept and forward the signal to all Esplora calls. The existing `EsploraClient` already uses `AbortSignal.timeout(10_000)` per-request — the overall signal should be composed: abort if _either_ the per-request timeout OR the overall timeout fires. Use `AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)])` in `EsploraClient` methods.
 - **BDK WASM cancellation (item 3)**: Not supported. `Promise.race` is the only option. Safe because `isSyncing` prevents overlap and `apply_update` is only called on the resolved path.
 - **`timer_tick_occurred` coupling**: Currently called only on successful sync. A pre-existing limitation that timeouts make more visible. Out of scope — document as known issue for a future decoupling task.
 

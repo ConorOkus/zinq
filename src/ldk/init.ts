@@ -38,9 +38,19 @@ import { getSeed, storeDerivedSeed } from './storage/seed'
 import { createLogger } from './traits/logger'
 import { createFeeEstimator } from './traits/fee-estimator'
 import { createBroadcaster } from './traits/broadcaster'
-import { createPersister, MONITOR_MANIFEST_KEY, parseMonitorManifest, type PersisterOptions } from './traits/persist'
+import {
+  createPersister,
+  MONITOR_MANIFEST_KEY,
+  parseMonitorManifest,
+  type PersisterOptions,
+} from './traits/persist'
 import { createFilter, type WatchState } from './traits/filter'
-import { createEventHandler, type PaymentEventCallback, type ChannelClosedCallback, type SyncNeededCallback } from './traits/event-handler'
+import {
+  createEventHandler,
+  type PaymentEventCallback,
+  type ChannelClosedCallback,
+  type SyncNeededCallback,
+} from './traits/event-handler'
 import { createBdkSignerProvider } from './traits/bdk-signer-provider'
 import { SIGNET_CONFIG } from './config'
 import { idbGet, idbGetAll, idbPut, idbDelete, idbDeleteBatch } from './storage/idb'
@@ -94,7 +104,7 @@ async function acquireWalletLock(): Promise<void> {
   if (!navigator.locks) {
     throw new Error(
       '[LDK Init] Web Locks API not available. ' +
-        'A modern browser with Web Locks support is required to prevent multi-tab fund loss.',
+        'A modern browser with Web Locks support is required to prevent multi-tab fund loss.'
     )
   }
 
@@ -145,7 +155,7 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   } else if (seed.length !== ldkSeed.length || !seed.every((b, i) => b === ldkSeed[i])) {
     throw new Error(
       '[LDK Init] Stored seed does not match mnemonic derivation — possible data corruption. ' +
-        'Clear browser data to start fresh.',
+        'Clear browser data to start fresh.'
     )
   }
 
@@ -188,9 +198,11 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
             const readResult = UtilMethods.constructor_C2Tuple_ThirtyTwoBytesChannelMonitorZ_read(
               obj.value,
               keysManager.as_EntropySource(),
-              bdkSignerProvider,
+              bdkSignerProvider
             )
-            if (!(readResult instanceof Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK)) {
+            if (
+              !(readResult instanceof Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK)
+            ) {
               throw new Error(`Monitor "${key}" from VSS failed deserialization — data is corrupt`)
             }
             await idbPut('ldk_channel_monitors', key, obj.value)
@@ -202,7 +214,9 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
           if (!cm) throw new Error('ChannelManager missing from VSS')
           // Basic sanity: LDK ChannelManager serialization has a minimum viable size
           if (cm.value.byteLength < 32) {
-            throw new Error(`ChannelManager from VSS is too small (${cm.value.byteLength} bytes) — likely corrupt`)
+            throw new Error(
+              `ChannelManager from VSS is too small (${cm.value.byteLength} bytes) — likely corrupt`
+            )
           }
           await idbPut('ldk_channel_manager', 'primary', cm.value)
           wroteChannelManager = true
@@ -228,7 +242,13 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
     }
   }
 
-  const { persist: persister, setChainMonitor, onPersistFailure, backfillManifest, versionCache } = createPersister({
+  const {
+    persist: persister,
+    setChainMonitor,
+    onPersistFailure,
+    backfillManifest,
+    versionCache,
+  } = createPersister({
     ...persisterOptions,
     initialMonitorKeys,
   })
@@ -253,7 +273,10 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   )
   setChainMonitor(chainMonitor)
   onPersistFailure(({ key, error }) => {
-    console.error(`[LDK Init] CRITICAL: Persist failure for ${key}, channel operations halted`, error)
+    console.error(
+      `[LDK Init] CRITICAL: Persist failure for ${key}, channel operations halted`,
+      error
+    )
   })
 
   // 5. Restore or create NetworkGraph
@@ -276,7 +299,12 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   const scorerBytes = await idbGet<Uint8Array>('ldk_scorer', 'primary')
   let scorer: ProbabilisticScorer
   if (scorerBytes) {
-    const result = ProbabilisticScorer.constructor_read(scorerBytes, decayParams, networkGraph, logger)
+    const result = ProbabilisticScorer.constructor_read(
+      scorerBytes,
+      decayParams,
+      networkGraph,
+      logger
+    )
     if (result instanceof Result_ProbabilisticScorerDecodeErrorZ_OK) {
       scorer = result.res
     } else {
@@ -331,14 +359,14 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
 
     const restoredChannels = channelManager.list_channels()
     console.log(
-      `[LDK Init] Restored ChannelManager from IDB with ${restoredMonitors.length} monitor(s) and ${restoredChannels.length} channel(s)`,
+      `[LDK Init] Restored ChannelManager from IDB with ${restoredMonitors.length} monitor(s) and ${restoredChannels.length} channel(s)`
     )
     for (const ch of restoredChannels) {
       console.log(
         `[LDK Init]   channel ${bytesToHex(ch.get_channel_id().write()).substring(0, 16)}... ` +
           `peer=${bytesToHex(ch.get_counterparty().get_node_id()).substring(0, 16)}... ` +
           `ready=${ch.get_is_channel_ready()} usable=${ch.get_is_usable()} ` +
-          `capacity=${ch.get_channel_value_satoshis()} sats`,
+          `capacity=${ch.get_channel_value_satoshis()} sats`
       )
     }
 
@@ -391,7 +419,7 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   const gossipSync = P2PGossipSync.constructor_new(
     networkGraph,
     Option_UtxoLookupZ.constructor_none(),
-    logger,
+    logger
   )
 
   // 11. Create OnionMessenger (required for BOLT 12 offers and BIP 353)
@@ -434,14 +462,17 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   let paymentCallback: PaymentEventCallback | undefined
   let channelClosedCallback: ChannelClosedCallback | undefined
   let syncNeededCallback: SyncNeededCallback | undefined
-  const { handler: eventHandler, cleanup: cleanupEventHandler, setBdkWallet: setEventHandlerBdkWallet } =
-    createEventHandler(
-      channelManager,
-      keysManager,
-      (...args) => paymentCallback?.(...args),
-      (...args) => channelClosedCallback?.(...args),
-      () => syncNeededCallback?.(),
-    )
+  const {
+    handler: eventHandler,
+    cleanup: cleanupEventHandler,
+    setBdkWallet: setEventHandlerBdkWallet,
+  } = createEventHandler(
+    channelManager,
+    keysManager,
+    (...args) => paymentCallback?.(...args),
+    (...args) => channelClosedCallback?.(...args),
+    () => syncNeededCallback?.()
+  )
 
   // Unified setBdkWallet that wires both the event handler and signer provider
   const setBdkWallet = (wallet: import('@bitcoindevkit/bdk-wallet-web').Wallet | null) => {
@@ -535,14 +566,14 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
 function deserializeMonitors(
   entries: Map<string, Uint8Array>,
   keysManager: KeysManager,
-  signerProvider: SignerProvider,
+  signerProvider: SignerProvider
 ): ChannelMonitor[] {
   const monitors: ChannelMonitor[] = []
   for (const [key, data] of entries) {
     const result = UtilMethods.constructor_C2Tuple_ThirtyTwoBytesChannelMonitorZ_read(
       data,
       keysManager.as_EntropySource(),
-      signerProvider,
+      signerProvider
     )
     if (result instanceof Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK) {
       monitors.push(result.res.get_b())

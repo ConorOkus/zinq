@@ -15,6 +15,8 @@ vi.mock('../storage/idb', () => ({
   idbPut: vi.fn().mockResolvedValue(undefined),
 }))
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/unbound-method, @typescript-eslint/require-await, @typescript-eslint/no-misused-promises */
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createMockConfirmable(): any {
   return {
@@ -69,10 +71,7 @@ describe('syncOnce', () => {
 
     await syncOnce([confirmable], watchState, esplora, 'oldtip')
 
-    expect(confirmable.best_block_updated).toHaveBeenCalledWith(
-      expect.any(Uint8Array),
-      100
-    )
+    expect(confirmable.best_block_updated).toHaveBeenCalledWith(expect.any(Uint8Array), 100)
   })
 
   it('calls transaction_unconfirmed for reorged transactions', async () => {
@@ -191,7 +190,7 @@ describe('syncOnce', () => {
     controller.abort()
 
     await expect(
-      syncOnce([confirmable], watchState, esplora, 'oldtip', controller.signal),
+      syncOnce([confirmable], watchState, esplora, 'oldtip', controller.signal)
     ).rejects.toThrow('aborted')
   })
 })

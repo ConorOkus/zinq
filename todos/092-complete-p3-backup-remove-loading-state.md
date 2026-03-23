@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "092"
+issue_id: '092'
 tags: [code-review, simplicity, pr-14]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ The Backup page has a 4-variant discriminated union (`warning | loading | reveal
 ## Proposed Solutions
 
 ### Option A: Remove loading state (Recommended)
+
 - Remove `{ status: 'loading' }` from the union
 - Remove `setState({ status: 'loading' })` before the await
 - Remove the loading render branch
@@ -45,8 +46,8 @@ Option A
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                     | Learnings                                    |
+| ---------- | -------------------------- | -------------------------------------------- |
 | 2026-03-15 | Created from PR #14 review | IDB reads are sub-ms, loading state is YAGNI |
 
 ## Resources

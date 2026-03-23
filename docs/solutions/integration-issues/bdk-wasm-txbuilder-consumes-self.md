@@ -22,8 +22,8 @@ If you call a second method on the original variable, `__wbg_ptr` is already 0, 
 
 ```typescript
 const txBuilder = wallet.build_tx()
-txBuilder.add_recipient(recipient)     // consumes txBuilder, returns new builder (discarded!)
-txBuilder.fee_rate(new FeeRate(1n))    // ❌ txBuilder.__wbg_ptr is 0 → WASM panic
+txBuilder.add_recipient(recipient) // consumes txBuilder, returns new builder (discarded!)
+txBuilder.fee_rate(new FeeRate(1n)) // ❌ txBuilder.__wbg_ptr is 0 → WASM panic
 const psbt = txBuilder.finish()
 ```
 
@@ -31,11 +31,7 @@ const psbt = txBuilder.finish()
 
 ```typescript
 // Chain all calls — each method's return value feeds the next
-const psbt = wallet
-  .build_tx()
-  .add_recipient(recipient)
-  .fee_rate(new FeeRate(1n))
-  .finish()
+const psbt = wallet.build_tx().add_recipient(recipient).fee_rate(new FeeRate(1n)).finish()
 ```
 
 ## Additional Notes

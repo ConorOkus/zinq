@@ -21,6 +21,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Validate P2WPKH format, fall back to KeysManager on mismatch
+
 Add explicit check: `script.length === 22 && script[0] === 0x00 && script[1] === 0x14`. If validation fails, fall back to `defaultProvider.get_shutdown_scriptpubkey()`.
 
 - **Pros**: Simple, safe, minimal code
@@ -29,6 +30,7 @@ Add explicit check: `script.length === 22 && script[0] === 0x00 && script[1] ===
 - **Risk**: Low
 
 ### Option B: Support both P2WPKH and P2TR
+
 Check script prefix and length, construct appropriate ShutdownScript for each type using `constructor_new_p2wpkh` or `constructor_new_witness_program`.
 
 - **Pros**: Future-proof for taproot wallets

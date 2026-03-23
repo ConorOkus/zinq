@@ -26,7 +26,13 @@ type SendStep =
   // Recipient entry (first screen)
   | { step: 'recipient' }
   // Amount entry (shown only when input has no embedded amount)
-  | { step: 'amount'; parsedInput: ParsedPaymentInput; rawInput: string; minSat?: bigint; maxSat?: bigint }
+  | {
+      step: 'amount'
+      parsedInput: ParsedPaymentInput
+      rawInput: string
+      minSat?: bigint
+      maxSat?: bigint
+    }
   // On-chain flow
   | {
       step: 'oc-review'
@@ -82,7 +88,10 @@ function classifyEstimateError(err: unknown): string {
 const msatToSat = msatToSatCeil
 
 /** Get a display label for a Lightning payment recipient. */
-function recipientLabel(parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' }, label?: string): string {
+function recipientLabel(
+  parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' },
+  label?: string
+): string {
   if (label) return label
   switch (parsed.type) {
     case 'bolt11':
@@ -95,8 +104,10 @@ function recipientLabel(parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12'
 /** Get a short badge label for the payment type. */
 function typeBadge(parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' }): string {
   switch (parsed.type) {
-    case 'bolt11': return 'BOLT 11'
-    case 'bolt12': return 'BOLT 12'
+    case 'bolt11':
+      return 'BOLT 11'
+    case 'bolt12':
+      return 'BOLT 12'
   }
 }
 
@@ -118,12 +129,15 @@ export function Send() {
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const resolveAbortRef = useRef<AbortController | null>(null)
   // Store amount step data so we can restore it when navigating back from review
-  const amountStepDataRef = useRef<{ parsedInput: ParsedPaymentInput; rawInput: string; minSat?: bigint; maxSat?: bigint } | null>(null)
+  const amountStepDataRef = useRef<{
+    parsedInput: ParsedPaymentInput
+    rawInput: string
+    minSat?: bigint
+    maxSat?: bigint
+  } | null>(null)
 
   const onchainBalance =
-    onchain.status === 'ready'
-      ? onchain.balance.confirmed + onchain.balance.trustedPending
-      : 0n
+    onchain.status === 'ready' ? onchain.balance.confirmed + onchain.balance.trustedPending : 0n
   const lnCapacityMsat = ldk.status === 'ready' ? ldk.outboundCapacityMsat() : 0n
 
   // Cleanup polling and abort on unmount
@@ -154,70 +168,15 @@ export function Send() {
   const handleApproxSendMax = useCallback(() => {
     if (sendStep.step !== 'amount') return
     // For LNURL with maxSat constraint, cap at maxSat
-    const maxAvailable = sendStep.maxSat ? (sendStep.maxSat < unified.total ? sendStep.maxSat : unified.total) : unified.total
+    const maxAvailable = sendStep.maxSat
+      ? sendStep.maxSat < unified.total
+        ? sendStep.maxSat
+        : unified.total
+      : unified.total
     if (maxAvailable <= 0n) return
     setAmountDigits(maxAvailable.toString())
     setIsSendMax(true)
   }, [unified.total, sendStep])
-
-  // --- Resolve user@domain: BIP 353 (DoH) then LNURL fallback ---
-  const resolveAddress = useCallback(async (raw: string, user: string, domain: string): Promise<void> => {
-    resolveAbortRef.current?.abort()
-    const controller = new AbortController()
-    resolveAbortRef.current = controller
-
-    setIsResolving(true)
-    setInputError(null)
-
-    try {
-      // Each resolution step gets its own timeout so a slow DoH response
-      // doesn't eat into the LNURL timeout budget
-      const bip353Signal = AbortSignal.any([controller.signal, AbortSignal.timeout(RESOLVE_TIMEOUT_MS)])
-      const bip353Result = await resolveBip353(user, domain, bip353Signal)
-
-      if (bip353Result && bip353Result.type !== 'error') {
-        routeResolvedInput(bip353Result, raw)
-        return
-      }
-
-      // Fall back to LNURL-pay with a fresh timeout
-      // resolveLnurlPay returns null if no endpoint exists, or throws on validation errors
-      const lnurlSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(RESOLVE_TIMEOUT_MS)])
-      const lnurlResult = await resolveLnurlPay(user, domain, lnurlSignal)
-
-      if (lnurlResult) {
-        // Round min up (ceil) so we never send less than the server requires;
-        // round max down (floor) so we never exceed the server's limit
-        const minSat = msatToSatCeil(lnurlResult.minSendableMsat)
-        const maxSat = msatToSatFloor(lnurlResult.maxSendableMsat)
-
-        // If min === max, it's a fixed-amount LNURL — skip numpad
-        if (minSat === maxSat) {
-          await fetchAndRouteInvoice(lnurlResult.callback, lnurlResult.minSendableMsat, raw)
-          return
-        }
-
-        setSendStep({
-          step: 'amount',
-          parsedInput: { type: 'lnurl', domain, user, metadata: lnurlResult, raw },
-          rawInput: raw,
-          minSat,
-          maxSat,
-        })
-        return
-      }
-
-      setInputError(`No Lightning Address or BIP 353 record found for ${raw}`)
-    } catch (err) {
-      if (controller.signal.aborted) return
-      const message = err instanceof Error ? err.message : String(err)
-      console.warn('[Send] Address resolution failed:', message)
-      setInputError(message)
-    } finally {
-      setIsResolving(false)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- routeResolvedInput and fetchAndRouteInvoice are stable setState wrappers
-  }, [])
 
   // Route a resolved ParsedPaymentInput to the appropriate review/amount step
   const routeResolvedInput = useCallback((parsed: ParsedPaymentInput, label: string) => {
@@ -229,7 +188,13 @@ export function Send() {
     if (parsed.type === 'bolt11' || parsed.type === 'bolt12') {
       // Fixed-amount: go directly to review
       if (parsed.amountMsat !== null) {
-        setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat, fromStep: 'recipient', label })
+        setSendStep({
+          step: 'ln-review',
+          parsed,
+          amountMsat: parsed.amountMsat,
+          fromStep: 'recipient',
+          label,
+        })
         return
       }
       // No amount: need numpad
@@ -241,103 +206,204 @@ export function Send() {
   }, [])
 
   // Fetch LNURL invoice and route to ln-review
-  const fetchAndRouteInvoice = useCallback(async (callback: string, amountMsat: bigint, label: string) => {
-    const controller = resolveAbortRef.current
-    setIsResolving(true)
-    try {
-      const invoiceStr = await fetchLnurlInvoice(callback, amountMsat, controller?.signal)
-      const parsed = classifyPaymentInput(invoiceStr)
-      if (parsed.type === 'bolt11') {
-        // Verify invoice amount matches what we requested
-        if (parsed.amountMsat !== null && parsed.amountMsat !== amountMsat) {
-          setInputError('Invoice amount does not match requested amount')
-          return
+  const fetchAndRouteInvoice = useCallback(
+    async (callback: string, amountMsat: bigint, label: string) => {
+      const controller = resolveAbortRef.current
+      setIsResolving(true)
+      try {
+        const invoiceStr = await fetchLnurlInvoice(callback, amountMsat, controller?.signal)
+        const parsed = classifyPaymentInput(invoiceStr)
+        if (parsed.type === 'bolt11') {
+          // Verify invoice amount matches what we requested
+          if (parsed.amountMsat !== null && parsed.amountMsat !== amountMsat) {
+            setInputError('Invoice amount does not match requested amount')
+            return
+          }
+          setSendStep({
+            step: 'ln-review',
+            parsed,
+            amountMsat: parsed.amountMsat ?? amountMsat,
+            fromStep: 'amount',
+            label,
+          })
+        } else {
+          setInputError('Invalid invoice from Lightning Address provider')
         }
-        setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat ?? amountMsat, fromStep: 'amount', label })
-      } else {
-        setInputError('Invalid invoice from Lightning Address provider')
+      } catch (err) {
+        if (controller?.signal.aborted) return
+        const message = err instanceof Error ? err.message : String(err)
+        setInputError(message)
+      } finally {
+        setIsResolving(false)
       }
-    } catch (err) {
-      if (controller?.signal.aborted) return
-      const message = err instanceof Error ? err.message : String(err)
-      setInputError(message)
-    } finally {
-      setIsResolving(false)
-    }
-  }, [])
+    },
+    []
+  )
 
-  // --- Process input: classify and route to review or amount step ---
-  const processRecipientInput = useCallback(async (value: string, fromStep: 'recipient' | 'amount') => {
-    if (processingRef.current) return
-    const trimmed = value.trim()
-    if (!trimmed) {
-      setInputError('Enter a payment request or address')
-      return
-    }
+  // --- Resolve user@domain: BIP 353 (DoH) then LNURL fallback ---
+  const resolveAddress = useCallback(
+    async (raw: string, user: string, domain: string): Promise<void> => {
+      resolveAbortRef.current?.abort()
+      const controller = new AbortController()
+      resolveAbortRef.current = controller
 
-    processingRef.current = true
-    try {
-      const parsed = classifyPaymentInput(trimmed)
-
-      if (parsed.type === 'error') {
-        setInputError(parsed.message)
-        return
-      }
-
+      setIsResolving(true)
       setInputError(null)
 
-      // BIP 353 / Lightning Address: trigger async resolution
-      if (parsed.type === 'bip353') {
-        const atIndex = parsed.raw.indexOf('@')
-        const user = parsed.raw.slice(0, atIndex)
-        const domain = parsed.raw.slice(atIndex + 1)
-        void resolveAddress(parsed.raw, user, domain)
+      try {
+        // Each resolution step gets its own timeout so a slow DoH response
+        // doesn't eat into the LNURL timeout budget
+        const bip353Signal = AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(RESOLVE_TIMEOUT_MS),
+        ])
+        const bip353Result = await resolveBip353(user, domain, bip353Signal)
+
+        if (bip353Result && bip353Result.type !== 'error') {
+          routeResolvedInput(bip353Result, raw)
+          return
+        }
+
+        // Fall back to LNURL-pay with a fresh timeout
+        // resolveLnurlPay returns null if no endpoint exists, or throws on validation errors
+        const lnurlSignal = AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(RESOLVE_TIMEOUT_MS),
+        ])
+        const lnurlResult = await resolveLnurlPay(user, domain, lnurlSignal)
+
+        if (lnurlResult) {
+          // Round min up (ceil) so we never send less than the server requires;
+          // round max down (floor) so we never exceed the server's limit
+          const minSat = msatToSatCeil(lnurlResult.minSendableMsat)
+          const maxSat = msatToSatFloor(lnurlResult.maxSendableMsat)
+
+          // If min === max, it's a fixed-amount LNURL — skip numpad
+          if (minSat === maxSat) {
+            await fetchAndRouteInvoice(lnurlResult.callback, lnurlResult.minSendableMsat, raw)
+            return
+          }
+
+          setSendStep({
+            step: 'amount',
+            parsedInput: { type: 'lnurl', domain, user, metadata: lnurlResult, raw },
+            rawInput: raw,
+            minSat,
+            maxSat,
+          })
+          return
+        }
+
+        setInputError(`No Lightning Address or BIP 353 record found for ${raw}`)
+      } catch (err) {
+        if (controller.signal.aborted) return
+        const message = err instanceof Error ? err.message : String(err)
+        console.warn('[Send] Address resolution failed:', message)
+        setInputError(message)
+      } finally {
+        setIsResolving(false)
+      }
+    },
+    [fetchAndRouteInvoice, routeResolvedInput]
+  )
+
+  // --- Process input: classify and route to review or amount step ---
+  const processRecipientInput = useCallback(
+    async (value: string, fromStep: 'recipient' | 'amount') => {
+      if (processingRef.current) return
+      const trimmed = value.trim()
+      if (!trimmed) {
+        setInputError('Enter a payment request or address')
         return
       }
 
-      // Save amount step data for back navigation from review
-      if (fromStep === 'amount') {
-        amountStepDataRef.current = { parsedInput: parsed, rawInput: trimmed }
-      } else {
-        amountStepDataRef.current = null
-      }
+      processingRef.current = true
+      try {
+        const parsed = classifyPaymentInput(trimmed)
 
-      if (parsed.type === 'onchain') {
-        const hasEmbeddedAmount = parsed.amountSats !== null
-
-        // If no amount and coming from recipient, go to numpad
-        if (!hasEmbeddedAmount && fromStep === 'recipient') {
-          setSendStep({ step: 'amount', parsedInput: parsed, rawInput: trimmed })
+        if (parsed.type === 'error') {
+          setInputError(parsed.message)
           return
         }
 
-        // Use parsed amount if present (BIP 321 URI with ?amount=), otherwise use numpad amount
-        const effectiveAmount = parsed.amountSats ?? amountSats
-        const effectiveIsSendMax = parsed.amountSats ? false : isSendMax
+        setInputError(null)
 
-        // Phase 2 validation: dust limit
-        if (effectiveAmount < MIN_DUST_SATS) {
-          setInputError('Amount must be at least 294 sats (dust limit)')
+        // BIP 353 / Lightning Address: trigger async resolution
+        if (parsed.type === 'bip353') {
+          const atIndex = parsed.raw.indexOf('@')
+          const user = parsed.raw.slice(0, atIndex)
+          const domain = parsed.raw.slice(atIndex + 1)
+          void resolveAddress(parsed.raw, user, domain)
           return
         }
 
-        if (onchain.status !== 'ready') return
+        // Save amount step data for back navigation from review
+        if (fromStep === 'amount') {
+          amountStepDataRef.current = { parsedInput: parsed, rawInput: trimmed }
+        } else {
+          amountStepDataRef.current = null
+        }
 
-        // Send max: recalculate exact amount with fee
-        if (effectiveIsSendMax) {
-          try {
-            const estimate = await onchain.estimateMaxSendable(parsed.address)
-            if (estimate.amount <= 0n) {
-              setInputError('Balance too low to cover fees')
-              return
+        if (parsed.type === 'onchain') {
+          const hasEmbeddedAmount = parsed.amountSats !== null
+
+          // If no amount and coming from recipient, go to numpad
+          if (!hasEmbeddedAmount && fromStep === 'recipient') {
+            setSendStep({ step: 'amount', parsedInput: parsed, rawInput: trimmed })
+            return
+          }
+
+          // Use parsed amount if present (BIP 321 URI with ?amount=), otherwise use numpad amount
+          const effectiveAmount = parsed.amountSats ?? amountSats
+          const effectiveIsSendMax = parsed.amountSats ? false : isSendMax
+
+          // Phase 2 validation: dust limit
+          if (effectiveAmount < MIN_DUST_SATS) {
+            setInputError('Amount must be at least 294 sats (dust limit)')
+            return
+          }
+
+          if (onchain.status !== 'ready') return
+
+          // Send max: recalculate exact amount with fee
+          if (effectiveIsSendMax) {
+            try {
+              const estimate = await onchain.estimateMaxSendable(parsed.address)
+              if (estimate.amount <= 0n) {
+                setInputError('Balance too low to cover fees')
+                return
+              }
+              setSendStep({
+                step: 'oc-review',
+                address: parsed.address,
+                amount: estimate.amount,
+                fee: estimate.fee,
+                feeRate: estimate.feeRate,
+                isSendMax: true,
+                fromStep,
+              })
+            } catch (err) {
+              const message = classifyEstimateError(err)
+              setInputError(message)
             }
+            return
+          }
+
+          // Validate against on-chain balance
+          if (effectiveAmount > onchainBalance) {
+            setInputError('Amount exceeds available on-chain balance')
+            return
+          }
+
+          try {
+            const estimate = await onchain.estimateFee(parsed.address, effectiveAmount)
             setSendStep({
               step: 'oc-review',
               address: parsed.address,
-              amount: estimate.amount,
+              amount: effectiveAmount,
               fee: estimate.fee,
               feeRate: estimate.feeRate,
-              isSendMax: true,
+              isSendMax: false,
               fromStep,
             })
           } catch (err) {
@@ -347,65 +413,51 @@ export function Send() {
           return
         }
 
-        // Validate against on-chain balance
-        if (effectiveAmount > onchainBalance) {
-          setInputError('Amount exceeds available on-chain balance')
+        // Lightning types (bolt11, bolt12)
+        // Fixed-amount: use embedded amount, skip numpad
+        if (parsed.type !== 'lnurl' && parsed.amountMsat !== null) {
+          if (parsed.amountMsat > lnCapacityMsat) {
+            setInputError('Amount exceeds Lightning channel capacity')
+            return
+          }
+          setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat, fromStep })
           return
         }
 
-        try {
-          const estimate = await onchain.estimateFee(parsed.address, effectiveAmount)
-          setSendStep({
-            step: 'oc-review',
-            address: parsed.address,
-            amount: effectiveAmount,
-            fee: estimate.fee,
-            feeRate: estimate.feeRate,
-            isSendMax: false,
-            fromStep,
-          })
-        } catch (err) {
-          const message = classifyEstimateError(err)
-          setInputError(message)
+        // No embedded amount — need numpad
+        if (fromStep === 'recipient') {
+          setSendStep({ step: 'amount', parsedInput: parsed, rawInput: trimmed })
+          return
         }
-        return
-      }
 
-      // Lightning types (bolt11, bolt12)
-      // Fixed-amount: use embedded amount, skip numpad
-      if (parsed.type !== 'lnurl' && parsed.amountMsat !== null) {
-        if (parsed.amountMsat > lnCapacityMsat) {
+        // Coming from numpad — use user-entered amount
+        if (parsed.type === 'lnurl') {
+          // LNURL: fetch invoice from callback
+          const effectiveMsat = amountSats * 1000n
+          void fetchAndRouteInvoice(parsed.metadata.callback, effectiveMsat, parsed.raw)
+          return
+        }
+
+        const effectiveMsat = amountSats * 1000n
+        if (effectiveMsat > lnCapacityMsat) {
           setInputError('Amount exceeds Lightning channel capacity')
           return
         }
-        setSendStep({ step: 'ln-review', parsed, amountMsat: parsed.amountMsat, fromStep })
-        return
+        setSendStep({ step: 'ln-review', parsed, amountMsat: effectiveMsat, fromStep })
+      } finally {
+        processingRef.current = false
       }
-
-      // No embedded amount — need numpad
-      if (fromStep === 'recipient') {
-        setSendStep({ step: 'amount', parsedInput: parsed, rawInput: trimmed })
-        return
-      }
-
-      // Coming from numpad — use user-entered amount
-      if (parsed.type === 'lnurl') {
-        // LNURL: fetch invoice from callback
-        const effectiveMsat = amountSats * 1000n
-        void fetchAndRouteInvoice(parsed.metadata.callback, effectiveMsat, parsed.raw)
-        return
-      }
-
-      const effectiveMsat = amountSats * 1000n
-      if (effectiveMsat > lnCapacityMsat) {
-        setInputError('Amount exceeds Lightning channel capacity')
-        return
-      }
-      setSendStep({ step: 'ln-review', parsed, amountMsat: effectiveMsat, fromStep })
-    } finally {
-      processingRef.current = false
-    }
-  }, [amountSats, isSendMax, onchain, onchainBalance, lnCapacityMsat, resolveAddress, fetchAndRouteInvoice])
+    },
+    [
+      amountSats,
+      isSendMax,
+      onchain,
+      onchainBalance,
+      lnCapacityMsat,
+      resolveAddress,
+      fetchAndRouteInvoice,
+    ]
+  )
 
   // --- Recipient: paste handler ---
   const handlePaste = useCallback(
@@ -417,7 +469,7 @@ export function Send() {
       setInputValue(pasted)
       void processRecipientInput(pasted, 'recipient')
     },
-    [processRecipientInput],
+    [processRecipientInput]
   )
 
   // --- Recipient: Next button ---
@@ -444,7 +496,11 @@ export function Send() {
     // (re-parsing would classify user@domain as bip353 and restart resolution)
     if (sendStep.parsedInput.type === 'lnurl') {
       const effectiveMsat = amountSats * 1000n
-      void fetchAndRouteInvoice(sendStep.parsedInput.metadata.callback, effectiveMsat, sendStep.parsedInput.raw)
+      void fetchAndRouteInvoice(
+        sendStep.parsedInput.metadata.callback,
+        effectiveMsat,
+        sendStep.parsedInput.raw
+      )
       return
     }
 
@@ -462,7 +518,7 @@ export function Send() {
     }
     void navigate('/send', { replace: true, state: null })
     setPendingQrInput(raw)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Process pending QR input once wallet is ready
@@ -523,13 +579,13 @@ export function Send() {
         case 'bolt11':
           paymentId = ldk.sendBolt11Payment(
             parsed.invoice,
-            parsed.amountMsat === null ? amountMsat : undefined,
+            parsed.amountMsat === null ? amountMsat : undefined
           )
           break
         case 'bolt12':
           paymentId = ldk.sendBolt12Payment(
             parsed.offer,
-            parsed.amountMsat === null ? amountMsat : undefined,
+            parsed.amountMsat === null ? amountMsat : undefined
           )
           break
       }
@@ -569,14 +625,21 @@ export function Send() {
         const paymentIdHex = bytesToHex(paymentId)
         const recent = ldk.listRecentPayments()
         for (const p of recent) {
-          if (p instanceof RecentPaymentDetails_Fulfilled && bytesToHex(p.payment_id) === paymentIdHex) {
+          if (
+            p instanceof RecentPaymentDetails_Fulfilled &&
+            bytesToHex(p.payment_id) === paymentIdHex
+          ) {
             stopPolling()
             const eventResult = ldk.getPaymentResult(paymentId)
-            const preimage = eventResult?.status === 'sent' ? eventResult.preimage : new Uint8Array(32)
+            const preimage =
+              eventResult?.status === 'sent' ? eventResult.preimage : new Uint8Array(32)
             setSendStep({ step: 'ln-success', preimage, amountMsat })
             return
           }
-          if (p instanceof RecentPaymentDetails_Abandoned && bytesToHex(p.payment_id) === paymentIdHex) {
+          if (
+            p instanceof RecentPaymentDetails_Abandoned &&
+            bytesToHex(p.payment_id) === paymentIdHex
+          ) {
             stopPolling()
             setSendStep({ step: 'error', message: 'Payment was abandoned', retryStep: null })
             return
@@ -740,11 +803,17 @@ export function Send() {
       const recent = ldk.listRecentPayments()
       const paymentIdHex = bytesToHex(sendStep.paymentId)
       for (const p of recent) {
-        if (p instanceof RecentPaymentDetails_AwaitingInvoice && bytesToHex(p.payment_id) === paymentIdHex) {
+        if (
+          p instanceof RecentPaymentDetails_AwaitingInvoice &&
+          bytesToHex(p.payment_id) === paymentIdHex
+        ) {
           statusText = 'Requesting invoice...'
           break
         }
-        if (p instanceof RecentPaymentDetails_Pending && bytesToHex(p.payment_id) === paymentIdHex) {
+        if (
+          p instanceof RecentPaymentDetails_Pending &&
+          bytesToHex(p.payment_id) === paymentIdHex
+        ) {
           statusText = 'Sending payment...'
           break
         }
@@ -830,7 +899,9 @@ export function Send() {
           </div>
           <div className="flex justify-between">
             <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Amount</span>
-            <span className="font-display text-3xl font-bold">{formatBtc(msatToSat(amountMsat))}</span>
+            <span className="font-display text-3xl font-bold">
+              {formatBtc(msatToSat(amountMsat))}
+            </span>
           </div>
         </div>
         <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
@@ -875,11 +946,7 @@ export function Send() {
           )}
           {inputError && <p className="mt-2 text-sm text-red-400">{inputError}</p>}
         </div>
-        <Numpad
-          onKey={handleNumpadKey}
-          onNext={handleAmountNext}
-          nextDisabled={amountSats <= 0n}
-        />
+        <Numpad onKey={handleNumpadKey} onNext={handleAmountNext} nextDisabled={amountSats <= 0n} />
       </div>
     )
   }
@@ -916,7 +983,14 @@ export function Send() {
       <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
         <button
           className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-white font-display text-lg font-bold uppercase tracking-wider text-dark transition-transform disabled:cursor-not-allowed disabled:opacity-30 active:scale-[0.98]"
-          onClick={isResolving ? () => { resolveAbortRef.current?.abort(); setIsResolving(false) } : handleRecipientNext}
+          onClick={
+            isResolving
+              ? () => {
+                  resolveAbortRef.current?.abort()
+                  setIsResolving(false)
+                }
+              : handleRecipientNext
+          }
           disabled={!inputValue.trim() && !isResolving}
         >
           {isResolving ? (

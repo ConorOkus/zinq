@@ -21,6 +21,7 @@ Flagged by: TypeScript reviewer, Security sentinel, Architecture strategist (all
 ## Proposed Solutions
 
 Update the comment to match reality:
+
 ```typescript
 /**
  * Derive a deterministic VSS store_id from an LDK seed.

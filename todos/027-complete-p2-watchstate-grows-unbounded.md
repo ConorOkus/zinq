@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "027"
+issue_id: '027'
 tags: [code-review, performance, architecture]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Remove confirmed/spent entries after processing in syncOnce
+
 - After calling `transactions_confirmed`, remove the txid from `watchedTxids`
 - After confirming an output spend, remove from `watchedOutputs`
 - **Effort:** Small
@@ -32,6 +33,6 @@ dependencies: []
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "017"
+issue_id: '017'
 tags: [code-review, security, fund-safety]
 dependencies: []
 ---
@@ -22,6 +22,7 @@ In `src/ldk/traits/persist.ts`, both `persist_new_channel` and `update_persisted
 ## Proposed Solutions
 
 ### Option A: Retry with force-close fallback
+
 - Retry IndexedDB write 3x with exponential backoff
 - On final failure, broadcast latest holder commitment transaction to force-close
 - **Pros:** Maximizes chance of persistence success, safe fallback
@@ -30,6 +31,7 @@ In `src/ldk/traits/persist.ts`, both `persist_new_channel` and `update_persisted
 - **Risk:** Low
 
 ### Option B: Retry and halt channel operations
+
 - Retry 3x with backoff
 - On failure, do NOT call `channel_monitor_updated` (LDK halts channel ops — safe but disruptive)
 - Surface error to UI via callback
@@ -47,8 +49,8 @@ In `src/ldk/traits/persist.ts`, both `persist_new_channel` and `update_persisted
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |
 
 ## Resources

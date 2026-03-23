@@ -25,7 +25,7 @@ vi.stubGlobal(
     constructor() {
       return { 0: mockClient, 1: mockServer }
     }
-  },
+  }
 )
 
 import worker from './index'
@@ -35,10 +35,7 @@ const env = {
   ALLOWED_PORTS: '9735',
 }
 
-function makeRequest(
-  path: string,
-  options: { upgrade?: boolean; origin?: string | null } = {},
-) {
+function makeRequest(path: string, options: { upgrade?: boolean; origin?: string | null } = {}) {
   const { upgrade = true, origin = 'http://localhost:5173' } = options
   const headers: Record<string, string> = {}
   if (upgrade) headers['Upgrade'] = 'websocket'
@@ -54,26 +51,20 @@ describe('Worker fetch handler', () => {
   })
 
   it('returns 426 for non-WebSocket requests', () => {
-    const response = worker.fetch(
-      makeRequest('/v1/1_2_3_4/9735', { upgrade: false }),
-      env,
-    )
+    const response = worker.fetch(makeRequest('/v1/1_2_3_4/9735', { upgrade: false }), env)
     expect(response.status).toBe(426)
   })
 
   it('returns 403 for unauthorized origin', () => {
     const response = worker.fetch(
       makeRequest('/v1/1_2_3_4/9735', { origin: 'https://evil.com' }),
-      env,
+      env
     )
     expect(response.status).toBe(403)
   })
 
   it('returns 403 for missing origin', () => {
-    const response = worker.fetch(
-      makeRequest('/v1/1_2_3_4/9735', { origin: null }),
-      env,
-    )
+    const response = worker.fetch(makeRequest('/v1/1_2_3_4/9735', { origin: null }), env)
     expect(response.status).toBe(403)
   })
 
@@ -128,15 +119,11 @@ describe('Worker fetch handler', () => {
   // that valid requests pass all validation and reach the WebSocket upgrade
   // (which throws in Node.js but succeeds in the Workers runtime).
   it('passes validation for valid public IP request', () => {
-    expect(() => worker.fetch(makeRequest('/v1/8_8_8_8/9735'), env)).toThrow(
-      RangeError,
-    )
+    expect(() => worker.fetch(makeRequest('/v1/8_8_8_8/9735'), env)).toThrow(RangeError)
   })
 
   it('passes validation for valid hostname request', () => {
-    expect(() =>
-      worker.fetch(makeRequest('/v1/node_example_com/9735'), env),
-    ).toThrow(RangeError)
+    expect(() => worker.fetch(makeRequest('/v1/node_example_com/9735'), env)).toThrow(RangeError)
   })
 
   it('passes validation for second allowed origin', () => {
@@ -145,8 +132,8 @@ describe('Worker fetch handler', () => {
         makeRequest('/v1/8_8_8_8/9735', {
           origin: 'https://wallet.example.com',
         }),
-        env,
-      ),
+        env
+      )
     ).toThrow(RangeError)
   })
 })

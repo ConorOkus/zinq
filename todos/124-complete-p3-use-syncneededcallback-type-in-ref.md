@@ -19,6 +19,7 @@ In `src/onchain/context.tsx` line 92, the ref type uses an inline `(() => void) 
 ## Proposed Solutions
 
 ### Option A: Import and use SyncNeededCallback
+
 - `import type { SyncNeededCallback } from '../ldk/traits/event-handler'`
 - Change ref type to use `SyncNeededCallback | undefined`
 - **Effort**: Small (2 lines)
@@ -33,9 +34,9 @@ In `src/onchain/context.tsx` line 92, the ref type uses an inline `(() => void) 
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
-| 2026-03-17 | Created from PR #30 code review | |
+| Date       | Action                          | Learnings |
+| ---------- | ------------------------------- | --------- |
+| 2026-03-17 | Created from PR #30 code review |           |
 
 ## Resources
 

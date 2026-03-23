@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "042"
+issue_id: '042'
 tags: [code-review, quality]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Add assertion for wsProxyUrl
+
 Assert it is a string starting with `wss://`.
 
 - **Effort:** Small

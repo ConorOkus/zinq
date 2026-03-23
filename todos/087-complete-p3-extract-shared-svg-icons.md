@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "087"
+issue_id: '087'
 tags: [code-review, quality, duplication]
 dependencies: []
 ---

@@ -1,5 +1,5 @@
 ---
-title: "fix: Remaining P2 + P3 todo batch — sync hardening, security UX, and cleanup"
+title: 'fix: Remaining P2 + P3 todo batch — sync hardening, security UX, and cleanup'
 type: fix
 status: active
 date: 2026-03-16
@@ -12,6 +12,7 @@ date: 2026-03-16
 All P1 critical bugs are resolved. This plan addresses the **11 remaining P2** and **17 remaining P3** todos, organized into 6 implementation phases by dependency chain. The sync loop changes (021/025/027/030) are the most interconnected and must be designed as a unit. Security UX fixes (046/091) and refactoring (005/006/028/049) are independent.
 
 **Deferred items (out of scope):**
+
 - 045 — Plaintext mnemonic in IDB (deferred to mainnet; requires SubtleCrypto encryption layer)
 - 094 — Auth gate before seed reveal (deferred to mainnet; requires PIN/biometric architecture)
 - 016 — NodeManager singleton (architectural; deferred until headless/agent use case is concrete)
@@ -37,6 +38,7 @@ const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
 **File:** `src/ldk/sync/esplora-client.ts`, `src/ldk/utils.ts`
 
 **Problems:**
+
 - `getTipHeight`: `parseInt(text, 10)` returns NaN on garbage response
 - `getTipHash`/`getBlockHeader`: no hex format validation, `hexToBytes` silently converts invalid chars to `0x00`
 - JSON endpoints (`getBlockStatus`, `getTxStatus`, etc.): `as T` casts with no runtime check
@@ -120,7 +122,7 @@ const txResults = await Promise.allSettled(
     return { txid, confirmed: false }
   })
 )
-const failedTxChecks = txResults.filter(r => r.status === 'rejected')
+const failedTxChecks = txResults.filter((r) => r.status === 'rejected')
 if (failedTxChecks.length > 0) {
   console.warn(`[LDK Sync] ${failedTxChecks.length} txid checks failed`)
 }
@@ -135,6 +137,7 @@ if (failedTxChecks.length > 0) {
 **Backoff strategy:** Capped exponential — base = `intervalMs` (30s), factor = 2, cap = 5 minutes, reset on first successful sync.
 
 **Sync status state machine:**
+
 - `syncing` → `synced`: after first successful `syncOnce` call
 - `synced` → `syncing`: when tip hash changes (new block)
 - `synced`/`syncing` → `stale`: after 3 consecutive failed sync ticks
@@ -172,9 +175,7 @@ After `transactions_confirmed` is called, compare `watchedTxids` against the set
 
 ```typescript
 // At end of syncOnce, after all confirmations processed:
-const relevantTxids = new Set(
-  channelManager.get_relevant_txids().map(([txid]) => bytesToHex(txid))
-)
+const relevantTxids = new Set(channelManager.get_relevant_txids().map(([txid]) => bytesToHex(txid)))
 for (const txid of watchState.watchedTxids.keys()) {
   if (!relevantTxids.has(txid)) {
     watchState.watchedTxids.delete(txid)
@@ -199,7 +200,7 @@ const handleVisibilityChange = () => {
       idbPut('ldk_channel_manager', 'primary', channelManager.write()),
       idbPut('ldk_network_graph', 'primary', networkGraph.write()),
       idbPut('ldk_scorer', 'primary', scorer.write()),
-    ]).catch(err => console.error('[LDK] Visibility-change persist failed:', err))
+    ]).catch((err) => console.error('[LDK] Visibility-change persist failed:', err))
   }
 }
 document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -226,7 +227,7 @@ export async function connectToPeer(
   pubkey: string,
   host: string,
   port: number,
-  wsProxyUrl: string,
+  wsProxyUrl: string
 ): Promise<{ disconnect: () => void }> {
   // ... existing WebSocket setup ...
   return {
@@ -285,12 +286,13 @@ const [importWords, setImportWords] = useState('')
 ```
 
 **Input normalization:**
+
 ```typescript
 function normalizeMnemonic(input: string): string {
   return input
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, ' ')    // collapse whitespace
+    .replace(/\s+/g, ' ') // collapse whitespace
     .replace(/[^\w\s]/g, '') // strip punctuation
 }
 ```
@@ -300,6 +302,7 @@ function normalizeMnemonic(input: string): string {
 **File:** `src/pages/Backup.tsx`
 
 Add three protections:
+
 1. A "Done" button that clears state and navigates to `/settings`
 2. `visibilitychange` listener that clears the revealed words when tab is hidden
 3. Auto-hide timer (60 seconds) with countdown indicator
@@ -376,6 +379,7 @@ Move `bytesToHex`, `txidBytesToHex`, `hexToBytes` to `src/utils/hex.ts`. Update 
 ### 6.2 Remove dead code (todos 006, 028, 049)
 
 Consolidate three dead-code cleanup todos into one pass:
+
 - Remove `idbGetAll` if unused
 - Remove unused IndexedDB stores from schema
 - Remove `getBlockHashAtHeight` from esplora-client
@@ -427,6 +431,7 @@ Add a test verifying the BIP21 URI in the QR code uses uppercase `BITCOIN:` pref
 ## Acceptance Criteria
 
 ### Phase 1: Esplora Hardening
+
 - [x] All Esplora fetch calls have 10s timeout via `AbortSignal.timeout()`
 - [x] `hexToBytes` throws on invalid hex characters
 - [x] `getTipHeight` validates integer response
@@ -434,6 +439,7 @@ Add a test verifying the BIP21 URI in the QR code uses uppercase `BITCOIN:` pref
 - [x] JSON endpoints have minimal shape validation before `as T` cast
 
 ### Phase 2: Sync Loop
+
 - [x] Watched txid and output checks run in parallel via `Promise.allSettled`
 - [x] Sync loop has capped exponential backoff (30s → 5min cap)
 - [x] `syncStatus` transitions: syncing → synced → stale (after 3 failures)
@@ -441,11 +447,13 @@ Add a test verifying the BIP21 URI in the QR code uses uppercase `BITCOIN:` pref
 - [x] `visibilitychange` handler triggers best-effort CM/NG/Scorer persist
 
 ### Phase 3: WebSocket
+
 - [x] `connectToPeer` returns a `disconnect` handle
 - [x] Active connections tracked in LDK context and cleaned up on unmount
 - [x] Timeout path documented re: `socket_disconnected` call chain
 
 ### Phase 4: Security UX
+
 - [x] Mnemonic import uses a proper form instead of `prompt()`
 - [x] Import input is normalized (lowercase, trim, collapse whitespace)
 - [x] Import error shows inline retry, not page refresh
@@ -454,11 +462,13 @@ Add a test verifying the BIP21 URI in the QR code uses uppercase `BITCOIN:` pref
 - [x] Backup page has "Done" button navigating to `/settings`
 
 ### Phase 5: Broadcaster
+
 - [x] `broadcastWithRetry` is importable for use in event-handler
 - [x] Inflight dedup `Set` prevents overlapping retry chains
 - [x] Todo 014 marked complete (retry already implemented)
 
 ### Phase 6: Cleanup
+
 - [ ] Hex utilities in `src/utils/hex.ts`, all imports updated
 - [x] Dead code removed across esplora-client, config, init, event-handler
 - [ ] `useLdk()` throws outside provider (skipped — guard breaks test pattern)
@@ -481,6 +491,7 @@ Phase 6 (Cleanup) ────── after all behavioral changes merged
 ```
 
 **Suggested PR structure:**
+
 1. PR #1: Phase 1 (Esplora hardening) — small, low risk
 2. PR #2: Phase 2 (Sync loop) — largest PR, design-heavy
 3. PR #3: Phase 3 (WebSocket cleanup) — medium
@@ -490,12 +501,12 @@ Phase 6 (Cleanup) ────── after all behavioral changes merged
 
 ## Deferred Items
 
-| # | Todo | Why deferred |
-|---|------|-------------|
-| 045 | Plaintext mnemonic in IDB | Requires SubtleCrypto encryption layer; overkill for signet |
-| 094 | Auth gate before seed reveal | Requires PIN/biometric architecture; signet risk is low |
-| 016 | NodeManager singleton | No headless/agent use case yet |
-| 072 | Extract onchain service | Depends on 016; no agent consumers exist |
+| #   | Todo                         | Why deferred                                                |
+| --- | ---------------------------- | ----------------------------------------------------------- |
+| 045 | Plaintext mnemonic in IDB    | Requires SubtleCrypto encryption layer; overkill for signet |
+| 094 | Auth gate before seed reveal | Requires PIN/biometric architecture; signet risk is low     |
+| 016 | NodeManager singleton        | No headless/agent use case yet                              |
+| 072 | Extract onchain service      | Depends on 016; no agent consumers exist                    |
 
 ## SpecFlow Analysis: Key Risks
 
@@ -509,20 +520,21 @@ Phase 6 (Cleanup) ────── after all behavioral changes merged
 
 Several pending-named files already have `status: complete` in frontmatter — these were fixed in prior batches but filenames weren't updated:
 
-| File | Status in frontmatter |
-|------|----------------------|
-| 001, 002, 003, 004 | `status: complete` ✓ |
-| 008, 009, 010, 011 | `status: complete` ✓ |
-| 017, 018, 019, 022, 024, 026 | `status: complete` ✓ |
-| 031, 032, 033, 034, 035 | `status: complete` ✓ |
-| 044, 047 | `status: complete` ✓ |
-| 056, 057, 073-077, 081, 083-084, 087, 089, 092-093 | `status: complete` ✓ |
+| File                                               | Status in frontmatter |
+| -------------------------------------------------- | --------------------- |
+| 001, 002, 003, 004                                 | `status: complete` ✓  |
+| 008, 009, 010, 011                                 | `status: complete` ✓  |
+| 017, 018, 019, 022, 024, 026                       | `status: complete` ✓  |
+| 031, 032, 033, 034, 035                            | `status: complete` ✓  |
+| 044, 047                                           | `status: complete` ✓  |
+| 056, 057, 073-077, 081, 083-084, 087, 089, 092-093 | `status: complete` ✓  |
 
 These filenames still say "pending" but the work is done. Consider a bulk rename or leave as-is (frontmatter is authoritative).
 
 ## Sources & References
 
 ### Internal References
+
 - Prior P1/P2 batch plan: `docs/plans/2026-03-14-003-fix-p1-p2-bugfix-batch-plan.md`
 - Persist retry pattern: `src/ldk/traits/persist.ts:19-39`
 - Sync loop: `src/ldk/sync/chain-sync.ts`
@@ -534,6 +546,7 @@ These filenames still say "pending" but the work is done. Consider a bulk rename
 - IDB module: `src/ldk/storage/idb.ts`
 
 ### Todo Files
+
 - P2: 020, 021, 023, 025, 027, 036, 046, 048, 091
 - P3: 005, 006, 007, 012, 013, 014, 015, 028, 029, 030, 049, 055, 058, 059, 078
 - Deferred: 045, 094, 016, 072

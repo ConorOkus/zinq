@@ -54,6 +54,7 @@ const impl: SignerProviderInterface = {
 ```
 
 Key implementation details:
+
 - BDK wallet reference is set lazily via `setBdkWallet()` since BDK initializes after LDK
 - Falls back to KeysManager defaults when BDK wallet isn't available yet
 - Must persist BDK changeset after `next_unused_address()` so the address is tracked after restart
@@ -62,12 +63,15 @@ Key implementation details:
 ## Critical Pitfalls
 
 ### 1. P2WPKH format must be validated
+
 `ShutdownScript.constructor_new_p2wpkh` expects exactly 20 bytes. If BDK returns a P2TR address (34 bytes), slicing without validation produces a malformed script → **permanent fund loss**.
 
 ### 2. `generate_channel_keys_id` cannot delegate through default provider
+
 The LDK WASM bindings have an asymmetry: `decodeUint128` reads full 128-bit values but `encodeUint128` rejects values >= 2^124. When `create_channel` calls `generate_channel_keys_id`, the `user_channel_id` parameter gets decoded to a BigInt that may exceed the encode limit. Delegating to `defaultProvider.generate_channel_keys_id()` re-encodes it, causing "U128s cannot exceed 128 bits". Fix: generate random 32 bytes directly.
 
 ### 3. `deserializeMonitors` must use the custom provider
+
 Channel monitors carry signer instances from deserialization. If deserialized with `keysManager.as_SignerProvider()` instead of the custom provider, force-close claim transactions use KeysManager addresses that BDK doesn't track.
 
 ## Prevention

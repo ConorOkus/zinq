@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "054"
+issue_id: '054'
 tags: [code-review, quality, typescript]
 dependencies: []
 ---
@@ -23,7 +23,7 @@ dependencies: []
 ```typescript
 const body = await response.text()
 if (!response.ok) {
-    throw new Error(`Esplora broadcast failed: ${response.status} ${body}`)
+  throw new Error(`Esplora broadcast failed: ${response.status} ${body}`)
 }
 return body
 ```
@@ -37,9 +37,9 @@ return body
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
-| 2026-03-12 | Identified during PR #8 code review | |
+| Date       | Action                              | Learnings |
+| ---------- | ----------------------------------- | --------- |
+| 2026-03-12 | Identified during PR #8 code review |           |
 
 ## Resources
 

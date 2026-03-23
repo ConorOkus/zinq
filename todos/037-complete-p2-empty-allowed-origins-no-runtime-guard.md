@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "037"
+issue_id: '037'
 tags: [code-review, security, proxy]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Add runtime guard and top-level default (Recommended)
+
 Return 500 with a clear message if `ALLOWED_ORIGINS` is empty/undefined. Add a placeholder to top-level `[vars]`.
 
 - **Effort:** Small

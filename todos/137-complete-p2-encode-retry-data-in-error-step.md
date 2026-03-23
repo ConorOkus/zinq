@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "137"
+issue_id: '137'
 tags: [code-review, architecture]
 ---
 

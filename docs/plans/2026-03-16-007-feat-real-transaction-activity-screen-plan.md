@@ -1,5 +1,5 @@
 ---
-title: "feat: Replace Activity screen with real transactions"
+title: 'feat: Replace Activity screen with real transactions'
 type: feat
 status: completed
 date: 2026-03-16
@@ -32,6 +32,7 @@ Replace mock data on the Activity screen with real on-chain transactions from BD
 3. **Lightning inbound (LDK):** `Event_PaymentClaimed` in event handler — currently only logged, not persisted.
 
 **Key files:**
+
 - `src/pages/Activity.tsx` — the screen to replace
 - `src/onchain/context.tsx` / `onchain-context.ts` — needs to expose transactions
 - `src/ldk/traits/event-handler.ts` — needs to persist payment events
@@ -39,6 +40,7 @@ Replace mock data on the Activity screen with real on-chain transactions from BD
 - `src/ldk/storage/idb.ts` — IDB helpers, needs new store + DB version bump
 
 **Institutional learnings:**
+
 - Persist changesets after any `next_unused_address()` call (bdk-address-reveal-not-persisted)
 - Use `useRef` for context dependencies to avoid sync loop teardown (bdk-wasm-onchain-wallet-integration-patterns)
 - `sent_and_received(tx)` returns tuple: `[0]` sent, `[1]` received — direction is `sent > received ? 'sent' : 'received'`
@@ -82,7 +84,7 @@ export async function updatePaymentStatus(
   paymentHash: string,
   status: 'succeeded' | 'failed',
   feePaidMsat?: bigint | null,
-  failureReason?: string,
+  failureReason?: string
 ): Promise<void> {
   // Read-modify-write; safe because single-threaded
   const all = await loadAllPayments()
@@ -123,7 +125,12 @@ In `Event_PaymentClaimed` handler (~line 163), add persistence:
 ```typescript
 if (event instanceof Event_PaymentClaimed) {
   const paymentHash = bytesToHex(event.payment_hash)
-  console.log('[LDK Event] PaymentClaimed:', paymentHash, 'amount_msat:', event.amount_msat.toString())
+  console.log(
+    '[LDK Event] PaymentClaimed:',
+    paymentHash,
+    'amount_msat:',
+    event.amount_msat.toString()
+  )
   void persistPayment({
     paymentHash,
     direction: 'inbound',
@@ -347,9 +354,11 @@ export function Activity() {
           {transactions.map((tx) => (
             <div key={tx.id} className="flex items-center gap-4 px-6 py-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center text-on-accent">
-                {tx.direction === 'sent'
-                  ? <ArrowUpRight className="h-5 w-5" />
-                  : <ArrowDownLeft className="h-5 w-5" />}
+                {tx.direction === 'sent' ? (
+                  <ArrowUpRight className="h-5 w-5" />
+                ) : (
+                  <ArrowDownLeft className="h-5 w-5" />
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-on-accent">
@@ -361,12 +370,15 @@ export function Activity() {
                   )}
                 </div>
                 <div className="mt-0.5 text-xs text-[var(--color-on-accent-muted)]">
-                  {tx.layer === 'lightning' ? '⚡ ' : ''}{formatRelativeTime(tx.timestamp)}
+                  {tx.layer === 'lightning' ? '⚡ ' : ''}
+                  {formatRelativeTime(tx.timestamp)}
                 </div>
               </div>
-              <div className={`shrink-0 font-display font-bold ${
-                tx.status === 'pending' ? 'text-[var(--color-on-accent-muted)]' : 'text-on-accent'
-              }`}>
+              <div
+                className={`shrink-0 font-display font-bold ${
+                  tx.status === 'pending' ? 'text-[var(--color-on-accent-muted)]' : 'text-on-accent'
+                }`}
+              >
                 {tx.direction === 'sent' ? '-' : '+'}
                 {formatBtc(tx.amountSats)}
               </div>

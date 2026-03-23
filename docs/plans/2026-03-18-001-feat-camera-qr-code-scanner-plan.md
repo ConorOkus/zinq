@@ -1,5 +1,5 @@
 ---
-title: "feat: Add Camera QR Code Scanner"
+title: 'feat: Add Camera QR Code Scanner'
 type: feat
 status: completed
 date: 2026-03-18
@@ -51,7 +51,7 @@ LDK class instances (`Bolt11Invoice`, `Offer`) cannot survive `structuredClone` 
 ```typescript
 // State passed from /scan to /send
 interface ScanNavigationState {
-  scannedInput: string; // raw QR content — re-parsed by Send.tsx
+  scannedInput: string // raw QR content — re-parsed by Send.tsx
 }
 ```
 
@@ -68,10 +68,10 @@ The current flow is: `amount → recipient → review`. When a scanned recipient
 
 **Permissions-Policy** — change in both locations:
 
-| File | Current | Required |
-|---|---|---|
+| File                | Current     | Required        |
+| ------------------- | ----------- | --------------- |
 | `vite.config.ts:18` | `camera=()` | `camera=(self)` |
-| `vercel.json:14` | `camera=()` | `camera=(self)` |
+| `vercel.json:14`    | `camera=()` | `camera=(self)` |
 
 **CSP in `index.html`** — add `worker-src` directive for qr-scanner's blob-based Web Worker:
 
@@ -84,6 +84,7 @@ worker-src 'self' blob:;
 ### Camera Cleanup
 
 The qr-scanner library's `scanner.stop()` method stops all media tracks. Must be called on:
+
 - Successful scan (before navigation)
 - Component unmount (useEffect cleanup)
 - Handle the async race: if component unmounts before `scanner.start()` resolves, stop the returned stream
@@ -115,6 +116,7 @@ The qr-scanner library's `scanner.stop()` method stops all media tracks. Must be
 **Files to create/modify:**
 
 1. **Install dependency**
+
    ```
    pnpm add qr-scanner
    ```
@@ -134,6 +136,7 @@ The qr-scanner library's `scanner.stop()` method stops all media tracks. Must be
    - `hasNavigated` ref to prevent double-decode
 
 3. **`src/routes/router.tsx`** — Add scan route:
+
    ```typescript
    { path: 'scan', element: <Scan /> }
    ```

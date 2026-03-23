@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "020"
+issue_id: '020'
 tags: [code-review, security, input-validation]
 dependencies: []
 ---
@@ -21,6 +21,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Add zod schemas for Esplora responses + hex validation
+
 - Define zod schemas for BlockStatus, TxStatus, MerkleProof, OutspendStatus
 - Validate `hexToBytes` input with regex `/^[0-9a-fA-F]*$/` and even-length check
 - **Effort:** Small-Medium
@@ -33,6 +34,6 @@ dependencies: []
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

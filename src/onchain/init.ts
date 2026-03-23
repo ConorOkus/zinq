@@ -1,9 +1,4 @@
-import {
-  Wallet,
-  EsploraClient,
-  ChangeSet,
-  type Network,
-} from '@bitcoindevkit/bdk-wallet-web'
+import { Wallet, EsploraClient, ChangeSet, type Network } from '@bitcoindevkit/bdk-wallet-web'
 import { ONCHAIN_CONFIG } from './config'
 import { getChangeset, putChangeset } from './storage/changeset'
 
@@ -16,7 +11,7 @@ let bdkInitPromise: Promise<BdkWallet> | null = null
 
 export function initializeBdkWallet(
   descriptors: { external: string; internal: string },
-  network: Network,
+  network: Network
 ): Promise<BdkWallet> {
   if (!bdkInitPromise) {
     bdkInitPromise = doInitializeBdkWallet(descriptors, network).catch((err) => {
@@ -29,11 +24,11 @@ export function initializeBdkWallet(
 
 async function doInitializeBdkWallet(
   descriptors: { external: string; internal: string },
-  network: Network,
+  network: Network
 ): Promise<BdkWallet> {
   const esploraClient = new EsploraClient(
     ONCHAIN_CONFIG.esploraUrl,
-    ONCHAIN_CONFIG.esploraMaxRetries,
+    ONCHAIN_CONFIG.esploraMaxRetries
   )
 
   // Try to restore from persisted ChangeSet, otherwise create fresh
@@ -62,7 +57,7 @@ async function doInitializeBdkWallet(
     const update = await esploraClient.full_scan(
       fullScanRequest,
       ONCHAIN_CONFIG.fullScanGapLimit,
-      ONCHAIN_CONFIG.syncParallelRequests,
+      ONCHAIN_CONFIG.syncParallelRequests
     )
     wallet.apply_update(update)
     console.log('[BDK Init] Initial full scan complete')

@@ -1,5 +1,5 @@
 ---
-title: "refactor: Remove tx-bridge workaround (BDK wasm 0.3.0)"
+title: 'refactor: Remove tx-bridge workaround (BDK wasm 0.3.0)'
 type: refactor
 status: completed
 date: 2026-03-17
@@ -71,6 +71,7 @@ import { computeTxid } from '../utils'
 Bump `@bitcoindevkit/bdk-wallet-web` from `^0.2.0` to `^0.3.0` in `package.json`. Run `pnpm install && pnpm typecheck` to surface any breaking changes before making functional changes.
 
 BDK wasm 0.3.0 adds:
+
 - `Transaction.to_bytes(): Uint8Array` — consensus serialization
 - `Transaction.from_bytes(bytes: Uint8Array): Transaction` — consensus deserialization
 
@@ -139,6 +140,7 @@ Remove the `broadcastTransaction` import from `../onchain/tx-bridge`. Add `broad
 ### Phase 6: Update tests
 
 **event-handler.test.ts:**
+
 - Remove the `../../onchain/tx-bridge` mock (~lines 190-195)
 - Add mock for `./broadcaster` (`broadcastWithRetry`)
 - Update `mockPsbt` to expose `extract_tx()`:
@@ -153,6 +155,7 @@ Remove the `broadcastTransaction` import from `../onchain/tx-bridge`. Add `broad
 - Update FundingTxBroadcastSafe assertion: verify `broadcastWithRetry` was called (not `mockBroadcastTransaction`)
 
 **broadcaster.test.ts (if exists):**
+
 - Add tests for the new return-txid behavior
 - Add tests for case-insensitive idempotency matching
 - Add test for throw-after-retries behavior
@@ -162,6 +165,7 @@ Remove the `broadcastTransaction` import from `../onchain/tx-bridge`. Add `broad
 ### Phase 7: Clean up docs
 
 Delete documentation that was written specifically for the tx-bridge workaround:
+
 - `docs/solutions/integration-issues/bdk-ldk-cross-wasm-transaction-bridge.md`
 - `docs/solutions/integration-issues/bdk-psbt-already-finalized-scure-extract.md`
 - `docs/brainstorms/2026-03-12-bdk-ldk-tx-bridge-brainstorm.md`
@@ -193,12 +197,12 @@ Close or mark resolved: `todos/055-pending-p3-consider-broadcasttx-consolidation
 
 ## Dependencies & Risks
 
-| Risk | Likelihood | Mitigation |
-|------|-----------|------------|
-| BDK 0.3.0 has other breaking changes | Medium | Phase 2 is isolated: bump + typecheck before functional changes |
-| `broadcastWithRetry` throw breaks LDK BroadcasterInterface | Low | Wrapper uses `void` which swallows rejections; add test |
-| Mid-upgrade IDB compat (pending funding tx) | Low | Both libs produce identical consensus-encoded bytes |
-| Sweep fund loss from silent broadcast failure | **Critical** | Phase 1 prerequisite: make broadcastWithRetry throw on failure |
+| Risk                                                       | Likelihood   | Mitigation                                                      |
+| ---------------------------------------------------------- | ------------ | --------------------------------------------------------------- |
+| BDK 0.3.0 has other breaking changes                       | Medium       | Phase 2 is isolated: bump + typecheck before functional changes |
+| `broadcastWithRetry` throw breaks LDK BroadcasterInterface | Low          | Wrapper uses `void` which swallows rejections; add test         |
+| Mid-upgrade IDB compat (pending funding tx)                | Low          | Both libs produce identical consensus-encoded bytes             |
+| Sweep fund loss from silent broadcast failure              | **Critical** | Phase 1 prerequisite: make broadcastWithRetry throw on failure  |
 
 ## Sources & References
 

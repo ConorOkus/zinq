@@ -1,7 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { WalletContext, defaultWalletContextValue, type WalletContextValue } from './wallet-context'
 import { generateMnemonic, getMnemonic, storeMnemonic } from './mnemonic'
-import { deriveLdkSeed, deriveBdkDescriptors, deriveVssEncryptionKey, deriveVssStoreId } from './keys'
+import {
+  deriveLdkSeed,
+  deriveBdkDescriptors,
+  deriveVssEncryptionKey,
+  deriveVssStoreId,
+} from './keys'
 
 // Deduplicate concurrent calls from React StrictMode double-mount.
 let walletInitPromise: ReturnType<typeof doInitializeWallet> | null = null

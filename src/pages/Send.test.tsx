@@ -7,11 +7,7 @@ import {
   type OnchainContextValue,
   defaultOnchainContextValue,
 } from '../onchain/onchain-context'
-import {
-  LdkContext,
-  defaultLdkContextValue,
-  type LdkContextValue,
-} from '../ldk/ldk-context'
+import { LdkContext, defaultLdkContextValue, type LdkContextValue } from '../ldk/ldk-context'
 import { Send } from './Send'
 
 vi.mock('../ldk/payment-input', () => ({
@@ -88,21 +84,19 @@ function renderSend(onchainValue?: OnchainContextValue, ldkValue?: LdkContextVal
           <Send />
         </OnchainContext>
       </LdkContext>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
 }
 
 function readyContext(
-  overrides?: Partial<Extract<OnchainContextValue, { status: 'ready' }>>,
+  overrides?: Partial<Extract<OnchainContextValue, { status: 'ready' }>>
 ): OnchainContextValue {
   return {
     status: 'ready',
     balance: { confirmed: 50000n, trustedPending: 0n, untrustedPending: 0n },
     generateAddress: () => 'tb1qtest',
     estimateFee: vi.fn().mockResolvedValue({ fee: 150n, feeRate: 1n }),
-    estimateMaxSendable: vi
-      .fn()
-      .mockResolvedValue({ amount: 49850n, fee: 150n, feeRate: 1n }),
+    estimateMaxSendable: vi.fn().mockResolvedValue({ amount: 49850n, fee: 150n, feeRate: 1n }),
     sendToAddress: vi.fn().mockResolvedValue('abc123txid'),
     sendMax: vi.fn().mockResolvedValue('maxabc123txid'),
     syncNow: vi.fn(),
@@ -450,7 +444,7 @@ describe('Send', () => {
         setSyncNeeded: vi.fn(),
         sendBolt11Payment: vi.fn(),
         sendBolt12Payment: vi.fn(),
-    
+
         closeChannel: vi.fn(),
         forceCloseChannel: vi.fn(),
         listChannels: vi.fn(() => []),

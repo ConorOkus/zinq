@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "021"
+issue_id: '021'
 tags: [code-review, reliability, architecture]
 dependencies: []
 ---
@@ -21,6 +21,7 @@ If `syncOnce` throws (Esplora down, rate limited), the error is logged and the n
 ## Proposed Solutions
 
 ### Option A: Backoff + status callback
+
 - Track consecutive error count, double interval on error (cap at 5 min), reset on success
 - Add `onSyncStatus` callback to `startSyncLoop` for status transitions
 - Wire callback to React context setState
@@ -35,6 +36,6 @@ If `syncOnce` throws (Esplora down, rate limited), the error is logged and the n
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

@@ -1,5 +1,5 @@
 ---
-title: "feat: Reorder send flow to amount-first with recipient input"
+title: 'feat: Reorder send flow to amount-first with recipient input'
 type: feat
 status: completed
 date: 2026-03-16
@@ -35,17 +35,17 @@ amount → recipient → oc-review | ln-review → broadcasting/sending → succ
 
 **New states:**
 
-| State | Carries | Description |
-|-------|---------|-------------|
-| `amount` | — | Numpad entry. Shows unified balance. |
-| `recipient` | `amountSats: bigint` | Text input for address/invoice/offer/HRN. Placeholder: `"payment request or user@domain"` |
-| `oc-review` | `address, amountSats, fee, feeRate` | On-chain review (unchanged) |
-| `ln-review` | `parsed, amountSats` | Lightning review (unchanged) |
-| `oc-broadcasting` | txid pending | Spinner (unchanged) |
-| `ln-sending` | payment pending | Spinner + polling (unchanged) |
-| `oc-success` | txid | Success screen (unchanged) |
-| `ln-success` | preimage | Success screen (unchanged) |
-| `error` | message, retryStep? | Error with retry to review (not back to step 1) |
+| State             | Carries                             | Description                                                                               |
+| ----------------- | ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| `amount`          | —                                   | Numpad entry. Shows unified balance.                                                      |
+| `recipient`       | `amountSats: bigint`                | Text input for address/invoice/offer/HRN. Placeholder: `"payment request or user@domain"` |
+| `oc-review`       | `address, amountSats, fee, feeRate` | On-chain review (unchanged)                                                               |
+| `ln-review`       | `parsed, amountSats`                | Lightning review (unchanged)                                                              |
+| `oc-broadcasting` | txid pending                        | Spinner (unchanged)                                                                       |
+| `ln-sending`      | payment pending                     | Spinner + polling (unchanged)                                                             |
+| `oc-success`      | txid                                | Success screen (unchanged)                                                                |
+| `ln-success`      | preimage                            | Success screen (unchanged)                                                                |
+| `error`           | message, retryStep?                 | Error with retry to review (not back to step 1)                                           |
 
 ### Key Design Decisions
 
@@ -115,6 +115,7 @@ Tapping the balance triggers send-max approximation.
 ### Send Max approximation
 
 On the numpad (before address is known):
+
 - Use `unifiedBalance` as the approximate max
 - After address entry, if on-chain: recalculate with `estimateMaxSendable(address)` and update the review screen amount
 - If lightning: outbound capacity is already exact, no recalculation needed

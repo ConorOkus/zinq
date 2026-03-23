@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "067"
+issue_id: '067'
 tags: [code-review, quality]
 dependencies: []
 ---
@@ -15,6 +15,7 @@ The UI validates amount against `balance.confirmed` only (Send.tsx line 114), bu
 ## Findings
 
 **Location:**
+
 - `src/pages/Send.tsx`, line 114: `if (amountSats > onchain.balance.confirmed)`
 - `src/onchain/context.tsx`, lines 150-151: `confirmed.to_sat() + trusted_pending.to_sat()`
 
@@ -23,6 +24,7 @@ Flagged by: security-sentinel
 ## Proposed Solutions
 
 ### Option A: Align to confirmed + trusted_pending
+
 Use the same balance calculation in both places.
 
 - Effort: Small

@@ -1,5 +1,5 @@
 ---
-title: "LDK EventHandler — Sync/Async Bridging and Fund-Safety Patterns"
+title: 'LDK EventHandler — Sync/Async Bridging and Fund-Safety Patterns'
 category: integration-issues
 date: 2026-03-12
 tags: [ldk, event-handler, lightning, typescript, fund-safety, indexeddb, wasm]
@@ -21,6 +21,7 @@ The WASM-to-JS bridge enforces synchronous trait methods. IndexedDB and network 
 Categorize events by their async requirements and handle each appropriately:
 
 ### Sync-safe events (call LDK methods inline)
+
 ```typescript
 // PaymentClaimable — claim_funds() is a sync WASM call
 if (event instanceof Event_PaymentClaimable) {
@@ -43,6 +44,7 @@ if (event instanceof Event_PendingHTLCsForwardable) {
 ```
 
 ### Async events (fire-and-forget with IDB persistence)
+
 ```typescript
 // SpendableOutputs — persist descriptors to IDB for future sweep
 // Note: IDB write is async but handle_event is sync. If the browser
@@ -57,6 +59,7 @@ if (event instanceof Event_SpendableOutputs) {
 ```
 
 ### Deferred events (no implementation yet, log and acknowledge)
+
 ```typescript
 // FundingGenerationReady, BumpTransaction — need wallet/UTXO layer
 if (event instanceof Event_FundingGenerationReady) {
@@ -66,16 +69,15 @@ if (event instanceof Event_FundingGenerationReady) {
 ```
 
 ### Background loop integration
+
 ```typescript
 // Process events on the 10s peer timer tick
 peerTimerId = setInterval(() => {
   node.peerManager.timer_tick_occurred()
   node.peerManager.process_events()
   // Drain events: ChannelManager first, then ChainMonitor
-  node.channelManager.as_EventsProvider()
-    .process_pending_events(node.eventHandler)
-  node.chainMonitor.as_EventsProvider()
-    .process_pending_events(node.eventHandler)
+  node.channelManager.as_EventsProvider().process_pending_events(node.eventHandler)
+  node.chainMonitor.as_EventsProvider().process_pending_events(node.eventHandler)
   // Flush CM state immediately after events (fund safety)
   if (node.channelManager.get_and_clear_needs_persistence()) {
     void idbPut('ldk_channel_manager', 'primary', node.channelManager.write())

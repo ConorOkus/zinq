@@ -22,9 +22,7 @@ export function Activity() {
   return (
     <div className="flex min-h-dvh flex-col bg-accent px-6 pb-(--spacing-tab-bar) pt-6">
       <div className="mb-6">
-        <h1 className="font-display text-3xl font-bold text-on-accent">
-          Activity
-        </h1>
+        <h1 className="font-display text-3xl font-bold text-on-accent">Activity</h1>
       </div>
 
       {isLoading ? (
@@ -33,17 +31,12 @@ export function Activity() {
         </div>
       ) : transactions.length === 0 ? (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-[var(--color-on-accent-muted)]">
-            No transactions yet
-          </p>
+          <p className="text-[var(--color-on-accent-muted)]">No transactions yet</p>
         </div>
       ) : (
         <div className="-mx-6 flex-1 overflow-y-auto">
           {transactions.map((tx) => (
-            <div
-              key={tx.id}
-              className="flex items-center gap-4 px-6 py-4"
-            >
+            <div key={tx.id} className="flex items-center gap-4 px-6 py-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center text-on-accent">
                 {tx.direction === 'sent' ? (
                   <ArrowUpRight className="h-5 w-5" />
@@ -67,9 +60,7 @@ export function Activity() {
               </div>
               <div
                 className={`shrink-0 font-display font-bold ${
-                  tx.status === 'pending'
-                    ? 'text-[var(--color-on-accent-muted)]'
-                    : 'text-on-accent'
+                  tx.status === 'pending' ? 'text-[var(--color-on-accent-muted)]' : 'text-on-accent'
                 }`}
               >
                 {tx.direction === 'sent' ? '-' : '+'}

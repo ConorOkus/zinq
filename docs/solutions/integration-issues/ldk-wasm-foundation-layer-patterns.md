@@ -1,5 +1,5 @@
 ---
-title: "LDK WASM Foundation Layer — Key Patterns and Pitfalls"
+title: 'LDK WASM Foundation Layer — Key Patterns and Pitfalls'
 category: integration-issues
 date: 2026-03-11
 tags: [ldk, wasm, indexeddb, react-context, lightning, typescript, persistence]
@@ -25,6 +25,7 @@ LDK's `Persist` trait methods (`persist_new_channel`, `update_persisted_channel`
 LDK Result types like `Result_PublicKeyNoneZ` use subclass-based discrimination. The `is_ok()` method confirms success, but accessing `.res` requires narrowing to the `_OK` subclass. Using `as { res: Uint8Array }` compiles but bypasses type safety.
 
 **Fix:** Import the `_OK` subclass and use `instanceof`:
+
 ```typescript
 import { Result_PublicKeyNoneZ_OK } from 'lightningdevkit'
 
@@ -39,6 +40,7 @@ const nodeId = bytesToHex(nodeIdResult.res) // .res is properly typed
 Exporting both a React component (`LdkProvider`) and a context/hook from the same file triggers the `react-refresh/only-export-components` warning and breaks HMR. Even exporting just the context object alongside a component triggers it.
 
 **Fix:** Split into three files:
+
 - `ldk-context.ts` — `createContext` + types (no components)
 - `context.tsx` — `LdkProvider` component only
 - `use-ldk.ts` — `useLdk()` hook only
@@ -48,6 +50,7 @@ Exporting both a React component (`LdkProvider`) and a context/hook from the sam
 A flat interface like `{ status: string; node: LdkNode | null; error: Error | null }` allows impossible combinations (`status: 'ready', node: null`). Consumers need redundant null checks even after narrowing on `status`.
 
 **Fix:** Use a discriminated union:
+
 ```typescript
 export type LdkContextValue =
   | { status: 'loading'; node: null; nodeId: null; error: null }
@@ -60,6 +63,7 @@ export type LdkContextValue =
 `generateAndStoreSeed()` with no guard silently overwrites the existing seed, destroying access to any channels opened with the previous key material.
 
 **Fix:** Check before write:
+
 ```typescript
 const existing = await getSeed()
 if (existing) {
@@ -72,6 +76,7 @@ if (existing) {
 jsdom doesn't include IndexedDB. Install `fake-indexeddb` and import in test setup. Uint8Arrays retrieved from IndexedDB come from a different realm, so `toEqual` fails even with identical contents.
 
 **Fix:** Compare with `Array.from()`:
+
 ```typescript
 expect(Array.from(result!)).toEqual(Array.from(expected))
 ```

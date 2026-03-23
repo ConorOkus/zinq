@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "094"
+issue_id: '094'
 tags: [code-review, security, pr-14, future-feature]
 dependencies: []
 ---
@@ -22,6 +22,7 @@ The `/settings/backup` page reveals the master seed phrase with only a warning s
 ## Proposed Solutions
 
 ### Option A: PIN entry before reveal
+
 - Add a PIN setup flow (first use) and PIN entry screen before `getMnemonic()` is called
 - PIN can later be reused for send confirmation and app unlock
 - **Pros**: Standard wallet pattern, reusable across features
@@ -30,6 +31,7 @@ The `/settings/backup` page reveals the master seed phrase with only a warning s
 - **Risk**: Medium (new state management, storage)
 
 ### Option B: Web Authentication API (biometrics)
+
 - Use `navigator.credentials.get` with `publicKey` to gate behind device biometrics
 - **Pros**: Strongest auth, no PIN to remember
 - **Cons**: Not supported in all browsers, requires HTTPS
@@ -37,6 +39,7 @@ The `/settings/backup` page reveals the master seed phrase with only a warning s
 - **Risk**: Medium (browser compatibility)
 
 ### Option C: Type-to-confirm speed bump
+
 - Require user to type "REVEAL" before showing seed
 - **Pros**: Trivial to implement, prevents casual access
 - **Cons**: Not real security, just a speed bump
@@ -59,8 +62,8 @@ Option A as a separate feature PR, with Option C as an interim measure if needed
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                     | Learnings                                                               |
+| ---------- | -------------------------- | ----------------------------------------------------------------------- |
 | 2026-03-15 | Created from PR #14 review | Security sentinel flagged as critical; accepted as follow-up for signet |
 
 ## Resources

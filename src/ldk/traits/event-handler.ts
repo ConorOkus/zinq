@@ -42,13 +42,7 @@ import {
   type KeysManager,
   type Event,
 } from 'lightningdevkit'
-import {
-  Wallet,
-  Recipient,
-  ScriptBuf,
-  Amount,
-  SignOptions,
-} from '@bitcoindevkit/bdk-wallet-web'
+import { Wallet, Recipient, ScriptBuf, Amount, SignOptions } from '@bitcoindevkit/bdk-wallet-web'
 import { idbPut, idbGet, idbDelete } from '../storage/idb'
 import { persistPayment, updatePaymentStatus } from '../storage/payment-history'
 import { bytesToHex } from '../utils'
@@ -59,10 +53,11 @@ import { sweepSpendableOutputs } from '../sweep'
 
 const MAX_FORWARD_DELAY_MS = 10_000
 
-export type PaymentEventCallback = (event:
-  | { type: 'sent'; paymentHash: string; preimage: Uint8Array; feePaidMsat: bigint | null }
-  | { type: 'failed'; paymentHash: string; reason: string }
-  | { type: 'claimed'; paymentHash: string; amountMsat: bigint }
+export type PaymentEventCallback = (
+  event:
+    | { type: 'sent'; paymentHash: string; preimage: Uint8Array; feePaidMsat: bigint | null }
+    | { type: 'failed'; paymentHash: string; reason: string }
+    | { type: 'claimed'; paymentHash: string; amountMsat: bigint }
 ) => void
 
 export type ChannelClosedCallback = (counterpartyPubkeyHex: string) => void
@@ -74,7 +69,7 @@ export function createEventHandler(
   keysManager: KeysManager,
   onPaymentEvent?: PaymentEventCallback,
   onChannelClosed?: ChannelClosedCallback,
-  onSyncNeeded?: SyncNeededCallback,
+  onSyncNeeded?: SyncNeededCallback
 ): {
   handler: EventHandler
   cleanup: () => void
@@ -86,10 +81,19 @@ export function createEventHandler(
   const handler = EventHandler.new_impl({
     handle_event(event: Event): Result_NoneReplayEventZ {
       try {
-        handleEvent(event, channelManager, keysManager, bdkWallet, (id) => {
-          if (forwardTimerId !== null) clearTimeout(forwardTimerId)
-          forwardTimerId = id
-        }, onPaymentEvent, onChannelClosed, onSyncNeeded)
+        handleEvent(
+          event,
+          channelManager,
+          keysManager,
+          bdkWallet,
+          (id) => {
+            if (forwardTimerId !== null) clearTimeout(forwardTimerId)
+            forwardTimerId = id
+          },
+          onPaymentEvent,
+          onChannelClosed,
+          onSyncNeeded
+        )
       } catch (err: unknown) {
         console.error('[LDK Event] Unhandled error in event handler:', err)
       }
@@ -115,21 +119,27 @@ export function createEventHandler(
         const staged = wallet.take_staged()
         if (staged && !staged.is_empty()) {
           void putChangeset(staged.to_json()).catch((err: unknown) =>
-            console.warn('[LDK] Failed to persist address reveal changeset:', err),
+            console.warn('[LDK] Failed to persist address reveal changeset:', err)
           )
         }
         const destinationScript = addressInfo.address.script_pubkey.as_bytes()
-        void sweepSpendableOutputs(
-          keysManager,
-          destinationScript,
-          ONCHAIN_CONFIG.esploraUrl,
-        ).then((result) => {
-          if (result.swept > 0) {
-            console.log('[LDK] Startup sweep: swept', result.swept, 'output(s), txid:', result.txid)
-          }
-        }).catch((err: unknown) => {
-          console.warn('[LDK] Startup sweep failed (will retry on next SpendableOutputs event):', err)
-        })
+        void sweepSpendableOutputs(keysManager, destinationScript, ONCHAIN_CONFIG.esploraUrl)
+          .then((result) => {
+            if (result.swept > 0) {
+              console.log(
+                '[LDK] Startup sweep: swept',
+                result.swept,
+                'output(s), txid:',
+                result.txid
+              )
+            }
+          })
+          .catch((err: unknown) => {
+            console.warn(
+              '[LDK] Startup sweep failed (will retry on next SpendableOutputs event):',
+              err
+            )
+          })
       }
     },
   }
@@ -143,7 +153,7 @@ function handleEvent(
   setForwardTimer: (id: ReturnType<typeof setTimeout>) => void,
   onPaymentEvent?: PaymentEventCallback,
   onChannelClosed?: ChannelClosedCallback,
-  onSyncNeeded?: SyncNeededCallback,
+  onSyncNeeded?: SyncNeededCallback
 ): void {
   // Payment events
   if (event instanceof Event_PaymentClaimable) {
@@ -153,7 +163,7 @@ function handleEvent(
         '[LDK Event] PaymentClaimable: claiming',
         bytesToHex(event.payment_hash),
         'amount_msat:',
-        event.amount_msat.toString(),
+        event.amount_msat.toString()
       )
       channelManager.claim_funds(preimage.some)
     } else {
@@ -163,7 +173,7 @@ function handleEvent(
       console.warn(
         '[LDK Event] PaymentClaimable: no preimage available for',
         bytesToHex(event.payment_hash),
-        '— payment cannot be claimed and will timeout',
+        '— payment cannot be claimed and will timeout'
       )
     }
     return
@@ -175,7 +185,7 @@ function handleEvent(
       '[LDK Event] PaymentClaimed:',
       paymentHash,
       'amount_msat:',
-      event.amount_msat.toString(),
+      event.amount_msat.toString()
     )
     void persistPayment({
       paymentHash,
@@ -192,9 +202,10 @@ function handleEvent(
 
   if (event instanceof Event_PaymentSent) {
     const paymentHash = bytesToHex(event.payment_hash)
-    const paymentIdHex = event.payment_id instanceof Option_ThirtyTwoBytesZ_Some
-      ? bytesToHex(event.payment_id.some)
-      : paymentHash
+    const paymentIdHex =
+      event.payment_id instanceof Option_ThirtyTwoBytesZ_Some
+        ? bytesToHex(event.payment_id.some)
+        : paymentHash
     const feePaid = event.fee_paid_msat
     const feePaidMsat = feePaid instanceof Option_u64Z_Some ? feePaid.some : null
     console.log('[LDK Event] PaymentSent:', paymentHash)
@@ -210,9 +221,10 @@ function handleEvent(
 
   if (event instanceof Event_PaymentFailed) {
     const paymentIdHex = bytesToHex(event.payment_id)
-    const paymentHash = event.payment_hash instanceof Option_ThirtyTwoBytesZ_Some
-      ? bytesToHex(event.payment_hash.some)
-      : paymentIdHex
+    const paymentHash =
+      event.payment_hash instanceof Option_ThirtyTwoBytesZ_Some
+        ? bytesToHex(event.payment_hash.some)
+        : paymentIdHex
     const reasonOpt = event.reason
     let reason = 'Payment failed'
     if (reasonOpt instanceof Option_PaymentFailureReasonZ_Some) {
@@ -226,32 +238,23 @@ function handleEvent(
 
   // HTLC forwarding — deduplicate by clearing previous timer
   if (event instanceof Event_PendingHTLCsForwardable) {
-    const delayMs = Math.min(
-      Number(event.time_forwardable) * 1000,
-      MAX_FORWARD_DELAY_MS,
-    )
+    const delayMs = Math.min(Number(event.time_forwardable) * 1000, MAX_FORWARD_DELAY_MS)
     setForwardTimer(
       setTimeout(() => {
         channelManager.process_pending_htlc_forwards()
-      }, delayMs),
+      }, delayMs)
     )
     return
   }
 
   // Channel lifecycle
   if (event instanceof Event_ChannelPending) {
-    console.log(
-      '[LDK Event] ChannelPending:',
-      bytesToHex(event.channel_id.write()),
-    )
+    console.log('[LDK Event] ChannelPending:', bytesToHex(event.channel_id.write()))
     return
   }
 
   if (event instanceof Event_ChannelReady) {
-    console.log(
-      '[LDK Event] ChannelReady:',
-      bytesToHex(event.channel_id.write()),
-    )
+    console.log('[LDK Event] ChannelReady:', bytesToHex(event.channel_id.write()))
     return
   }
 
@@ -293,32 +296,30 @@ function handleEvent(
           const staged = bdkWallet.take_staged()
           if (staged && !staged.is_empty()) {
             void putChangeset(staged.to_json()).catch((err: unknown) =>
-              console.warn('[LDK Event] Failed to persist address reveal changeset:', err),
+              console.warn('[LDK Event] Failed to persist address reveal changeset:', err)
             )
           }
           const destinationScript = addressInfo.address.script_pubkey.as_bytes()
-          return sweepSpendableOutputs(
-            keysManager,
-            destinationScript,
-            ONCHAIN_CONFIG.esploraUrl,
-          )
+          return sweepSpendableOutputs(keysManager, destinationScript, ONCHAIN_CONFIG.esploraUrl)
         }
       })
       .then((result) => {
         if (result && result.swept > 0) {
-          console.log('[LDK Event] SpendableOutputs: swept', result.swept, 'output(s), txid:', result.txid)
+          console.log(
+            '[LDK Event] SpendableOutputs: swept',
+            result.swept,
+            'output(s), txid:',
+            result.txid
+          )
         }
       })
       .catch((err: unknown) => {
-        console.error(
-          '[LDK Event] CRITICAL: Failed to persist/sweep SpendableOutputs:',
-          err,
-        )
+        console.error('[LDK Event] CRITICAL: Failed to persist/sweep SpendableOutputs:', err)
       })
     console.log(
       '[LDK Event] SpendableOutputs: persisting',
       event.outputs.length,
-      'descriptor(s) and attempting sweep',
+      'descriptor(s) and attempting sweep'
     )
     return
   }
@@ -328,7 +329,7 @@ function handleEvent(
     console.warn(
       '[LDK Event] ConnectionNeeded:',
       bytesToHex(event.node_id),
-      '— SocketAddress parsing not yet implemented',
+      '— SocketAddress parsing not yet implemented'
     )
     return
   }
@@ -338,7 +339,7 @@ function handleEvent(
   if (event instanceof Event_FundingGenerationReady) {
     if (!bdkWallet) {
       console.warn(
-        '[LDK Event] FundingGenerationReady: BDK wallet not available — cannot fund channel',
+        '[LDK Event] FundingGenerationReady: BDK wallet not available — cannot fund channel'
       )
       return
     }
@@ -361,13 +362,13 @@ function handleEvent(
       const result = channelManager.funding_transaction_generated(
         event.temporary_channel_id,
         event.counterparty_node_id,
-        rawTxBytes,
+        rawTxBytes
       )
       if (!result.is_ok()) {
         const apiErr = result instanceof Result_NoneAPIErrorZ_Err ? result.err : null
         console.error(
           '[LDK Event] FundingGenerationReady: funding_transaction_generated failed:',
-          apiErr ?? 'unknown error',
+          apiErr ?? 'unknown error'
         )
         return
       }
@@ -377,27 +378,27 @@ function handleEvent(
       const tempChannelIdHex = bytesToHex(event.temporary_channel_id.write())
       const txHex = bytesToHex(rawTxBytes)
       void idbPut('ldk_funding_txs', tempChannelIdHex, txHex).catch((err: unknown) =>
-        console.error('[LDK Event] Failed to persist funding tx to IDB:', err),
+        console.error('[LDK Event] Failed to persist funding tx to IDB:', err)
       )
 
       console.log(
         '[LDK Event] FundingGenerationReady: funding tx registered',
-        'channel_value:', event.channel_value_satoshis.toString(), 'sats',
-        'tempChannelId:', tempChannelIdHex.substring(0, 16) + '...',
+        'channel_value:',
+        event.channel_value_satoshis.toString(),
+        'sats',
+        'tempChannelId:',
+        tempChannelIdHex.substring(0, 16) + '...'
       )
 
       // Persist wallet state after successful funding
       const changeset = bdkWallet.take_staged()
       if (changeset && !changeset.is_empty()) {
         void putChangeset(changeset.to_json()).catch((err: unknown) =>
-          console.error('[BDK] CRITICAL: failed to persist changeset after funding tx', err),
+          console.error('[BDK] CRITICAL: failed to persist changeset after funding tx', err)
         )
       }
     } catch (err: unknown) {
-      console.error(
-        '[LDK Event] FundingGenerationReady: failed to build funding tx:',
-        err,
-      )
+      console.error('[LDK Event] FundingGenerationReady: failed to build funding tx:', err)
     }
     return
   }
@@ -412,9 +413,7 @@ function handleEvent(
 
   if (event instanceof Event_BumpTransaction) {
     // TODO: Implement CPFP with BDK UTXOs for anchor channels
-    console.warn(
-      '[LDK Event] BumpTransaction: not yet implemented — cannot bump fees',
-    )
+    console.warn('[LDK Event] BumpTransaction: not yet implemented — cannot bump fees')
     return
   }
 
@@ -426,7 +425,7 @@ function handleEvent(
     // TODO: Store a temp→final channel ID mapping in ChannelPending to enable cleanup.
     console.log(
       '[LDK Event] DiscardFunding:',
-      bytesToHex(event.channel_id.write()).substring(0, 16) + '...',
+      bytesToHex(event.channel_id.write()).substring(0, 16) + '...'
     )
     return
   }
@@ -439,9 +438,7 @@ function handleEvent(
 
   // Inbound channel requests — no acceptance policy yet, will timeout
   if (event instanceof Event_OpenChannelRequest) {
-    console.log(
-      '[LDK Event] OpenChannelRequest: ignoring (no acceptance policy, will timeout)',
-    )
+    console.log('[LDK Event] OpenChannelRequest: ignoring (no acceptance policy, will timeout)')
     return
   }
 
@@ -454,7 +451,7 @@ async function broadcastPersistedFundingTx(tempChannelIdHex: string): Promise<vo
   if (!txHex) {
     console.warn(
       '[LDK Event] FundingTxBroadcastSafe: no persisted tx for',
-      tempChannelIdHex.substring(0, 16) + '...',
+      tempChannelIdHex.substring(0, 16) + '...'
     )
     return
   }
@@ -467,14 +464,17 @@ function describeClosureReason(reason: ClosureReason): string {
   if (reason instanceof ClosureReason_CounterpartyForceClosed) return 'Counterparty force closed'
   if (reason instanceof ClosureReason_HolderForceClosed) return 'Force closed by you'
   if (reason instanceof ClosureReason_LegacyCooperativeClosure) return 'Cooperative close'
-  if (reason instanceof ClosureReason_CounterpartyInitiatedCooperativeClosure) return 'Cooperative close (initiated by peer)'
+  if (reason instanceof ClosureReason_CounterpartyInitiatedCooperativeClosure)
+    return 'Cooperative close (initiated by peer)'
   if (reason instanceof ClosureReason_LocallyInitiatedCooperativeClosure) return 'Cooperative close'
-  if (reason instanceof ClosureReason_CommitmentTxConfirmed) return 'Commitment transaction confirmed'
+  if (reason instanceof ClosureReason_CommitmentTxConfirmed)
+    return 'Commitment transaction confirmed'
   if (reason instanceof ClosureReason_FundingTimedOut) return 'Funding timed out'
   if (reason instanceof ClosureReason_ProcessingError) return 'Processing error'
   if (reason instanceof ClosureReason_DisconnectedPeer) return 'Peer disconnected'
   if (reason instanceof ClosureReason_OutdatedChannelManager) return 'Outdated channel manager'
-  if (reason instanceof ClosureReason_CounterpartyCoopClosedUnfundedChannel) return 'Counterparty closed unfunded channel'
+  if (reason instanceof ClosureReason_CounterpartyCoopClosedUnfundedChannel)
+    return 'Counterparty closed unfunded channel'
   if (reason instanceof ClosureReason_FundingBatchClosure) return 'Funding batch closure'
   if (reason instanceof ClosureReason_HTLCsTimedOut) return 'HTLCs timed out'
   if (reason instanceof ClosureReason_PeerFeerateTooLow) return 'Peer feerate too low'

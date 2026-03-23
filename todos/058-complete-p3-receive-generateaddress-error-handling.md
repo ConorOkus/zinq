@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "058"
+issue_id: '058'
 tags: [code-review, quality, error-handling]
 dependencies: []
 ---

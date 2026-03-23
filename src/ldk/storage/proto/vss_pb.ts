@@ -3,22 +3,25 @@
 /* eslint-disable */
 // @ts-nocheck — generated code uses enum syntax incompatible with erasableSyntaxOnly
 
-import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type { GenEnum, GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { enumDesc, fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import type { Message } from '@bufbuild/protobuf'
 
 /**
  * Describes the file vss.proto.
  */
-export const file_vss: GenFile = /*@__PURE__*/
-  fileDesc("Cgl2c3MucHJvdG8SA3ZzcyIxChBHZXRPYmplY3RSZXF1ZXN0EhAKCHN0b3JlX2lkGAEgASgJEgsKA2tleRgCIAEoCSIxChFHZXRPYmplY3RSZXNwb25zZRIcCgV2YWx1ZRgCIAEoCzINLnZzcy5LZXlWYWx1ZSKjAQoQUHV0T2JqZWN0UmVxdWVzdBIQCghzdG9yZV9pZBgBIAEoCRIbCg5nbG9iYWxfdmVyc2lvbhgCIAEoA0gAiAEBEigKEXRyYW5zYWN0aW9uX2l0ZW1zGAMgAygLMg0udnNzLktleVZhbHVlEiMKDGRlbGV0ZV9pdGVtcxgEIAMoCzINLnZzcy5LZXlWYWx1ZUIRCg9fZ2xvYmFsX3ZlcnNpb24iEwoRUHV0T2JqZWN0UmVzcG9uc2UiSQoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzdG9yZV9pZBgBIAEoCRIgCglrZXlfdmFsdWUYAiABKAsyDS52c3MuS2V5VmFsdWUiFgoURGVsZXRlT2JqZWN0UmVzcG9uc2UioAEKFkxpc3RLZXlWZXJzaW9uc1JlcXVlc3QSEAoIc3RvcmVfaWQYASABKAkSFwoKa2V5X3ByZWZpeBgCIAEoCUgAiAEBEhYKCXBhZ2Vfc2l6ZRgDIAEoBUgBiAEBEhcKCnBhZ2VfdG9rZW4YBCABKAlIAogBAUINCgtfa2V5X3ByZWZpeEIMCgpfcGFnZV9zaXplQg0KC19wYWdlX3Rva2VuIqABChdMaXN0S2V5VmVyc2lvbnNSZXNwb25zZRIjCgxrZXlfdmVyc2lvbnMYASADKAsyDS52c3MuS2V5VmFsdWUSHAoPbmV4dF9wYWdlX3Rva2VuGAIgASgJSACIAQESGwoOZ2xvYmFsX3ZlcnNpb24YAyABKANIAYgBAUISChBfbmV4dF9wYWdlX3Rva2VuQhEKD19nbG9iYWxfdmVyc2lvbiJECg1FcnJvclJlc3BvbnNlEiIKCmVycm9yX2NvZGUYASABKA4yDi52c3MuRXJyb3JDb2RlEg8KB21lc3NhZ2UYAiABKAkiNwoIS2V5VmFsdWUSCwoDa2V5GAEgASgJEg8KB3ZlcnNpb24YAiABKAMSDQoFdmFsdWUYAyABKAwiTgoIU3RvcmFibGUSDAoEZGF0YRgBIAEoDBI0ChNlbmNyeXB0aW9uX21ldGFkYXRhGAIgASgLMhcudnNzLkVuY3J5cHRpb25NZXRhZGF0YSJHChJFbmNyeXB0aW9uTWV0YWRhdGESFQoNY2lwaGVyX2Zvcm1hdBgBIAEoCRINCgVub25jZRgCIAEoDBILCgN0YWcYAyABKAwiLwoNUGxhaW50ZXh0QmxvYhINCgV2YWx1ZRgBIAEoDBIPCgd2ZXJzaW9uGAIgASgDKp0BCglFcnJvckNvZGUSCwoHVU5LTk9XThAAEhYKEkNPTkZMSUNUX0VYQ0VQVElPThABEh0KGUlOVkFMSURfUkVRVUVTVF9FWENFUFRJT04QAhIdChlJTlRFUk5BTF9TRVJWRVJfRVhDRVBUSU9OEAMSGQoVTk9fU1VDSF9LRVlfRVhDRVBUSU9OEAQSEgoOQVVUSF9FWENFUFRJT04QBUILCgdvcmcudnNzUAFiBnByb3RvMw");
+export const file_vss: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'Cgl2c3MucHJvdG8SA3ZzcyIxChBHZXRPYmplY3RSZXF1ZXN0EhAKCHN0b3JlX2lkGAEgASgJEgsKA2tleRgCIAEoCSIxChFHZXRPYmplY3RSZXNwb25zZRIcCgV2YWx1ZRgCIAEoCzINLnZzcy5LZXlWYWx1ZSKjAQoQUHV0T2JqZWN0UmVxdWVzdBIQCghzdG9yZV9pZBgBIAEoCRIbCg5nbG9iYWxfdmVyc2lvbhgCIAEoA0gAiAEBEigKEXRyYW5zYWN0aW9uX2l0ZW1zGAMgAygLMg0udnNzLktleVZhbHVlEiMKDGRlbGV0ZV9pdGVtcxgEIAMoCzINLnZzcy5LZXlWYWx1ZUIRCg9fZ2xvYmFsX3ZlcnNpb24iEwoRUHV0T2JqZWN0UmVzcG9uc2UiSQoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzdG9yZV9pZBgBIAEoCRIgCglrZXlfdmFsdWUYAiABKAsyDS52c3MuS2V5VmFsdWUiFgoURGVsZXRlT2JqZWN0UmVzcG9uc2UioAEKFkxpc3RLZXlWZXJzaW9uc1JlcXVlc3QSEAoIc3RvcmVfaWQYASABKAkSFwoKa2V5X3ByZWZpeBgCIAEoCUgAiAEBEhYKCXBhZ2Vfc2l6ZRgDIAEoBUgBiAEBEhcKCnBhZ2VfdG9rZW4YBCABKAlIAogBAUINCgtfa2V5X3ByZWZpeEIMCgpfcGFnZV9zaXplQg0KC19wYWdlX3Rva2VuIqABChdMaXN0S2V5VmVyc2lvbnNSZXNwb25zZRIjCgxrZXlfdmVyc2lvbnMYASADKAsyDS52c3MuS2V5VmFsdWUSHAoPbmV4dF9wYWdlX3Rva2VuGAIgASgJSACIAQESGwoOZ2xvYmFsX3ZlcnNpb24YAyABKANIAYgBAUISChBfbmV4dF9wYWdlX3Rva2VuQhEKD19nbG9iYWxfdmVyc2lvbiJECg1FcnJvclJlc3BvbnNlEiIKCmVycm9yX2NvZGUYASABKA4yDi52c3MuRXJyb3JDb2RlEg8KB21lc3NhZ2UYAiABKAkiNwoIS2V5VmFsdWUSCwoDa2V5GAEgASgJEg8KB3ZlcnNpb24YAiABKAMSDQoFdmFsdWUYAyABKAwiTgoIU3RvcmFibGUSDAoEZGF0YRgBIAEoDBI0ChNlbmNyeXB0aW9uX21ldGFkYXRhGAIgASgLMhcudnNzLkVuY3J5cHRpb25NZXRhZGF0YSJHChJFbmNyeXB0aW9uTWV0YWRhdGESFQoNY2lwaGVyX2Zvcm1hdBgBIAEoCRINCgVub25jZRgCIAEoDBILCgN0YWcYAyABKAwiLwoNUGxhaW50ZXh0QmxvYhINCgV2YWx1ZRgBIAEoDBIPCgd2ZXJzaW9uGAIgASgDKp0BCglFcnJvckNvZGUSCwoHVU5LTk9XThAAEhYKEkNPTkZMSUNUX0VYQ0VQVElPThABEh0KGUlOVkFMSURfUkVRVUVTVF9FWENFUFRJT04QAhIdChlJTlRFUk5BTF9TRVJWRVJfRVhDRVBUSU9OEAMSGQoVTk9fU1VDSF9LRVlfRVhDRVBUSU9OEAQSEgoOQVVUSF9FWENFUFRJT04QBUILCgdvcmcudnNzUAFiBnByb3RvMw'
+  )
 
 /**
  * Request payload to be used for `GetObject` API call to server.
  *
  * @generated from message vss.GetObjectRequest
  */
-export type GetObjectRequest = Message<"vss.GetObjectRequest"> & {
+export type GetObjectRequest = Message<'vss.GetObjectRequest'> & {
   /**
    * `store_id` is a keyspace identifier.
    * Ref: https://en.wikipedia.org/wiki/Keyspace_(distributed_data_store)
@@ -29,7 +32,7 @@ export type GetObjectRequest = Message<"vss.GetObjectRequest"> & {
    *
    * @generated from field: string store_id = 1;
    */
-  storeId: string;
+  storeId: string
 
   /**
    * The key of the value to be fetched.
@@ -47,43 +50,45 @@ export type GetObjectRequest = Message<"vss.GetObjectRequest"> & {
    *
    * @generated from field: string key = 2;
    */
-  key: string;
-};
+  key: string
+}
 
 /**
  * Describes the message vss.GetObjectRequest.
  * Use `create(GetObjectRequestSchema)` to create a new message.
  */
-export const GetObjectRequestSchema: GenMessage<GetObjectRequest> = /*@__PURE__*/
-  messageDesc(file_vss, 0);
+export const GetObjectRequestSchema: GenMessage<GetObjectRequest> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 0)
 
 /**
  * Server response for `GetObject` API.
  *
  * @generated from message vss.GetObjectResponse
  */
-export type GetObjectResponse = Message<"vss.GetObjectResponse"> & {
+export type GetObjectResponse = Message<'vss.GetObjectResponse'> & {
   /**
    * Fetched `value` and `version` along with the corresponding `key` in the request.
    *
    * @generated from field: vss.KeyValue value = 2;
    */
-  value?: KeyValue;
-};
+  value?: KeyValue
+}
 
 /**
  * Describes the message vss.GetObjectResponse.
  * Use `create(GetObjectResponseSchema)` to create a new message.
  */
-export const GetObjectResponseSchema: GenMessage<GetObjectResponse> = /*@__PURE__*/
-  messageDesc(file_vss, 1);
+export const GetObjectResponseSchema: GenMessage<GetObjectResponse> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 1)
 
 /**
  * Request payload to be used for `PutObject` API call to server.
  *
  * @generated from message vss.PutObjectRequest
  */
-export type PutObjectRequest = Message<"vss.PutObjectRequest"> & {
+export type PutObjectRequest = Message<'vss.PutObjectRequest'> & {
   /**
    * `store_id` is a keyspace identifier.
    * Ref: https://en.wikipedia.org/wiki/Keyspace_(distributed_data_store)
@@ -94,7 +99,7 @@ export type PutObjectRequest = Message<"vss.PutObjectRequest"> & {
    *
    * @generated from field: string store_id = 1;
    */
-  storeId: string;
+  storeId: string
 
   /**
    * `global_version` is a sequence-number/version of the whole store. This can be used for versioning
@@ -117,7 +122,7 @@ export type PutObjectRequest = Message<"vss.PutObjectRequest"> & {
    *
    * @generated from field: optional int64 global_version = 2;
    */
-  globalVersion?: bigint;
+  globalVersion?: bigint
 
   /**
    * Items to be written as a result of this `PutObjectRequest`.
@@ -164,7 +169,7 @@ export type PutObjectRequest = Message<"vss.PutObjectRequest"> & {
    *
    * @generated from field: repeated vss.KeyValue transaction_items = 3;
    */
-  transactionItems: KeyValue[];
+  transactionItems: KeyValue[]
 
   /**
    * Items to be deleted as a result of this `PutObjectRequest`.
@@ -192,37 +197,38 @@ export type PutObjectRequest = Message<"vss.PutObjectRequest"> & {
    *
    * @generated from field: repeated vss.KeyValue delete_items = 4;
    */
-  deleteItems: KeyValue[];
-};
+  deleteItems: KeyValue[]
+}
 
 /**
  * Describes the message vss.PutObjectRequest.
  * Use `create(PutObjectRequestSchema)` to create a new message.
  */
-export const PutObjectRequestSchema: GenMessage<PutObjectRequest> = /*@__PURE__*/
-  messageDesc(file_vss, 2);
+export const PutObjectRequestSchema: GenMessage<PutObjectRequest> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 2)
 
 /**
  * Server response for `PutObject` API.
  *
  * @generated from message vss.PutObjectResponse
  */
-export type PutObjectResponse = Message<"vss.PutObjectResponse"> & {
-};
+export type PutObjectResponse = Message<'vss.PutObjectResponse'> & {}
 
 /**
  * Describes the message vss.PutObjectResponse.
  * Use `create(PutObjectResponseSchema)` to create a new message.
  */
-export const PutObjectResponseSchema: GenMessage<PutObjectResponse> = /*@__PURE__*/
-  messageDesc(file_vss, 3);
+export const PutObjectResponseSchema: GenMessage<PutObjectResponse> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 3)
 
 /**
  * Request payload to be used for `DeleteObject` API call to server.
  *
  * @generated from message vss.DeleteObjectRequest
  */
-export type DeleteObjectRequest = Message<"vss.DeleteObjectRequest"> & {
+export type DeleteObjectRequest = Message<'vss.DeleteObjectRequest'> & {
   /**
    * `store_id` is a keyspace identifier.
    * Ref: https://en.wikipedia.org/wiki/Keyspace_(distributed_data_store)
@@ -233,7 +239,7 @@ export type DeleteObjectRequest = Message<"vss.DeleteObjectRequest"> & {
    *
    * @generated from field: string store_id = 1;
    */
-  storeId: string;
+  storeId: string
 
   /**
    * Item to be deleted as a result of this `DeleteObjectRequest`.
@@ -255,37 +261,38 @@ export type DeleteObjectRequest = Message<"vss.DeleteObjectRequest"> & {
    *
    * @generated from field: vss.KeyValue key_value = 2;
    */
-  keyValue?: KeyValue;
-};
+  keyValue?: KeyValue
+}
 
 /**
  * Describes the message vss.DeleteObjectRequest.
  * Use `create(DeleteObjectRequestSchema)` to create a new message.
  */
-export const DeleteObjectRequestSchema: GenMessage<DeleteObjectRequest> = /*@__PURE__*/
-  messageDesc(file_vss, 4);
+export const DeleteObjectRequestSchema: GenMessage<DeleteObjectRequest> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 4)
 
 /**
  * Server response for `DeleteObject` API.
  *
  * @generated from message vss.DeleteObjectResponse
  */
-export type DeleteObjectResponse = Message<"vss.DeleteObjectResponse"> & {
-};
+export type DeleteObjectResponse = Message<'vss.DeleteObjectResponse'> & {}
 
 /**
  * Describes the message vss.DeleteObjectResponse.
  * Use `create(DeleteObjectResponseSchema)` to create a new message.
  */
-export const DeleteObjectResponseSchema: GenMessage<DeleteObjectResponse> = /*@__PURE__*/
-  messageDesc(file_vss, 5);
+export const DeleteObjectResponseSchema: GenMessage<DeleteObjectResponse> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 5)
 
 /**
  * Request payload to be used for `ListKeyVersions` API call to server.
  *
  * @generated from message vss.ListKeyVersionsRequest
  */
-export type ListKeyVersionsRequest = Message<"vss.ListKeyVersionsRequest"> & {
+export type ListKeyVersionsRequest = Message<'vss.ListKeyVersionsRequest'> & {
   /**
    * `store_id` is a keyspace identifier.
    * Ref: https://en.wikipedia.org/wiki/Keyspace_(distributed_data_store)
@@ -296,7 +303,7 @@ export type ListKeyVersionsRequest = Message<"vss.ListKeyVersionsRequest"> & {
    *
    * @generated from field: string store_id = 1;
    */
-  storeId: string;
+  storeId: string
 
   /**
    * A `key_prefix` is a string of characters at the beginning of the key. Prefixes can be used as
@@ -310,7 +317,7 @@ export type ListKeyVersionsRequest = Message<"vss.ListKeyVersionsRequest"> & {
    *
    * @generated from field: optional string key_prefix = 2;
    */
-  keyPrefix?: string;
+  keyPrefix?: string
 
   /**
    * `page_size` is used by clients to specify the maximum number of results that can be returned by
@@ -320,7 +327,7 @@ export type ListKeyVersionsRequest = Message<"vss.ListKeyVersionsRequest"> & {
    *
    * @generated from field: optional int32 page_size = 3;
    */
-  pageSize?: number;
+  pageSize?: number
 
   /**
    * `page_token` is a pagination token.
@@ -332,29 +339,30 @@ export type ListKeyVersionsRequest = Message<"vss.ListKeyVersionsRequest"> & {
    *
    * @generated from field: optional string page_token = 4;
    */
-  pageToken?: string;
-};
+  pageToken?: string
+}
 
 /**
  * Describes the message vss.ListKeyVersionsRequest.
  * Use `create(ListKeyVersionsRequestSchema)` to create a new message.
  */
-export const ListKeyVersionsRequestSchema: GenMessage<ListKeyVersionsRequest> = /*@__PURE__*/
-  messageDesc(file_vss, 6);
+export const ListKeyVersionsRequestSchema: GenMessage<ListKeyVersionsRequest> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 6)
 
 /**
  * Server response for `ListKeyVersions` API.
  *
  * @generated from message vss.ListKeyVersionsResponse
  */
-export type ListKeyVersionsResponse = Message<"vss.ListKeyVersionsResponse"> & {
+export type ListKeyVersionsResponse = Message<'vss.ListKeyVersionsResponse'> & {
   /**
    * Fetched keys and versions.
    * Even though this API reuses the `KeyValue` struct, the `value` sub-field will not be set by the server.
    *
    * @generated from field: repeated vss.KeyValue key_versions = 1;
    */
-  keyVersions: KeyValue[];
+  keyVersions: KeyValue[]
 
   /**
    * `next_page_token` is a pagination token, used to retrieve the next page of results.
@@ -373,7 +381,7 @@ export type ListKeyVersionsResponse = Message<"vss.ListKeyVersionsResponse"> & {
    *
    * @generated from field: optional string next_page_token = 2;
    */
-  nextPageToken?: string;
+  nextPageToken?: string
 
   /**
    * `global_version` is a sequence-number/version of the whole store.
@@ -392,15 +400,16 @@ export type ListKeyVersionsResponse = Message<"vss.ListKeyVersionsResponse"> & {
    *
    * @generated from field: optional int64 global_version = 3;
    */
-  globalVersion?: bigint;
-};
+  globalVersion?: bigint
+}
 
 /**
  * Describes the message vss.ListKeyVersionsResponse.
  * Use `create(ListKeyVersionsResponseSchema)` to create a new message.
  */
-export const ListKeyVersionsResponseSchema: GenMessage<ListKeyVersionsResponse> = /*@__PURE__*/
-  messageDesc(file_vss, 7);
+export const ListKeyVersionsResponseSchema: GenMessage<ListKeyVersionsResponse> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 7)
 
 /**
  * When HttpStatusCode is not ok (200), the response `content` contains a serialized `ErrorResponse`
@@ -408,7 +417,7 @@ export const ListKeyVersionsResponseSchema: GenMessage<ListKeyVersionsResponse> 
  *
  * @generated from message vss.ErrorResponse
  */
-export type ErrorResponse = Message<"vss.ErrorResponse"> & {
+export type ErrorResponse = Message<'vss.ErrorResponse'> & {
   /**
    * The error code uniquely identifying an error condition.
    * It is meant to be read and understood programmatically by code that detects/handles errors by
@@ -416,7 +425,7 @@ export type ErrorResponse = Message<"vss.ErrorResponse"> & {
    *
    * @generated from field: vss.ErrorCode error_code = 1;
    */
-  errorCode: ErrorCode;
+  errorCode: ErrorCode
 
   /**
    * The error message containing a generic description of the error condition in English.
@@ -425,28 +434,27 @@ export type ErrorResponse = Message<"vss.ErrorResponse"> & {
    *
    * @generated from field: string message = 2;
    */
-  message: string;
-};
+  message: string
+}
 
 /**
  * Describes the message vss.ErrorResponse.
  * Use `create(ErrorResponseSchema)` to create a new message.
  */
-export const ErrorResponseSchema: GenMessage<ErrorResponse> = /*@__PURE__*/
-  messageDesc(file_vss, 8);
+export const ErrorResponseSchema: GenMessage<ErrorResponse> = /*@__PURE__*/ messageDesc(file_vss, 8)
 
 /**
  * Represents a key-value pair to be stored or retrieved.
  *
  * @generated from message vss.KeyValue
  */
-export type KeyValue = Message<"vss.KeyValue"> & {
+export type KeyValue = Message<'vss.KeyValue'> & {
   /**
    * Key against which the value is stored.
    *
    * @generated from field: string key = 1;
    */
-  key: string;
+  key: string
 
   /**
    * Version field is used for key-level versioning.
@@ -458,7 +466,7 @@ export type KeyValue = Message<"vss.KeyValue"> & {
    *
    * @generated from field: int64 version = 2;
    */
-  version: bigint;
+  version: bigint
 
   /**
    * Object value in bytes which is stored (in put) and fetched (in get).
@@ -468,15 +476,14 @@ export type KeyValue = Message<"vss.KeyValue"> & {
    *
    * @generated from field: bytes value = 3;
    */
-  value: Uint8Array;
-};
+  value: Uint8Array
+}
 
 /**
  * Describes the message vss.KeyValue.
  * Use `create(KeyValueSchema)` to create a new message.
  */
-export const KeyValueSchema: GenMessage<KeyValue> = /*@__PURE__*/
-  messageDesc(file_vss, 9);
+export const KeyValueSchema: GenMessage<KeyValue> = /*@__PURE__*/ messageDesc(file_vss, 9)
 
 /**
  * Represents a storable object that can be serialized and stored as `value` in `PutObjectRequest`.
@@ -487,42 +494,41 @@ export const KeyValueSchema: GenMessage<KeyValue> = /*@__PURE__*/
  *
  * @generated from message vss.Storable
  */
-export type Storable = Message<"vss.Storable"> & {
+export type Storable = Message<'vss.Storable'> & {
   /**
    * Represents an encrypted and serialized `PlaintextBlob`. MUST encrypt the whole `PlaintextBlob`
    * using client-side encryption before setting here.
    *
    * @generated from field: bytes data = 1;
    */
-  data: Uint8Array;
+  data: Uint8Array
 
   /**
    * Represents encryption related metadata
    *
    * @generated from field: vss.EncryptionMetadata encryption_metadata = 2;
    */
-  encryptionMetadata?: EncryptionMetadata;
-};
+  encryptionMetadata?: EncryptionMetadata
+}
 
 /**
  * Describes the message vss.Storable.
  * Use `create(StorableSchema)` to create a new message.
  */
-export const StorableSchema: GenMessage<Storable> = /*@__PURE__*/
-  messageDesc(file_vss, 10);
+export const StorableSchema: GenMessage<Storable> = /*@__PURE__*/ messageDesc(file_vss, 10)
 
 /**
  * Represents encryption related metadata
  *
  * @generated from message vss.EncryptionMetadata
  */
-export type EncryptionMetadata = Message<"vss.EncryptionMetadata"> & {
+export type EncryptionMetadata = Message<'vss.EncryptionMetadata'> & {
   /**
    * The encryption algorithm used for encrypting the `PlaintextBlob`.
    *
    * @generated from field: string cipher_format = 1;
    */
-  cipherFormat: string;
+  cipherFormat: string
 
   /**
    * The nonce used for encryption. Nonce is a random or unique value used to ensure that the same
@@ -530,7 +536,7 @@ export type EncryptionMetadata = Message<"vss.EncryptionMetadata"> & {
    *
    * @generated from field: bytes nonce = 2;
    */
-  nonce: Uint8Array;
+  nonce: Uint8Array
 
   /**
    * The authentication tag used for encryption. It provides integrity and authenticity assurance
@@ -538,15 +544,16 @@ export type EncryptionMetadata = Message<"vss.EncryptionMetadata"> & {
    *
    * @generated from field: bytes tag = 3;
    */
-  tag: Uint8Array;
-};
+  tag: Uint8Array
+}
 
 /**
  * Describes the message vss.EncryptionMetadata.
  * Use `create(EncryptionMetadataSchema)` to create a new message.
  */
-export const EncryptionMetadataSchema: GenMessage<EncryptionMetadata> = /*@__PURE__*/
-  messageDesc(file_vss, 11);
+export const EncryptionMetadataSchema: GenMessage<EncryptionMetadata> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 11)
 
 /**
  * Represents a data blob, which is encrypted, serialized and later used in `Storable.data`.
@@ -554,28 +561,29 @@ export const EncryptionMetadataSchema: GenMessage<EncryptionMetadata> = /*@__PUR
  *
  * @generated from message vss.PlaintextBlob
  */
-export type PlaintextBlob = Message<"vss.PlaintextBlob"> & {
+export type PlaintextBlob = Message<'vss.PlaintextBlob'> & {
   /**
    * The unencrypted value.
    *
    * @generated from field: bytes value = 1;
    */
-  value: Uint8Array;
+  value: Uint8Array
 
   /**
    * The version of the value. Can be used by client to verify version integrity.
    *
    * @generated from field: int64 version = 2;
    */
-  version: bigint;
-};
+  version: bigint
+}
 
 /**
  * Describes the message vss.PlaintextBlob.
  * Use `create(PlaintextBlobSchema)` to create a new message.
  */
-export const PlaintextBlobSchema: GenMessage<PlaintextBlob> = /*@__PURE__*/
-  messageDesc(file_vss, 12);
+export const PlaintextBlobSchema: GenMessage<PlaintextBlob> =
+  /*@__PURE__*/
+  messageDesc(file_vss, 12)
 
 /**
  * ErrorCodes to be used in `ErrorResponse`
@@ -634,6 +642,4 @@ export enum ErrorCode {
 /**
  * Describes the enum vss.ErrorCode.
  */
-export const ErrorCodeSchema: GenEnum<ErrorCode> = /*@__PURE__*/
-  enumDesc(file_vss, 0);
-
+export const ErrorCodeSchema: GenEnum<ErrorCode> = /*@__PURE__*/ enumDesc(file_vss, 0)

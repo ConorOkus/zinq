@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "082"
+issue_id: '082'
 tags: [code-review, typescript, type-safety]
 dependencies: []
 ---

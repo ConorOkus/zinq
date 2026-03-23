@@ -40,8 +40,8 @@ activeConnections.current.set(pk, conn)
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                     | Learnings                            |
+| ---------- | -------------------------- | ------------------------------------ |
 | 2026-03-16 | Created from PR #29 review | Consistency with manual connect path |
 
 ## Resources

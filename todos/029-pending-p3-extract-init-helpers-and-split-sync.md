@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p3
-issue_id: "029"
+issue_id: '029'
 tags: [code-review, architecture, quality]
 dependencies: []
 ---
@@ -30,6 +30,6 @@ dependencies: []
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

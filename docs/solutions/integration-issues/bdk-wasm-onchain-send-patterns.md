@@ -29,9 +29,9 @@ async function buildSignBroadcast(
   esplora: EsploraClient,
   syncHandle: OnchainSyncHandle | null,
   buildPsbt: (feeRate: FeeRate) => Psbt,
-  feeRateSatVb?: bigint, // optional: reuse rate from estimate step
+  feeRateSatVb?: bigint // optional: reuse rate from estimate step
 ): Promise<string> {
-  const resolvedRate = feeRateSatVb ?? await getFeeRate(esplora)
+  const resolvedRate = feeRateSatVb ?? (await getFeeRate(esplora))
   syncHandle?.pause()
   try {
     const psbt = buildPsbt(new FeeRate(resolvedRate))
@@ -115,9 +115,13 @@ React state updates are asynchronous. A `useState`-based disabled flag can still
 const sendingRef = useRef(false)
 
 const handleConfirm = useCallback(async () => {
-  if (sendingRef.current) return  // synchronous check
+  if (sendingRef.current) return // synchronous check
   sendingRef.current = true
-  try { /* send */ } finally { sendingRef.current = false }
+  try {
+    /* send */
+  } finally {
+    sendingRef.current = false
+  }
 }, [])
 ```
 

@@ -4,7 +4,11 @@ import { resolveBip353 } from './resolve-bip353'
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
-function dohResponse(opts: { Status?: number; AD?: boolean; Answer?: Array<{ type: number; data: string }> }) {
+function dohResponse(opts: {
+  Status?: number
+  AD?: boolean
+  Answer?: Array<{ type: number; data: string }>
+}) {
   return {
     ok: true,
     json: () => Promise.resolve({ Status: 0, AD: true, ...opts }),
@@ -21,10 +25,8 @@ describe('resolveBip353', () => {
     // that parseBip321 can handle
     mockFetch.mockResolvedValueOnce(
       dohResponse({
-        Answer: [
-          { type: 16, data: '"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"' },
-        ],
-      }),
+        Answer: [{ type: 16, data: '"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"' }],
+      })
     )
 
     const result = await resolveBip353('alice', 'example.com')
@@ -36,7 +38,7 @@ describe('resolveBip353', () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('alice.user._bitcoin-payment.example.com'),
-      expect.objectContaining({ headers: { Accept: 'application/dns-json' } }),
+      expect.objectContaining({ headers: { Accept: 'application/dns-json' } })
     )
   })
 
@@ -51,10 +53,8 @@ describe('resolveBip353', () => {
     mockFetch.mockResolvedValueOnce(
       dohResponse({
         AD: false,
-        Answer: [
-          { type: 16, data: '"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"' },
-        ],
-      }),
+        Answer: [{ type: 16, data: '"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"' }],
+      })
     )
 
     const result = await resolveBip353('alice', 'example.com')
@@ -64,10 +64,8 @@ describe('resolveBip353', () => {
   it('returns null when no bitcoin: TXT record exists', async () => {
     mockFetch.mockResolvedValueOnce(
       dohResponse({
-        Answer: [
-          { type: 16, data: '"v=spf1 include:example.com ~all"' },
-        ],
-      }),
+        Answer: [{ type: 16, data: '"v=spf1 include:example.com ~all"' }],
+      })
     )
 
     const result = await resolveBip353('alice', 'example.com')
@@ -119,7 +117,7 @@ describe('resolveBip353', () => {
           { type: 1, data: '1.2.3.4' }, // A record
           { type: 16, data: '"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"' },
         ],
-      }),
+      })
     )
 
     const result = await resolveBip353('alice', 'example.com')
@@ -135,7 +133,7 @@ describe('resolveBip353', () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ signal: controller.signal }),
+      expect.objectContaining({ signal: controller.signal })
     )
   })
 
@@ -144,10 +142,8 @@ describe('resolveBip353', () => {
     const addr = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'
     mockFetch.mockResolvedValueOnce(
       dohResponse({
-        Answer: [
-          { type: 16, data: `"bitcoin:${addr}?amount=" "0.001"` },
-        ],
-      }),
+        Answer: [{ type: 16, data: `"bitcoin:${addr}?amount=" "0.001"` }],
+      })
     )
 
     const result = await resolveBip353('alice', 'example.com')
@@ -161,7 +157,7 @@ describe('resolveBip353', () => {
         Answer: [
           { type: 16, data: '"bitcoin:"' }, // empty URI → error
         ],
-      }),
+      })
     )
 
     const result = await resolveBip353('alice', 'example.com')

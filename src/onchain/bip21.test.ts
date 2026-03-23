@@ -36,7 +36,7 @@ describe('parseBip21', () => {
 
   it('ignores unknown parameters', () => {
     const result = parseBip21(
-      'bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.01&label=test&message=hello',
+      'bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.01&label=test&message=hello'
     )
     expect(result).toEqual({
       address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
@@ -57,7 +57,9 @@ describe('parseBip21', () => {
   })
 
   it('parses large amount without floating-point precision loss', () => {
-    const result = parseBip21('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=21000000.00000001')
+    const result = parseBip21(
+      'bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=21000000.00000001'
+    )
     expect(result).toEqual({
       address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: 2100000000000001n,

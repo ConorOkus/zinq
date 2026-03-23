@@ -32,6 +32,7 @@ A full LDK ChannelManager integration for the browser wallet, including:
 ## Scope
 
 ### In scope
+
 - ChainMonitor creation
 - ChannelManager creation and serialization/deserialization
 - Esplora-based chain sync (block polling + transaction confirmation)
@@ -41,6 +42,7 @@ A full LDK ChannelManager integration for the browser wallet, including:
 - ChannelMonitor restoration on startup
 
 ### Out of scope
+
 - PeerManager / WebSocket networking (next phase)
 - Channel open/close UI
 - Payment sending/receiving

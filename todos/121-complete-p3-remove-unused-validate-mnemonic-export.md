@@ -20,10 +20,12 @@ After removing the import wallet flow, `validateMnemonic` in `src/wallet/mnemoni
 ## Proposed Solutions
 
 ### Option A: Remove export and tests
+
 - **Effort**: Small (3 lines + test cases)
 - **Risk**: Low — trivially re-added when import flow is implemented
 
 ### Option B: Keep for planned import feature
+
 - If wallet import in Settings is actively planned (it is), keeping it avoids churn.
 
 ## Technical Details
@@ -36,8 +38,8 @@ After removing the import wallet flow, `validateMnemonic` in `src/wallet/mnemoni
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                     | Learnings                      |
+| ---------- | -------------------------- | ------------------------------ |
 | 2026-03-16 | Created from PR #29 review | Dead code after import removal |
 
 ## Resources

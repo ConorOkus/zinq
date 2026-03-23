@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "048"
+issue_id: '048'
 tags: [code-review, architecture]
 dependencies: []
 ---
@@ -22,14 +22,19 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Move IDB to shared `src/storage/` (Recommended)
+
 Move `idb.ts` to `src/storage/idb.ts`. Rename DB to `browser-wallet`. Update all imports.
+
 - **Effort:** Small | **Risk:** Low
 
 ### Option B: Also break bidirectional coupling
+
 Introduce a `FundingWallet` interface in shared types. LDK depends on the interface, OnchainProvider implements it.
+
 - **Effort:** Medium | **Risk:** Low
 
 ## Acceptance Criteria
+
 - [ ] `idb.ts` lives in a module-neutral location
 - [ ] DB name reflects its multi-module scope
 - [ ] No `wallet/` or `onchain/` module imports from `ldk/` internals

@@ -56,7 +56,10 @@ export function openDb(): Promise<IDBDatabase> {
             tx.objectStore(storeName).clear()
           }
         }
-        console.warn('[IDB] Migrated from v%d→v3: cleared old LDK state for mnemonic migration', oldVersion)
+        console.warn(
+          '[IDB] Migrated from v%d→v3: cleared old LDK state for mnemonic migration',
+          oldVersion
+        )
       }
 
       // v7→v8: Added ldk_bolt12_offer store for persisting BOLT 12 offers.

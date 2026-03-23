@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "028"
+issue_id: '028'
 tags: [code-review, quality, simplicity]
 dependencies: []
 ---
@@ -31,6 +31,6 @@ Several pieces of dead code and premature abstractions identified across the PR.
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

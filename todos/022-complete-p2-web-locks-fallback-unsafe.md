@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "022"
+issue_id: '022'
 tags: [code-review, security, fund-safety]
 dependencies: []
 ---
@@ -21,6 +21,7 @@ If the Web Locks API is unavailable, `acquireWalletLock()` logs a warning and co
 ## Proposed Solutions
 
 ### Option A: Fail initialization if Web Locks unavailable
+
 - Throw an error explaining the browser doesn't support required security features
 - **Effort:** Small
 
@@ -31,6 +32,6 @@ If the Web Locks API is unavailable, `acquireWalletLock()` logs a warning and co
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

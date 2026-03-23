@@ -1,5 +1,5 @@
 ---
-title: "WebSocket message relay blocked after handshake by resolved flag guard"
+title: 'WebSocket message relay blocked after handshake by resolved flag guard'
 category: logic-errors
 severity: high
 date: 2026-03-15
@@ -12,11 +12,11 @@ tags:
   - lightning-network
 module: src/ldk/peers/peer-connection.ts
 symptoms:
-  - "Peers disconnect approximately 60 seconds after successful connection"
-  - "Disconnection triggered by navigating away from Peers page and returning"
-  - "LDK ping/pong keepalive frames silently dropped after Noise handshake"
-  - "peerManager.read_event() never called for post-handshake messages"
-  - "No errors logged — messages dropped silently by early return guard"
+  - 'Peers disconnect approximately 60 seconds after successful connection'
+  - 'Disconnection triggered by navigating away from Peers page and returning'
+  - 'LDK ping/pong keepalive frames silently dropped after Noise handshake'
+  - 'peerManager.read_event() never called for post-handshake messages'
+  - 'No errors logged — messages dropped silently by early return guard'
 ---
 
 # WebSocket Message Relay Blocked After Noise Handshake
@@ -33,7 +33,7 @@ In `src/ldk/peers/peer-connection.ts`, the `ws.onmessage` handler had a boolean 
 
 ```typescript
 ws.onmessage = (event) => {
-  if (!descriptor || resolved) return  // <-- BUG
+  if (!descriptor || resolved) return // <-- BUG
   // ...
   peerManager.read_event(descriptor, data)
   peerManager.process_events()
@@ -60,14 +60,15 @@ Remove `|| resolved` from the top-level `onmessage` guard. Keep the `resolved` c
 
 ```typescript
 ws.onmessage = (event) => {
-  if (!descriptor) return                          // only check descriptor
+  if (!descriptor) return // only check descriptor
   if (!(event.data instanceof ArrayBuffer)) return
   const data = new Uint8Array(event.data)
 
   const readResult = peerManager.read_event(descriptor, data)
   if (!(readResult instanceof Result_boolPeerHandleErrorZ_OK)) {
     cleanup()
-    if (!resolved) {                               // guard only the reject()
+    if (!resolved) {
+      // guard only the reject()
       resolved = true
       ws.close()
       reject(new Error('Peer handshake failed'))
@@ -77,7 +78,8 @@ ws.onmessage = (event) => {
 
   peerManager.process_events()
 
-  if (!resolved) {                                 // guard only the resolve()
+  if (!resolved) {
+    // guard only the resolve()
     const peers = peerManager.list_peers()
     for (const peer of peers) {
       const peerPubkey = bytesToHex(peer.get_counterparty_node_id())
@@ -117,7 +119,7 @@ Any early-return on a boolean in an `onmessage`/`ondata` handler is a red flag. 
 
 ### Testing approach
 
-Write a test that sends messages *after* the handshake resolves:
+Write a test that sends messages _after_ the handshake resolves:
 
 1. Set up the WebSocket connection and await the handshake promise
 2. After the promise resolves, send simulated messages (e.g., ping frames) into the `onmessage` handler

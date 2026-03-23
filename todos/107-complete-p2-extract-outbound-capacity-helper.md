@@ -15,9 +15,12 @@ dependencies: []
 ## Proposed Solution
 
 Extract a local helper:
+
 ```typescript
 function getOutboundCapacitySats(cm: ChannelManager): bigint {
-  const msat = cm.list_usable_channels().reduce((sum, ch) => sum + ch.get_outbound_capacity_msat(), 0n)
+  const msat = cm
+    .list_usable_channels()
+    .reduce((sum, ch) => sum + ch.get_outbound_capacity_msat(), 0n)
   return msatToSatFloor(msat)
 }
 ```

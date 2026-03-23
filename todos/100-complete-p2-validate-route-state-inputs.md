@@ -21,6 +21,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Add inline regex validation after route state read
+
 Validate `peerPubkey` with `/^[0-9a-f]{66}$/` and `channelIdHex` with `/^[0-9a-f]+$/` immediately after reading from route state. Redirect to Peers on invalid.
 
 - **Pros**: Simple, self-contained, matches existing `parsePeerAddress` pattern
@@ -29,6 +30,7 @@ Validate `peerPubkey` with `/^[0-9a-f]{66}$/` and `channelIdHex` with `/^[0-9a-f
 - **Risk**: Low
 
 ### Option B: Type guard functions with runtime validation
+
 Create `parseOpenChannelState(state: unknown)` and `parseCloseChannelState(state: unknown)` functions that return typed objects or null. Replaces the `as` casts with proper runtime validation.
 
 - **Pros**: Type-safe, eliminates `as` casts, reusable

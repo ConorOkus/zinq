@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "009"
+issue_id: '009'
 tags: [code-review, security, type-safety]
 dependencies: []
 ---

@@ -35,11 +35,11 @@ a {
 /* --- Design Tokens --- */
 :root {
   /* Accent color candidates — swap this one line to change the entire vibe */
-  --accent: #7C3AED;          /* violet — current pick */
-  /* --accent: #2563EB; */    /* electric blue */
-  /* --accent: #06B6D4; */    /* cyan */
-  /* --accent: #E11D48; */    /* rose */
-  /* --accent: #D946EF; */    /* fuchsia */
+  --accent: #7c3aed; /* violet — current pick */
+  /* --accent: #2563EB; */ /* electric blue */
+  /* --accent: #06B6D4; */ /* cyan */
+  /* --accent: #E11D48; */ /* rose */
+  /* --accent: #D946EF; */ /* fuchsia */
 
   /* Core palette */
   --dark: #0a0a0a;
@@ -61,15 +61,15 @@ a {
   --font-body: 'Inter', system-ui, sans-serif;
 
   /* Font sizes */
-  --text-xs: 0.75rem;    /* 12px */
-  --text-sm: 0.875rem;   /* 14px */
-  --text-base: 1rem;     /* 16px */
-  --text-lg: 1.125rem;   /* 18px */
-  --text-xl: 1.25rem;    /* 20px */
-  --text-2xl: 1.5rem;    /* 24px */
-  --text-3xl: 1.75rem;   /* 28px */
-  --text-4xl: 2.25rem;   /* 36px */
-  --text-hero: 5rem;     /* 80px — balance display */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.75rem; /* 28px */
+  --text-4xl: 2.25rem; /* 36px */
+  --text-hero: 5rem; /* 80px — balance display */
 
   /* Spacing */
   --space-1: 0.25rem;
@@ -261,7 +261,6 @@ body {
   justify-content: space-between;
 }
 
-
 .home__balance-section {
   flex: 1;
   display: flex;
@@ -325,7 +324,9 @@ body {
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  transition: transform 0.15s var(--ease-out), opacity 0.15s;
+  transition:
+    transform 0.15s var(--ease-out),
+    opacity 0.15s;
 }
 
 .home__action-btn:active {
@@ -405,7 +406,9 @@ body {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  transition: transform 0.1s, opacity 0.15s;
+  transition:
+    transform 0.1s,
+    opacity 0.15s;
 }
 
 .numpad__next-btn:active {
@@ -532,7 +535,9 @@ body {
   font-size: var(--text-lg);
   font-weight: 700;
   letter-spacing: 0.02em;
-  transition: transform 0.1s, opacity 0.15s;
+  transition:
+    transform 0.1s,
+    opacity 0.15s;
 }
 
 .send-review__confirm-btn:active {

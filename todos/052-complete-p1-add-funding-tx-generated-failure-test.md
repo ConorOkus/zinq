@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "052"
+issue_id: '052'
 tags: [code-review, testing, fund-safety]
 dependencies: []
 ---
@@ -22,6 +22,7 @@ The `funding_transaction_generated` error branch (line 239-244) has no test cove
 ## Proposed Solutions
 
 ### Option A: Add test with is_ok returning false
+
 - Set `mockFundingTransactionGenerated` to return `{ is_ok: () => false }`
 - Verify: error logged, cache NOT populated, changeset NOT persisted
 - **Effort**: Small
@@ -39,8 +40,8 @@ The `funding_transaction_generated` error branch (line 239-244) has no test cove
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                              | Learnings                                        |
+| ---------- | ----------------------------------- | ------------------------------------------------ |
 | 2026-03-12 | Identified during PR #8 code review | Critical error paths need explicit test coverage |
 
 ## Resources

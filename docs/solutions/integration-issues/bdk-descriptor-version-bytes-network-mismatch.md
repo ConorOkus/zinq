@@ -1,5 +1,5 @@
 ---
-title: "BDK Descriptor Version Bytes: tprv vs xprv Network Mismatch"
+title: 'BDK Descriptor Version Bytes: tprv vs xprv Network Mismatch'
 category: integration-issues
 date: 2026-03-14
 module:
@@ -15,7 +15,7 @@ tags:
   - key-derivation
   - scure
 severity: high
-symptom: "Key error: Invalid network"
+symptom: 'Key error: Invalid network'
 ---
 
 # BDK Descriptor Version Bytes: tprv vs xprv Network Mismatch
@@ -36,10 +36,10 @@ The wallet is completely non-functional — no address generation, no balance sy
 
 The BIP32 version bytes control how `privateExtendedKey` is serialized:
 
-| Network | Private Version | Prefix | Public Version | Prefix |
-|---------|----------------|--------|----------------|--------|
-| Mainnet | `0x0488ADE4` | `xprv` | `0x0488B21E` | `xpub` |
-| Testnet/Signet | `0x04358394` | `tprv` | `0x043587CF` | `tpub` |
+| Network        | Private Version | Prefix | Public Version | Prefix |
+| -------------- | --------------- | ------ | -------------- | ------ |
+| Mainnet        | `0x0488ADE4`    | `xprv` | `0x0488B21E`   | `xpub` |
+| Testnet/Signet | `0x04358394`    | `tprv` | `0x043587CF`   | `tpub` |
 
 ## Solution
 
@@ -49,7 +49,7 @@ Pass testnet version bytes to `HDKey.fromMasterSeed()` when the target network i
 
 ```typescript
 const seed = mnemonicToSeedSync(mnemonic)
-const master = HDKey.fromMasterSeed(seed)  // Always uses mainnet xprv
+const master = HDKey.fromMasterSeed(seed) // Always uses mainnet xprv
 ```
 
 **After:**
@@ -59,7 +59,7 @@ const TESTNET_VERSIONS = { private: 0x04358394, public: 0x043587cf }
 
 const seed = mnemonicToSeedSync(mnemonic)
 const versions = network === 'bitcoin' ? undefined : TESTNET_VERSIONS
-const master = HDKey.fromMasterSeed(seed, versions)  // tprv for signet, xprv for mainnet
+const master = HDKey.fromMasterSeed(seed, versions) // tprv for signet, xprv for mainnet
 ```
 
 The `versions` parameter is the second argument to `fromMasterSeed()` — when `undefined`, it defaults to mainnet. The derived `account.privateExtendedKey` then serializes with the correct prefix, and BDK accepts the descriptor.

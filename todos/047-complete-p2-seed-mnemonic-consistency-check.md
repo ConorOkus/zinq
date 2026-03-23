@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "047"
+issue_id: '047'
 tags: [code-review, security, fund-safety]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ dependencies: []
 ## Proposed Solutions
 
 Add a consistency check on startup:
+
 ```typescript
 let seed = await getSeed()
 if (!seed) {
@@ -29,8 +30,10 @@ if (!seed) {
   throw new Error('Stored LDK seed does not match mnemonic derivation — possible corruption')
 }
 ```
+
 - **Effort:** Small | **Risk:** Low
 
 ## Acceptance Criteria
+
 - [ ] Startup compares stored seed against mnemonic-derived seed
 - [ ] Mismatch throws a clear error rather than silently using wrong key

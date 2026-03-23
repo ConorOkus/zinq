@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p1
-issue_id: "062"
+issue_id: '062'
 tags: [code-review, architecture]
 dependencies: []
 ---
@@ -23,6 +23,7 @@ Flagged by: kieran-typescript-reviewer, code-simplicity-reviewer, architecture-s
 ## Proposed Solutions
 
 ### Option A: Extract buildSignBroadcast helper (Recommended)
+
 Create a private helper that takes a callback for PSBT construction:
 
 ```typescript
@@ -30,15 +31,18 @@ async function buildSignBroadcast(
   wallet: Wallet,
   esplora: EsploraClient,
   syncHandle: OnchainSyncHandle | null,
-  buildPsbt: (feeRate: FeeRate) => Psbt,
+  buildPsbt: (feeRate: FeeRate) => Psbt
 ): Promise<string> {
   syncHandle?.pause()
   try {
     const feeRateSatVb = await getFeeRate(esplora)
     const psbt = buildPsbt(new FeeRate(feeRateSatVb))
     // ... fee check, sign, persist, broadcast
-  } catch (err) { throw mapSendError(err) }
-  finally { syncHandle?.resume() }
+  } catch (err) {
+    throw mapSendError(err)
+  } finally {
+    syncHandle?.resume()
+  }
 }
 ```
 

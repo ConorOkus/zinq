@@ -17,7 +17,12 @@ import {
 } from 'lightningdevkit'
 import { initializeLdk, type LdkNode } from './init'
 import { VssClient, FixedHeaderProvider } from './storage/vss-client'
-import { LdkContext, defaultLdkContextValue, type LdkContextValue, type PaymentResult } from './ldk-context'
+import {
+  LdkContext,
+  defaultLdkContextValue,
+  type LdkContextValue,
+  type PaymentResult,
+} from './ldk-context'
 import { SIGNET_CONFIG } from './config'
 import { EsploraClient } from './sync/esplora-client'
 import { startSyncLoop } from './sync/chain-sync'
@@ -31,7 +36,9 @@ import { bytesToHex } from './utils'
 import { msatToSatFloor } from '../utils/msat'
 
 function getOutboundCapacitySats(cm: import('lightningdevkit').ChannelManager): bigint {
-  const msat = cm.list_usable_channels().reduce((sum, ch) => sum + ch.get_outbound_capacity_msat(), 0n)
+  const msat = cm
+    .list_usable_channels()
+    .reduce((sum, ch) => sum + ch.get_outbound_capacity_msat(), 0n)
   return msatToSatFloor(msat)
 }
 
@@ -56,9 +63,7 @@ export function LdkProvider({
   const refreshPaymentHistory = useCallback(async () => {
     const all = await loadAllPayments()
     const payments = Array.from(all.values())
-    setState((prev) =>
-      prev.status === 'ready' ? { ...prev, paymentHistory: payments } : prev,
-    )
+    setState((prev) => (prev.status === 'ready' ? { ...prev, paymentHistory: payments } : prev))
   }, [])
 
   const connectToPeer = useCallback(
@@ -81,39 +86,29 @@ export function LdkProvider({
       // which is well within LDK's u128 limit while providing sufficient uniqueness.
       const idBytes = new Uint8Array(8)
       crypto.getRandomValues(idBytes)
-      const userChannelId = idBytes.reduce(
-        (acc, byte) => (acc << 8n) | BigInt(byte),
-        0n,
-      )
+      const userChannelId = idBytes.reduce((acc, byte) => (acc << 8n) | BigInt(byte), 0n)
       const result = nodeRef.current.channelManager.create_channel(
         counterpartyPubkey,
         channelValueSats,
         0n, // push_msat
         userChannelId,
         null, // temporary_channel_id — let LDK generate
-        null, // override_config — use defaults
+        null // override_config — use defaults
       )
       if (!result.is_ok()) {
         console.error('[ldk] create_channel failed:', result)
         return false
       }
-      console.log(
-        '[ldk] create_channel succeeded for',
-        channelValueSats.toString(),
-        'sats',
-      )
+      console.log('[ldk] create_channel succeeded for', channelValueSats.toString(), 'sats')
       return true
     },
-    [],
+    []
   )
 
   const closeChannel = useCallback(
     (channelId: ChannelId, counterpartyNodeId: Uint8Array): boolean => {
       if (!nodeRef.current) throw new Error('Node not initialized')
-      const result = nodeRef.current.channelManager.close_channel(
-        channelId,
-        counterpartyNodeId,
-      )
+      const result = nodeRef.current.channelManager.close_channel(channelId, counterpartyNodeId)
       if (!result.is_ok()) {
         console.error('[ldk] close_channel failed:', result)
         return false
@@ -121,7 +116,7 @@ export function LdkProvider({
       console.log('[ldk] close_channel initiated')
       return true
     },
-    [],
+    []
   )
 
   const forceCloseChannel = useCallback(
@@ -130,7 +125,7 @@ export function LdkProvider({
       const result = nodeRef.current.channelManager.force_close_broadcasting_latest_txn(
         channelId,
         counterpartyNodeId,
-        'User-initiated force close',
+        'User-initiated force close'
       )
       if (!result.is_ok()) {
         console.error('[ldk] force_close failed:', result)
@@ -139,7 +134,7 @@ export function LdkProvider({
       console.log('[ldk] force_close initiated')
       return true
     },
-    [],
+    []
   )
 
   const listChannels = useCallback(() => {
@@ -178,32 +173,30 @@ export function LdkProvider({
     map.set(key, value)
   }
 
-  const createInvoice = useCallback(
-    (amountMsat?: bigint, description = 'Zinq Wallet'): string => {
-      const node = nodeRef.current
-      if (!node) throw new Error('Node not initialized')
+  const createInvoice = useCallback((amountMsat?: bigint, description = 'Zinq Wallet'): string => {
+    const node = nodeRef.current
+    if (!node) throw new Error('Node not initialized')
 
-      const amountOption = amountMsat != null
+    const amountOption =
+      amountMsat != null
         ? Option_u64Z.constructor_some(amountMsat)
         : Option_u64Z_None.constructor_none()
 
-      const result = UtilMethods.constructor_create_invoice_from_channelmanager(
-        node.channelManager,
-        amountOption,
-        description,
-        3600, // 1 hour expiry
-        Option_u16Z_None.constructor_none(),
-      )
+    const result = UtilMethods.constructor_create_invoice_from_channelmanager(
+      node.channelManager,
+      amountOption,
+      description,
+      3600, // 1 hour expiry
+      Option_u16Z_None.constructor_none()
+    )
 
-      if (!(result instanceof Result_Bolt11InvoiceSignOrCreationErrorZ_OK)) {
-        console.error('[ldk] create_invoice failed:', result)
-        throw new Error('Failed to create invoice')
-      }
+    if (!(result instanceof Result_Bolt11InvoiceSignOrCreationErrorZ_OK)) {
+      console.error('[ldk] create_invoice failed:', result)
+      throw new Error('Failed to create invoice')
+    }
 
-      return result.res.to_str()
-    },
-    [],
-  )
+    return result.res.to_str()
+  }, [])
 
   const sendBolt11Payment = useCallback(
     (invoice: Bolt11Invoice, amountMsat?: bigint): Uint8Array => {
@@ -218,7 +211,7 @@ export function LdkProvider({
         ? UtilMethods.constructor_payment_parameters_from_invoice(invoice)
         : UtilMethods.constructor_payment_parameters_from_variable_amount_invoice(
             invoice,
-            amountMsat as bigint,
+            amountMsat as bigint
           )
 
       if (
@@ -240,7 +233,7 @@ export function LdkProvider({
         recipientOnion,
         paymentId,
         routeParams,
-        Retry.constructor_attempts(3),
+        Retry.constructor_attempts(3)
       )
 
       if (!result.is_ok()) {
@@ -251,9 +244,8 @@ export function LdkProvider({
       setPaymentResult(paymentIdHex, { status: 'pending' })
 
       const invoiceAmountOpt = invoice.amount_milli_satoshis()
-      const resolvedMsat = invoiceAmountOpt instanceof Option_u64Z_Some
-        ? invoiceAmountOpt.some
-        : amountMsat ?? 0n
+      const resolvedMsat =
+        invoiceAmountOpt instanceof Option_u64Z_Some ? invoiceAmountOpt.some : (amountMsat ?? 0n)
       void persistPayment({
         paymentHash: paymentIdHex,
         direction: 'outbound',
@@ -266,7 +258,7 @@ export function LdkProvider({
 
       return paymentId
     },
-    [refreshPaymentHistory],
+    [refreshPaymentHistory]
   )
 
   const sendBolt12Payment = useCallback(
@@ -283,12 +275,10 @@ export function LdkProvider({
         amountMsat != null
           ? Option_u64Z.constructor_some(amountMsat)
           : Option_u64Z.constructor_none(),
-        payerNote
-          ? Option_StrZ.constructor_some(payerNote)
-          : Option_StrZ.constructor_none(),
+        payerNote ? Option_StrZ.constructor_some(payerNote) : Option_StrZ.constructor_none(),
         paymentId,
         Retry.constructor_attempts(3),
-        Option_u64Z.constructor_none(), // max routing fee
+        Option_u64Z.constructor_none() // max routing fee
       )
 
       if (!result.is_ok()) {
@@ -310,7 +300,7 @@ export function LdkProvider({
 
       return paymentId
     },
-    [refreshPaymentHistory],
+    [refreshPaymentHistory]
   )
 
   const abandonPayment = useCallback((paymentId: Uint8Array): void => {
@@ -319,12 +309,9 @@ export function LdkProvider({
     node.channelManager.abandon_payment(paymentId)
   }, [])
 
-  const getPaymentResult = useCallback(
-    (paymentId: Uint8Array): PaymentResult | null => {
-      return paymentResultsRef.current.get(bytesToHex(paymentId)) ?? null
-    },
-    [],
-  )
+  const getPaymentResult = useCallback((paymentId: Uint8Array): PaymentResult | null => {
+    return paymentResultsRef.current.get(bytesToHex(paymentId)) ?? null
+  }, [])
 
   const listRecentPayments = useCallback(() => {
     const node = nodeRef.current
@@ -335,7 +322,9 @@ export function LdkProvider({
   const outboundCapacityMsat = useCallback((): bigint => {
     const node = nodeRef.current
     if (!node) return 0n
-    return node.channelManager.list_usable_channels().reduce((sum, ch) => sum + ch.get_outbound_capacity_msat(), 0n)
+    return node.channelManager
+      .list_usable_channels()
+      .reduce((sum, ch) => sum + ch.get_outbound_capacity_msat(), 0n)
   }, [])
 
   useEffect(() => {
@@ -352,7 +341,7 @@ export function LdkProvider({
           SIGNET_CONFIG.vssUrl,
           vssStoreId,
           vssEncryptionKey,
-          new FixedHeaderProvider({}),
+          new FixedHeaderProvider({})
         )
 
     initializeLdk({
@@ -361,338 +350,347 @@ export function LdkProvider({
       persisterOptions: {
         vssClient,
         onVssUnavailable: () => {
-          setState((prev) =>
-            prev.status === 'ready' ? { ...prev, vssStatus: 'degraded' } : prev,
-          )
+          setState((prev) => (prev.status === 'ready' ? { ...prev, vssStatus: 'degraded' } : prev))
         },
         onVssRecovered: () => {
-          setState((prev) =>
-            prev.status === 'ready' ? { ...prev, vssStatus: 'ok' } : prev,
-          )
+          setState((prev) => (prev.status === 'ready' ? { ...prev, vssStatus: 'ok' } : prev))
         },
       },
     })
-      .then(async ({ node, watchState, cleanupEventHandler, setBdkWallet, setPaymentCallback, setChannelClosedCallback, setSyncNeededCallback, cmPersistCtx }) => {
-        if (cancelled) return
-
-        nodeRef.current = node
-
-        // Expose node on window for dev console debugging
-        if (import.meta.env.DEV) {
-          ;(window as unknown as Record<string, unknown>).__ldkNode = node
-        }
-
-        // Wire payment event callback to update the result store and refresh history
-        setPaymentCallback((event) => {
-          if (event.type === 'sent') {
-            setPaymentResult(event.paymentHash, {
-              status: 'sent',
-              preimage: event.preimage,
-              feePaidMsat: event.feePaidMsat,
-            })
-          } else if (event.type === 'failed') {
-            setPaymentResult(event.paymentHash, {
-              status: 'failed',
-              reason: event.reason,
-            })
-          }
-          void refreshPaymentHistory()
-        })
-
-        // Remove peer from known peers when their last channel closes,
-        // so auto-reconnect doesn't trigger stale "wrong node" warnings.
-        setChannelClosedCallback((counterpartyPubkeyHex) => {
-          deleteKnownPeer(counterpartyPubkeyHex).catch((err: unknown) => {
-            console.warn('[ldk] Failed to remove known peer after channel close:', err)
-          })
-        })
-
-        cleanupEventHandlerFn = cleanupEventHandler
-
-        const esplora = new EsploraClient(SIGNET_CONFIG.esploraUrl)
-        const confirmables = [
-          node.channelManager.as_Confirm(),
-          node.chainMonitor.as_Confirm(),
-        ]
-
-        syncHandle = startSyncLoop({
-          confirmables,
+      .then(
+        async ({
+          node,
           watchState,
-          esplora,
-          channelManager: node.channelManager,
-          chainMonitor: node.chainMonitor,
-          networkGraph: node.networkGraph,
-          logger: node.logger,
-          scorer: node.scorer,
-          intervalMs: SIGNET_CONFIG.chainPollIntervalMs,
-          rgsUrl: SIGNET_CONFIG.rgsUrl,
-          rgsSyncIntervalTicks: SIGNET_CONFIG.rgsSyncIntervalTicks,
-          onStatusChange: (syncStatus) => {
-            setState((prev) =>
-              prev.status === 'ready' ? { ...prev, syncStatus } : prev,
-            )
-          },
+          cleanupEventHandler,
+          setBdkWallet,
+          setPaymentCallback,
+          setChannelClosedCallback,
+          setSyncNeededCallback,
           cmPersistCtx,
-        })
+        }) => {
+          if (cancelled) return
 
-        // Periodic reconnection: check every 3rd tick (~30s) for channel
-        // peers that have dropped and reconnect them from known peers.
-        let peerTickCount = 0
-        let reconnecting = false
+          nodeRef.current = node
 
-        const maybeReconnectPeers = () => {
-          if (reconnecting) return
-          const channels = node.channelManager.list_channels()
-          if (channels.length === 0) return
-
-          // Build set of pubkeys that have channels
-          const channelPeerPubkeys = new Set<string>()
-          for (const ch of channels) {
-            channelPeerPubkeys.add(bytesToHex(ch.get_counterparty().get_node_id()))
+          // Expose node on window for dev console debugging
+          if (import.meta.env.DEV) {
+            ;(window as unknown as Record<string, unknown>).__ldkNode = node
           }
 
-          // Build set of currently connected peers
-          const connectedPubkeys = new Set<string>()
-          for (const peer of node.peerManager.list_peers()) {
-            connectedPubkeys.add(bytesToHex(peer.get_counterparty_node_id()))
+          // Wire payment event callback to update the result store and refresh history
+          setPaymentCallback((event) => {
+            if (event.type === 'sent') {
+              setPaymentResult(event.paymentHash, {
+                status: 'sent',
+                preimage: event.preimage,
+                feePaidMsat: event.feePaidMsat,
+              })
+            } else if (event.type === 'failed') {
+              setPaymentResult(event.paymentHash, {
+                status: 'failed',
+                reason: event.reason,
+              })
+            }
+            void refreshPaymentHistory()
+          })
+
+          // Remove peer from known peers when their last channel closes,
+          // so auto-reconnect doesn't trigger stale "wrong node" warnings.
+          setChannelClosedCallback((counterpartyPubkeyHex) => {
+            deleteKnownPeer(counterpartyPubkeyHex).catch((err: unknown) => {
+              console.warn('[ldk] Failed to remove known peer after channel close:', err)
+            })
+          })
+
+          cleanupEventHandlerFn = cleanupEventHandler
+
+          const esplora = new EsploraClient(SIGNET_CONFIG.esploraUrl)
+          const confirmables = [node.channelManager.as_Confirm(), node.chainMonitor.as_Confirm()]
+
+          syncHandle = startSyncLoop({
+            confirmables,
+            watchState,
+            esplora,
+            channelManager: node.channelManager,
+            chainMonitor: node.chainMonitor,
+            networkGraph: node.networkGraph,
+            logger: node.logger,
+            scorer: node.scorer,
+            intervalMs: SIGNET_CONFIG.chainPollIntervalMs,
+            rgsUrl: SIGNET_CONFIG.rgsUrl,
+            rgsSyncIntervalTicks: SIGNET_CONFIG.rgsSyncIntervalTicks,
+            onStatusChange: (syncStatus) => {
+              setState((prev) => (prev.status === 'ready' ? { ...prev, syncStatus } : prev))
+            },
+            cmPersistCtx,
+          })
+
+          // Periodic reconnection: check every 3rd tick (~30s) for channel
+          // peers that have dropped and reconnect them from known peers.
+          let peerTickCount = 0
+          let reconnecting = false
+
+          const maybeReconnectPeers = () => {
+            if (reconnecting) return
+            const channels = node.channelManager.list_channels()
+            if (channels.length === 0) return
+
+            // Build set of pubkeys that have channels
+            const channelPeerPubkeys = new Set<string>()
+            for (const ch of channels) {
+              channelPeerPubkeys.add(bytesToHex(ch.get_counterparty().get_node_id()))
+            }
+
+            // Build set of currently connected peers
+            const connectedPubkeys = new Set<string>()
+            for (const peer of node.peerManager.list_peers()) {
+              connectedPubkeys.add(bytesToHex(peer.get_counterparty_node_id()))
+            }
+
+            // Find channel peers that are disconnected
+            const disconnected = [...channelPeerPubkeys].filter((pk) => !connectedPubkeys.has(pk))
+            if (disconnected.length === 0) return
+
+            reconnecting = true
+            console.log(
+              `[ldk] ${disconnected.length} channel peer(s) disconnected, attempting reconnect`
+            )
+
+            getKnownPeers()
+              .then(async (known) => {
+                const results = await Promise.allSettled(
+                  disconnected
+                    .filter((pk) => known.has(pk))
+                    .map(async (pk) => {
+                      const { host, port } = known.get(pk)!
+                      activeConnections.current.get(pk)?.disconnect()
+                      const conn = await doConnectToPeer(node.peerManager, pk, host, port)
+                      activeConnections.current.set(pk, conn)
+                    })
+                )
+                const succeeded = results.filter((r) => r.status === 'fulfilled').length
+                const failed = results.filter((r) => r.status === 'rejected').length
+                if (succeeded > 0 || failed > 0) {
+                  console.log(`[ldk] peer reconnect: ${succeeded} reconnected, ${failed} failed`)
+                }
+              })
+              .catch((err: unknown) => {
+                console.warn('[ldk] peer reconnect failed:', err)
+              })
+              .finally(() => {
+                reconnecting = false
+              })
           }
 
-          // Find channel peers that are disconnected
-          const disconnected = [...channelPeerPubkeys].filter((pk) => !connectedPubkeys.has(pk))
-          if (disconnected.length === 0) return
+          // PeerManager timer + LDK event processing every ~10s
+          peerTimerId = setInterval(() => {
+            node.peerManager.timer_tick_occurred()
+            node.peerManager.process_events()
 
-          reconnecting = true
-          console.log(`[ldk] ${disconnected.length} channel peer(s) disconnected, attempting reconnect`)
+            // Check for disconnected channel peers every ~30s
+            peerTickCount += 1
+            if (peerTickCount % 3 === 0) {
+              maybeReconnectPeers()
+            }
 
+            // Drain LDK events from ChannelManager, ChainMonitor, and OnionMessenger
+            node.channelManager.as_EventsProvider().process_pending_events(node.eventHandler)
+            node.chainMonitor.as_EventsProvider().process_pending_events(node.eventHandler)
+            node.onionMessenger.as_EventsProvider().process_pending_events(node.eventHandler)
+
+            // Recompute Lightning balance and update context if changed
+            const newBalanceSats = getOutboundCapacitySats(node.channelManager)
+            const balanceChanged = newBalanceSats !== lightningBalanceSatsRef.current
+
+            // Detect channel state changes (count, ready, usable status)
+            const channels = node.channelManager.list_channels()
+            const snapshot = channels
+              .map(
+                (ch) =>
+                  `${bytesToHex(ch.get_channel_id().write())}:${ch.get_is_channel_ready()}:${ch.get_is_usable()}`
+              )
+              .sort()
+              .join(',')
+            const channelsChanged = snapshot !== lastChannelSnapshotRef.current
+            lastChannelSnapshotRef.current = snapshot
+
+            if (balanceChanged || channelsChanged) {
+              lightningBalanceSatsRef.current = newBalanceSats
+              if (channelsChanged) channelChangeCounterRef.current += 1
+              const newCounter = channelChangeCounterRef.current
+              setState((prev) =>
+                prev.status === 'ready'
+                  ? {
+                      ...prev,
+                      lightningBalanceSats: newBalanceSats,
+                      channelChangeCounter: newCounter,
+                    }
+                  : prev
+              )
+            }
+
+            // Flush ChannelManager state immediately after processing events
+            if (node.channelManager.get_and_clear_needs_persistence()) {
+              void persistChannelManager(node.channelManager, cmPersistCtx).catch(
+                (err: unknown) => {
+                  console.error('[LDK Context] Failed to persist ChannelManager after events:', err)
+                }
+              )
+            }
+          }, SIGNET_CONFIG.peerTimerIntervalMs)
+
+          // Compute initial Lightning balance eagerly so Home screen
+          // does not show 0 for up to 10s before the first timer tick.
+          const initialBalanceSats = getOutboundCapacitySats(node.channelManager)
+          lightningBalanceSatsRef.current = initialBalanceSats
+
+          // Load persisted Lightning payment history
+          const initialPayments = await loadAllPayments()
+          const initialPaymentHistory = Array.from(initialPayments.values())
+
+          setState({
+            status: 'ready',
+            node,
+            nodeId: node.nodeId,
+            error: null,
+            syncStatus: 'syncing',
+            connectToPeer,
+            forgetPeer,
+            createChannel,
+            closeChannel,
+            forceCloseChannel,
+            listChannels,
+            setBdkWallet,
+            setSyncNeeded: setSyncNeededCallback,
+            createInvoice,
+            sendBolt11Payment,
+            sendBolt12Payment,
+            abandonPayment,
+            getPaymentResult,
+            listRecentPayments,
+            outboundCapacityMsat,
+            lightningBalanceSats: initialBalanceSats,
+            channelChangeCounter: 0,
+            peersReconnected: false,
+            paymentHistory: initialPaymentHistory,
+            bolt12Offer: null,
+            vssStatus: 'ok',
+          })
+
+          // Load or create the BOLT 12 offer after peers reconnect.
+          // Retries with backoff because create_offer_builder needs the
+          // DefaultMessageRouter to find blinding paths through the network
+          // graph, which may not be populated until RGS sync completes.
+          const MAX_OFFER_RETRIES = 5
+          let offerCreationStarted = false
+          const loadOrCreateOffer = async (attempt = 0) => {
+            if (cancelled) return
+            if (attempt === 0) {
+              if (offerCreationStarted) return
+              offerCreationStarted = true
+            }
+            try {
+              const existing = attempt === 0 ? await getPersistedOffer() : undefined
+              if (existing) {
+                setState((prev) =>
+                  prev.status === 'ready' ? { ...prev, bolt12Offer: existing } : prev
+                )
+                return
+              }
+
+              const builderResult = node.channelManager.create_offer_builder(
+                Option_u64Z.constructor_none() // no expiry
+              )
+              if (
+                !(
+                  builderResult instanceof
+                  Result_OfferWithDerivedMetadataBuilderBolt12SemanticErrorZ_OK
+                )
+              ) {
+                if (attempt < MAX_OFFER_RETRIES) {
+                  const delayMs = 3000 * 2 ** attempt // 3s, 6s, 12s, 24s, 48s
+                  console.warn(
+                    `[ldk] create_offer_builder failed (attempt ${attempt + 1}/${MAX_OFFER_RETRIES + 1}), retrying in ${delayMs / 1000}s`
+                  )
+                  offerRetryTimer = setTimeout(() => void loadOrCreateOffer(attempt + 1), delayMs)
+                  return
+                }
+                console.error('[ldk] create_offer_builder failed after retries:', builderResult)
+                return
+              }
+              const builder = builderResult.res
+              builder.chain(SIGNET_CONFIG.network)
+              builder.description('zinq wallet')
+              const offerResult = builder.build()
+              if (!(offerResult instanceof Result_OfferBolt12SemanticErrorZ_OK)) {
+                console.error('[ldk] offer build failed:', offerResult)
+                return
+              }
+              const offerStr = offerResult.res.to_str()
+              await putPersistedOffer(offerStr)
+              setState((prev) =>
+                prev.status === 'ready' ? { ...prev, bolt12Offer: offerStr } : prev
+              )
+              console.log('[ldk] BOLT 12 offer created and persisted')
+            } catch (err) {
+              console.error('[ldk] Failed to load/create BOLT 12 offer:', err)
+            }
+          }
+
+          // Auto-reconnect to known peers, then mark peersReconnected so
+          // the Home screen knows the lightning balance is now accurate.
           getKnownPeers()
-            .then(async (known) => {
+            .then(async (peers) => {
+              if (peers.size === 0) {
+                setState((prev) =>
+                  prev.status === 'ready' ? { ...prev, peersReconnected: true } : prev
+                )
+                void loadOrCreateOffer()
+                return
+              }
+              console.log(`[ldk] reconnecting to ${peers.size} known peer(s)`)
               const results = await Promise.allSettled(
-                disconnected
-                  .filter((pk) => known.has(pk))
-                  .map(async (pk) => {
-                    const { host, port } = known.get(pk)!
-                    activeConnections.current.get(pk)?.disconnect()
-                    const conn = await doConnectToPeer(node.peerManager, pk, host, port)
-                    activeConnections.current.set(pk, conn)
-                  })
+                Array.from(peers.entries()).map(async ([pubkey, { host, port }]) => {
+                  const conn = await doConnectToPeer(node.peerManager, pubkey, host, port)
+                  activeConnections.current.set(pubkey, conn)
+                })
               )
               const succeeded = results.filter((r) => r.status === 'fulfilled').length
               const failed = results.filter((r) => r.status === 'rejected').length
-              if (succeeded > 0 || failed > 0) {
-                console.log(`[ldk] peer reconnect: ${succeeded} reconnected, ${failed} failed`)
+              console.log(`[ldk] peer reconnection: ${succeeded} connected, ${failed} failed`)
+
+              // Wait for channels to become usable after reconnection.
+              // connectToPeer resolves after the noise handshake, but LDK still
+              // needs to exchange channel_reestablish messages before channels
+              // are marked usable. Poll briefly (up to 5s) so the balance is
+              // accurate before we dismiss the loading spinner.
+              if (succeeded > 0) {
+                for (let attempt = 0; attempt < 10; attempt++) {
+                  await new Promise((resolve) => setTimeout(resolve, 500))
+                  node.peerManager.process_events()
+                  if (node.channelManager.list_usable_channels().length > 0) break
+                }
               }
-            })
-            .catch((err: unknown) => {
-              console.warn('[ldk] peer reconnect failed:', err)
-            })
-            .finally(() => {
-              reconnecting = false
-            })
-        }
 
-        // PeerManager timer + LDK event processing every ~10s
-        peerTimerId = setInterval(() => {
-          node.peerManager.timer_tick_occurred()
-          node.peerManager.process_events()
-
-          // Check for disconnected channel peers every ~30s
-          peerTickCount += 1
-          if (peerTickCount % 3 === 0) {
-            maybeReconnectPeers()
-          }
-
-          // Drain LDK events from ChannelManager, ChainMonitor, and OnionMessenger
-          node.channelManager
-            .as_EventsProvider()
-            .process_pending_events(node.eventHandler)
-          node.chainMonitor
-            .as_EventsProvider()
-            .process_pending_events(node.eventHandler)
-          node.onionMessenger
-            .as_EventsProvider()
-            .process_pending_events(node.eventHandler)
-
-          // Recompute Lightning balance and update context if changed
-          const newBalanceSats = getOutboundCapacitySats(node.channelManager)
-          const balanceChanged = newBalanceSats !== lightningBalanceSatsRef.current
-
-          // Detect channel state changes (count, ready, usable status)
-          const channels = node.channelManager.list_channels()
-          const snapshot = channels
-            .map((ch) => `${bytesToHex(ch.get_channel_id().write())}:${ch.get_is_channel_ready()}:${ch.get_is_usable()}`)
-            .sort()
-            .join(',')
-          const channelsChanged = snapshot !== lastChannelSnapshotRef.current
-          lastChannelSnapshotRef.current = snapshot
-
-          if (balanceChanged || channelsChanged) {
-            lightningBalanceSatsRef.current = newBalanceSats
-            if (channelsChanged) channelChangeCounterRef.current += 1
-            const newCounter = channelChangeCounterRef.current
-            setState((prev) =>
-              prev.status === 'ready'
-                ? { ...prev, lightningBalanceSats: newBalanceSats, channelChangeCounter: newCounter }
-                : prev,
-            )
-          }
-
-          // Flush ChannelManager state immediately after processing events
-          if (node.channelManager.get_and_clear_needs_persistence()) {
-            void persistChannelManager(node.channelManager, cmPersistCtx).catch(
-              (err: unknown) => {
-                console.error(
-                  '[LDK Context] Failed to persist ChannelManager after events:',
-                  err,
-                )
-              },
-            )
-          }
-        }, SIGNET_CONFIG.peerTimerIntervalMs)
-
-        // Compute initial Lightning balance eagerly so Home screen
-        // does not show 0 for up to 10s before the first timer tick.
-        const initialBalanceSats = getOutboundCapacitySats(node.channelManager)
-        lightningBalanceSatsRef.current = initialBalanceSats
-
-        // Load persisted Lightning payment history
-        const initialPayments = await loadAllPayments()
-        const initialPaymentHistory = Array.from(initialPayments.values())
-
-        setState({
-          status: 'ready',
-          node,
-          nodeId: node.nodeId,
-          error: null,
-          syncStatus: 'syncing',
-          connectToPeer,
-          forgetPeer,
-          createChannel,
-          closeChannel,
-          forceCloseChannel,
-          listChannels,
-          setBdkWallet,
-          setSyncNeeded: setSyncNeededCallback,
-          createInvoice,
-          sendBolt11Payment,
-          sendBolt12Payment,
-          abandonPayment,
-          getPaymentResult,
-          listRecentPayments,
-          outboundCapacityMsat,
-          lightningBalanceSats: initialBalanceSats,
-          channelChangeCounter: 0,
-          peersReconnected: false,
-          paymentHistory: initialPaymentHistory,
-          bolt12Offer: null,
-          vssStatus: 'ok',
-        })
-
-        // Load or create the BOLT 12 offer after peers reconnect.
-        // Retries with backoff because create_offer_builder needs the
-        // DefaultMessageRouter to find blinding paths through the network
-        // graph, which may not be populated until RGS sync completes.
-        const MAX_OFFER_RETRIES = 5
-        let offerCreationStarted = false
-        const loadOrCreateOffer = async (attempt = 0) => {
-          if (cancelled) return
-          if (attempt === 0) {
-            if (offerCreationStarted) return
-            offerCreationStarted = true
-          }
-          try {
-            const existing = attempt === 0 ? await getPersistedOffer() : undefined
-            if (existing) {
+              const bal = getOutboundCapacitySats(node.channelManager)
+              lightningBalanceSatsRef.current = bal
               setState((prev) =>
-                prev.status === 'ready' ? { ...prev, bolt12Offer: existing } : prev,
-              )
-              return
-            }
-
-            const builderResult = node.channelManager.create_offer_builder(
-              Option_u64Z.constructor_none(), // no expiry
-            )
-            if (!(builderResult instanceof Result_OfferWithDerivedMetadataBuilderBolt12SemanticErrorZ_OK)) {
-              if (attempt < MAX_OFFER_RETRIES) {
-                const delayMs = 3000 * 2 ** attempt // 3s, 6s, 12s, 24s, 48s
-                console.warn(`[ldk] create_offer_builder failed (attempt ${attempt + 1}/${MAX_OFFER_RETRIES + 1}), retrying in ${delayMs / 1000}s`)
-                offerRetryTimer = setTimeout(() => void loadOrCreateOffer(attempt + 1), delayMs)
-                return
-              }
-              console.error('[ldk] create_offer_builder failed after retries:', builderResult)
-              return
-            }
-            const builder = builderResult.res
-            builder.chain(SIGNET_CONFIG.network)
-            builder.description('zinq wallet')
-            const offerResult = builder.build()
-            if (!(offerResult instanceof Result_OfferBolt12SemanticErrorZ_OK)) {
-              console.error('[ldk] offer build failed:', offerResult)
-              return
-            }
-            const offerStr = offerResult.res.to_str()
-            await putPersistedOffer(offerStr)
-            setState((prev) =>
-              prev.status === 'ready' ? { ...prev, bolt12Offer: offerStr } : prev,
-            )
-            console.log('[ldk] BOLT 12 offer created and persisted')
-          } catch (err) {
-            console.error('[ldk] Failed to load/create BOLT 12 offer:', err)
-          }
-        }
-
-        // Auto-reconnect to known peers, then mark peersReconnected so
-        // the Home screen knows the lightning balance is now accurate.
-        getKnownPeers()
-          .then(async (peers) => {
-            if (peers.size === 0) {
-              setState((prev) =>
-                prev.status === 'ready' ? { ...prev, peersReconnected: true } : prev,
+                prev.status === 'ready'
+                  ? { ...prev, lightningBalanceSats: bal, peersReconnected: true }
+                  : prev
               )
               void loadOrCreateOffer()
-              return
-            }
-            console.log(`[ldk] reconnecting to ${peers.size} known peer(s)`)
-            const results = await Promise.allSettled(
-              Array.from(peers.entries()).map(async ([pubkey, { host, port }]) => {
-                const conn = await doConnectToPeer(node.peerManager, pubkey, host, port)
-                activeConnections.current.set(pubkey, conn)
-              })
-            )
-            const succeeded = results.filter((r) => r.status === 'fulfilled').length
-            const failed = results.filter((r) => r.status === 'rejected').length
-            console.log(`[ldk] peer reconnection: ${succeeded} connected, ${failed} failed`)
-
-            // Wait for channels to become usable after reconnection.
-            // connectToPeer resolves after the noise handshake, but LDK still
-            // needs to exchange channel_reestablish messages before channels
-            // are marked usable. Poll briefly (up to 5s) so the balance is
-            // accurate before we dismiss the loading spinner.
-            if (succeeded > 0) {
-              for (let attempt = 0; attempt < 10; attempt++) {
-                await new Promise((resolve) => setTimeout(resolve, 500))
-                node.peerManager.process_events()
-                if (node.channelManager.list_usable_channels().length > 0) break
-              }
-            }
-
-            const bal = getOutboundCapacitySats(node.channelManager)
-            lightningBalanceSatsRef.current = bal
-            setState((prev) =>
-              prev.status === 'ready'
-                ? { ...prev, lightningBalanceSats: bal, peersReconnected: true }
-                : prev,
-            )
-            void loadOrCreateOffer()
-          })
-          .catch((err: unknown) => {
-            console.warn('[ldk] failed to read known peers:', err)
-            // Still mark as reconnected so UI doesn't stay loading forever
-            setState((prev) =>
-              prev.status === 'ready' ? { ...prev, peersReconnected: true } : prev,
-            )
-            void loadOrCreateOffer()
-          })
-      })
+            })
+            .catch((err: unknown) => {
+              console.warn('[ldk] failed to read known peers:', err)
+              // Still mark as reconnected so UI doesn't stay loading forever
+              setState((prev) =>
+                prev.status === 'ready' ? { ...prev, peersReconnected: true } : prev
+              )
+              void loadOrCreateOffer()
+            })
+        }
+      )
       .catch((err: unknown) => {
         if (cancelled) return
         setState({
@@ -711,13 +709,12 @@ export function LdkProvider({
           persistChannelManagerIdbOnly(channelManager),
           idbPut('ldk_network_graph', 'primary', networkGraph.write()),
           idbPut('ldk_scorer', 'primary', scorer.write()),
-        ]).catch((err: unknown) =>
-          console.error('[LDK] Visibility-change persist failed:', err),
-        )
+        ]).catch((err: unknown) => console.error('[LDK] Visibility-change persist failed:', err))
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
+    const connections = activeConnections.current
     return () => {
       cancelled = true
       document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -725,13 +722,31 @@ export function LdkProvider({
       cleanupEventHandlerFn?.()
       if (peerTimerId !== null) clearInterval(peerTimerId)
       if (offerRetryTimer !== null) clearTimeout(offerRetryTimer)
-      for (const [, conn] of activeConnections.current) {
+      for (const [, conn] of connections) {
         conn.disconnect()
       }
-      activeConnections.current.clear()
+      connections.clear()
       nodeRef.current = null
     }
-  }, [connectToPeer, forgetPeer, createChannel, closeChannel, forceCloseChannel, listChannels, createInvoice, sendBolt11Payment, sendBolt12Payment, abandonPayment, getPaymentResult, listRecentPayments, outboundCapacityMsat, refreshPaymentHistory, ldkSeed, vssEncryptionKey, vssStoreId])
+  }, [
+    connectToPeer,
+    forgetPeer,
+    createChannel,
+    closeChannel,
+    forceCloseChannel,
+    listChannels,
+    createInvoice,
+    sendBolt11Payment,
+    sendBolt12Payment,
+    abandonPayment,
+    getPaymentResult,
+    listRecentPayments,
+    outboundCapacityMsat,
+    refreshPaymentHistory,
+    ldkSeed,
+    vssEncryptionKey,
+    vssStoreId,
+  ])
 
   return <LdkContext value={state}>{children}</LdkContext>
 }

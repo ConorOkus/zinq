@@ -55,13 +55,17 @@ export function Restore() {
         SIGNET_CONFIG.vssUrl,
         vssStoreId,
         vssEncryptionKey,
-        new FixedHeaderProvider({}),
+        new FixedHeaderProvider({})
       )
 
       // Check if VSS has data for this wallet
       const keys = await vssClient.listKeyVersions()
       if (keys.length === 0) {
-        setState({ status: 'error', message: 'No backup found for this wallet. Make sure you entered the correct seed phrase.' })
+        setState({
+          status: 'error',
+          message:
+            'No backup found for this wallet. Make sure you entered the correct seed phrase.',
+        })
         return
       }
 
@@ -161,14 +165,16 @@ export function Restore() {
         {state.status === 'input' && (
           <div className="flex flex-1 flex-col gap-4 pt-4">
             <p className="text-sm text-[var(--color-on-dark-muted)]">
-              Enter your 12-word recovery phrase to restore your wallet from backup.
-              You can paste all 12 words into the first field.
+              Enter your 12-word recovery phrase to restore your wallet from backup. You can paste
+              all 12 words into the first field.
             </p>
 
             <div className="grid grid-cols-3 gap-2">
               {words.map((word, i) => (
                 <div key={i} className="flex items-center gap-1">
-                  <span className="w-5 text-right text-xs text-[var(--color-on-dark-muted)]">{i + 1}</span>
+                  <span className="w-5 text-right text-xs text-[var(--color-on-dark-muted)]">
+                    {i + 1}
+                  </span>
                   <input
                     type="text"
                     value={word}
@@ -214,8 +220,8 @@ export function Restore() {
                 This will replace your current wallet
               </h2>
               <p className="text-sm text-[var(--color-on-dark-muted)]">
-                All existing wallet data will be erased and replaced with the restored wallet.
-                Make sure you have backed up your current seed phrase if needed.
+                All existing wallet data will be erased and replaced with the restored wallet. Make
+                sure you have backed up your current seed phrase if needed.
               </p>
             </div>
             <div className="flex w-full flex-col gap-3">

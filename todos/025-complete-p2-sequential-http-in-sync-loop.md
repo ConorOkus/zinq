@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "025"
+issue_id: '025'
 tags: [code-review, performance]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ In `syncOnce`, watched txids and outputs are checked sequentially with `await` i
 ## Proposed Solutions
 
 ### Option A: Use Promise.all for batched lookups
+
 - Batch watched txid checks with `Promise.all`
 - Batch watched output spend checks with `Promise.all`
 - **Effort:** Small
@@ -32,6 +33,6 @@ In `syncOnce`, watched txids and outputs are checked sequentially with `await` i
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

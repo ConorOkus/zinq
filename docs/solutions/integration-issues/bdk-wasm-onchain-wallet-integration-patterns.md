@@ -36,7 +36,7 @@ useEffect(() => {
 // Main init effect — stable deps, no ldk object
 useEffect(() => {
   // ...use setBdkWalletRef.current?.() instead of ldk.setBdkWallet()
-}, [bdkDescriptors, generateAddress])  // no `ldk` here
+}, [bdkDescriptors, generateAddress]) // no `ldk` here
 ```
 
 ### 2. Seed Consistency Check Prevents Silent Corruption
@@ -70,6 +70,7 @@ const mnemonic = raw.trim().toLowerCase().replace(/\s+/g, ' ')
 **Problem:** BDK-WASM's `Transaction` class doesn't expose raw byte serialization. LDK's `funding_transaction_generated()` requires raw tx bytes (`Uint8Array`). The two WASM modules don't share types.
 
 **Status:** Unresolved. The funding handler builds and signs the PSBT but cannot pass the finalized tx to LDK. Options being explored:
+
 1. BDK-WASM exposing `Transaction.to_bytes()` (upstream feature request)
 2. Parsing the PSBT base64 to extract the finalized tx in JS
 3. Shared serialization format
@@ -101,7 +102,7 @@ const versions = network === 'bitcoin' ? undefined : TESTNET_VERSIONS
 const master = HDKey.fromMasterSeed(seed, versions)
 const fingerprint = master.fingerprint.toString(16).padStart(8, '0')
 const account = master.derive(`m/84'/${coinType}'/0'`)
-const xprv = account.privateExtendedKey  // tprv for signet, xprv for mainnet
+const xprv = account.privateExtendedKey // tprv for signet, xprv for mainnet
 const descriptor = `wpkh([${fingerprint}/84'/${coinType}'/0']${xprv}/0/*)`
 ```
 

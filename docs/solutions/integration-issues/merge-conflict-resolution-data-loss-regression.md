@@ -1,5 +1,5 @@
 ---
-title: "Merge conflict resolution silently dropped feature commits"
+title: 'Merge conflict resolution silently dropped feature commits'
 category: integration-issues
 date: 2026-03-18
 tags: [git, merge-conflict, regression, send-flow]
@@ -35,6 +35,7 @@ Verified tests pass (214/214), committed directly to main.
 2. **Feature branches should be clean**: Don't create a new feature branch from a working tree that has unrelated uncommitted changes. Stash or commit them first. The VSS branch inadvertently carried Send.tsx changes that weren't part of the VSS feature.
 
 3. **After merge conflict resolution, diff the resolution against both parents** to confirm no unintended deletions:
+
    ```bash
    git diff HEAD~1 -- src/pages/  # What changed in the merge commit?
    ```

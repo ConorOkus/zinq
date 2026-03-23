@@ -36,12 +36,14 @@ Adding the ability to specify an amount when requesting a payment. The Receive s
 ## Scope
 
 ### In scope
+
 - Amount entry UI on Receive screen (numpad toggle)
 - Updating `createInvoice` to accept optional amount
 - Including amount in BIP 21 URI when set
 - Regenerating QR when amount changes
 
 ### Out of scope
+
 - Denomination toggle (sats/BTC)
 - Description/memo field
 - BOLT 12 offers

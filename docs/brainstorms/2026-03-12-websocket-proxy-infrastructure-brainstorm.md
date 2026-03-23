@@ -20,6 +20,7 @@ The proxy will be a lightweight TypeScript Cloudflare Worker (~50 lines of core 
 ### Why self-hosted (not public proxy)
 
 The wallet currently depends on `wss://p.mutinynet.com`, a community-run proxy. For production use:
+
 - No SLA or uptime guarantees from a public proxy
 - Cannot control access, rate limiting, or security policies
 - Single point of failure outside our control

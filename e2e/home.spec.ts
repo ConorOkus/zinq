@@ -24,7 +24,7 @@ test.describe('wallet app', () => {
     await page.goto('/')
     // Should see the loading state or the home screen with CTAs
     await expect(
-      page.getByRole('button', { name: /send/i }).or(page.getByText(/loading wallet/i)),
+      page.getByRole('button', { name: /send/i }).or(page.getByText(/loading wallet/i))
     ).toBeVisible({ timeout: 10000 })
   })
 
@@ -49,15 +49,15 @@ test.describe('wallet app', () => {
 
   test('send flow shows address input', async ({ page }) => {
     await page.goto('/send')
-    await expect(
-      page.getByText('Send').or(page.getByText(/loading wallet/i)),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Send').or(page.getByText(/loading wallet/i))).toBeVisible({
+      timeout: 10000,
+    })
   })
 
   test('receive shows request overlay', async ({ page }) => {
     await page.goto('/receive')
-    await expect(
-      page.getByText('Request').or(page.getByText(/loading wallet/i)),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Request').or(page.getByText(/loading wallet/i))).toBeVisible({
+      timeout: 10000,
+    })
   })
 })

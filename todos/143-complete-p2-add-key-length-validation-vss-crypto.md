@@ -20,6 +20,7 @@ Neither `vssEncrypt` nor `vssDecrypt` validates that the key is exactly 32 bytes
 ## Proposed Solutions
 
 Add guard at top of both functions:
+
 ```typescript
 if (key.length !== 32) {
   throw new Error(`[VSS Crypto] Key must be exactly 32 bytes, got ${key.length}`)

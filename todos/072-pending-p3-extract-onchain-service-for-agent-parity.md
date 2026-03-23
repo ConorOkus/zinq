@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p3
-issue_id: "072"
+issue_id: '072'
 tags: [code-review, architecture]
 dependencies: []
 ---
@@ -23,6 +23,7 @@ Flagged by: agent-native-reviewer
 ## Proposed Solutions
 
 ### Option A: Extract createOnchainService factory
+
 Create `createOnchainService(wallet, esploraClient)` returning the 5 operations. Provider instantiates and exposes through context. Agents instantiate directly after initializeBdkWallet().
 
 - Effort: Medium

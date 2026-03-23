@@ -1,4 +1,7 @@
-import { generateMnemonic as generateBip39Mnemonic, validateMnemonic as validateBip39Mnemonic } from '@scure/bip39'
+import {
+  generateMnemonic as generateBip39Mnemonic,
+  validateMnemonic as validateBip39Mnemonic,
+} from '@scure/bip39'
 import { wordlist } from '@scure/bip39/wordlists/english.js'
 import { idbGet, openDb } from '../ldk/storage/idb'
 
@@ -28,7 +31,11 @@ export async function storeMnemonic(mnemonic: string): Promise<void> {
     getReq.onsuccess = () => {
       if (getReq.result !== undefined) {
         tx.abort()
-        reject(new Error('Mnemonic already exists. Refusing to overwrite — this would destroy access to existing funds.'))
+        reject(
+          new Error(
+            'Mnemonic already exists. Refusing to overwrite — this would destroy access to existing funds.'
+          )
+        )
         return
       }
       store.put(mnemonic, MNEMONIC_KEY)

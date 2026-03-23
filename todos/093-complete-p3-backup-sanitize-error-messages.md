@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "093"
+issue_id: '093'
 tags: [code-review, security, pr-14]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ The Backup page passes raw `err.message` from IndexedDB failures directly to the
 ## Proposed Solutions
 
 ### Option A: Generic user-facing message (Recommended)
+
 - Always show "Unable to retrieve your seed phrase. Please restart the app and try again."
 - Log detailed error to `console.error` for debugging
 - **Effort**: Small
@@ -32,8 +33,8 @@ The Backup page passes raw `err.message` from IndexedDB failures directly to the
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                     | Learnings                                 |
+| ---------- | -------------------------- | ----------------------------------------- |
 | 2026-03-15 | Created from PR #14 review | Security sentinel flagged info disclosure |
 
 ## Resources

@@ -19,14 +19,14 @@ The module-level `walletInitPromise` in `src/wallet/context.tsx` caches the reso
 ## Proposed Solutions
 
 ### Option A: Null out after consumption (Recommended)
+
 Add `walletInitPromise = null` in the `.then()` callback after transferring state.
 
 ```typescript
-initializeWallet()
-  .then(({ ldkSeed, bdkDescriptors }) => {
-    walletInitPromise = null  // Allow GC of the closure
-    setState({ status: 'ready', ldkSeed, bdkDescriptors })
-  })
+initializeWallet().then(({ ldkSeed, bdkDescriptors }) => {
+  walletInitPromise = null // Allow GC of the closure
+  setState({ status: 'ready', ldkSeed, bdkDescriptors })
+})
 ```
 
 - **Pros**: One-line fix, reduces mnemonic exposure window
@@ -45,8 +45,8 @@ initializeWallet()
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                              | Learnings                                 |
+| ---------- | ----------------------------------- | ----------------------------------------- |
 | 2026-03-16 | Created from PR #29 security review | Mnemonic in closure extends heap exposure |
 
 ## Resources

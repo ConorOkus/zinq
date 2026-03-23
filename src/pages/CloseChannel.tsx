@@ -26,12 +26,15 @@ export function CloseChannel() {
   const ldk = useLdk()
 
   const routeState = (location.state ?? {}) as RouteState
-  const channelIdHex = typeof routeState.channelIdHex === 'string' && HEX_RE.test(routeState.channelIdHex)
-    ? routeState.channelIdHex
-    : undefined
-  const counterpartyPubkey = typeof routeState.counterpartyPubkey === 'string' && PUBKEY_HEX_RE.test(routeState.counterpartyPubkey)
-    ? routeState.counterpartyPubkey
-    : undefined
+  const channelIdHex =
+    typeof routeState.channelIdHex === 'string' && HEX_RE.test(routeState.channelIdHex)
+      ? routeState.channelIdHex
+      : undefined
+  const counterpartyPubkey =
+    typeof routeState.counterpartyPubkey === 'string' &&
+    PUBKEY_HEX_RE.test(routeState.counterpartyPubkey)
+      ? routeState.counterpartyPubkey
+      : undefined
 
   const [currentStep, setCurrentStep] = useState<CloseChannelStep | null>(null)
   const closingRef = useRef(false)
@@ -80,9 +83,10 @@ export function CloseChannel() {
     const { channel, closeType } = currentStep
 
     try {
-      const ok = closeType === 'cooperative'
-        ? ldk.closeChannel(channel.channelId, channel.counterpartyNodeId)
-        : ldk.forceCloseChannel(channel.channelId, channel.counterpartyNodeId)
+      const ok =
+        closeType === 'cooperative'
+          ? ldk.closeChannel(channel.channelId, channel.counterpartyNodeId)
+          : ldk.forceCloseChannel(channel.channelId, channel.counterpartyNodeId)
 
       if (ok) {
         setCurrentStep({ step: 'success', closeType })
@@ -147,9 +151,7 @@ export function CloseChannel() {
           <Check className="h-10 w-10 text-white" />
         </div>
         <div>
-          <div className="font-display text-2xl font-bold text-on-dark">
-            Channel Closing
-          </div>
+          <div className="font-display text-2xl font-bold text-on-dark">Channel Closing</div>
           <div className="mt-2 text-sm text-[var(--color-on-dark-muted)]">
             {isForce
               ? 'Force close initiated. Your funds will be available after the timelock expires (may take several hours).'
@@ -174,13 +176,9 @@ export function CloseChannel() {
           <XClose className="h-10 w-10 text-red-400" />
         </div>
         <div>
-          <div className="font-display text-2xl font-bold text-on-dark">
-            Close Failed
-          </div>
+          <div className="font-display text-2xl font-bold text-on-dark">Close Failed</div>
           <div className="mt-2 text-sm text-red-400">{currentStep.message}</div>
-          <div className="mt-1 text-sm text-[var(--color-on-dark-muted)]">
-            Your funds are safe.
-          </div>
+          <div className="mt-1 text-sm text-[var(--color-on-dark-muted)]">Your funds are safe.</div>
         </div>
         <div className="flex w-full max-w-[280px] flex-col gap-3">
           {currentStep.canForceClose && (
@@ -231,15 +229,21 @@ export function CloseChannel() {
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Channel Capacity</span>
+          <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">
+            Channel Capacity
+          </span>
           <span className="font-semibold">{formatBtc(channel.capacitySats)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Your Balance</span>
+          <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">
+            Your Balance
+          </span>
           <span className="font-semibold">{formatBtc(localSats)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Remote Balance</span>
+          <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">
+            Remote Balance
+          </span>
           <span className="font-semibold">{formatBtc(remoteSats)}</span>
         </div>
 
@@ -247,7 +251,9 @@ export function CloseChannel() {
 
         {/* Close type toggle */}
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Close Method</span>
+          <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">
+            Close Method
+          </span>
           <div className="flex gap-2">
             <button
               className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${
@@ -274,8 +280,8 @@ export function CloseChannel() {
 
         {isForce && (
           <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">
-            Force close broadcasts your latest commitment transaction. Funds will be locked
-            for a timelock period (may take several hours) before they can be swept to your wallet.
+            Force close broadcasts your latest commitment transaction. Funds will be locked for a
+            timelock period (may take several hours) before they can be swept to your wallet.
           </div>
         )}
       </div>
@@ -283,9 +289,7 @@ export function CloseChannel() {
       <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
         <button
           className={`h-14 w-full rounded-xl font-display text-lg font-bold transition-transform active:scale-[0.98] ${
-            isForce
-              ? 'bg-red-500 text-white'
-              : 'bg-accent text-white'
+            isForce ? 'bg-red-500 text-white' : 'bg-accent text-white'
           }`}
           onClick={handleConfirm}
         >

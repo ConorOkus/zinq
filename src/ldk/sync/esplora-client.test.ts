@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EsploraClient } from './esplora-client'
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/require-await */
+
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+
 const BASE_URL = 'https://mutinynet.com/api'
 const FAKE_HASH = 'aa'.repeat(32)
 const FAKE_TXID = 'bb'.repeat(32)
@@ -26,9 +30,7 @@ describe('EsploraClient', () => {
   })
 
   it('getBlockHeader returns decoded hex bytes', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('0a0b0c', { status: 200 })
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('0a0b0c', { status: 200 }))
     const header = await client.getBlockHeader(FAKE_HASH)
     expect(Array.from(header)).toEqual([10, 11, 12])
     expect(fetch).toHaveBeenCalledWith(
@@ -55,10 +57,9 @@ describe('EsploraClient', () => {
 
   it('getTxStatus returns parsed JSON', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ confirmed: true, block_height: 50, block_hash: 'abc' }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ confirmed: true, block_height: 50, block_hash: 'abc' }), {
+        status: 200,
+      })
     )
     const status = await client.getTxStatus(FAKE_TXID)
     expect(status.confirmed).toBe(true)
@@ -67,10 +68,7 @@ describe('EsploraClient', () => {
 
   it('getOutspend returns parsed JSON', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ spent: true, txid: 'spend_txid', vin: 0 }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ spent: true, txid: 'spend_txid', vin: 0 }), { status: 200 })
     )
     const result = await client.getOutspend(FAKE_TXID, 1)
     expect(result.spent).toBe(true)
@@ -87,9 +85,7 @@ describe('EsploraClient', () => {
   })
 
   it('throws on non-ok response', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('not found', { status: 404 })
-    )
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('not found', { status: 404 }))
     await expect(client.getTipHash()).rejects.toThrow('failed: 404')
   })
 

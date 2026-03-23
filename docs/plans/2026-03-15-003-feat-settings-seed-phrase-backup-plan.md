@@ -1,5 +1,5 @@
 ---
-title: "feat: Expose Seed Phrase via Wallet Backup in Settings"
+title: 'feat: Expose Seed Phrase via Wallet Backup in Settings'
 type: feat
 status: completed
 date: 2026-03-15
@@ -39,12 +39,12 @@ The `ready` state in `WalletContextValue` exposes `ldkSeed` and `bdkDescriptors`
 
 The backup page has four internal states:
 
-| State | Trigger | UI |
-|---|---|---|
-| `warning` | Initial render | Warning copy + "Reveal Seed Phrase" button |
-| `loading` | User taps reveal | Spinner/loading indicator while `getMnemonic()` resolves |
-| `revealed` | Mnemonic fetched | Numbered 12-word grid |
-| `error` | `getMnemonic()` rejects or returns `undefined` | Error message + back button |
+| State      | Trigger                                        | UI                                                       |
+| ---------- | ---------------------------------------------- | -------------------------------------------------------- |
+| `warning`  | Initial render                                 | Warning copy + "Reveal Seed Phrase" button               |
+| `loading`  | User taps reveal                               | Spinner/loading indicator while `getMnemonic()` resolves |
+| `revealed` | Mnemonic fetched                               | Numbered 12-word grid                                    |
+| `error`    | `getMnemonic()` rejects or returns `undefined` | Error message + back button                              |
 
 Navigating away and returning always resets to `warning` state.
 
@@ -98,12 +98,12 @@ Extract a `<MnemonicWordGrid words={string[]} />` component from the existing in
 
 ## Dependencies & Risks
 
-| Dependency/Risk | Mitigation |
-|---|---|
-| No auth gate — anyone with browser access can view seed | Acceptable for signet; warning screen as speed bump; auth gate is a separate future feature |
-| `getMnemonic()` returns undefined (storage cleared) | Explicit error state with user-friendly message |
-| Mnemonic in component memory while revealed | Cleared on unmount; minimal exposure window |
-| Shared component extraction may require WalletGate refactor | WalletGate grid is simple (6 lines) — extraction is low-risk |
+| Dependency/Risk                                             | Mitigation                                                                                  |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| No auth gate — anyone with browser access can view seed     | Acceptable for signet; warning screen as speed bump; auth gate is a separate future feature |
+| `getMnemonic()` returns undefined (storage cleared)         | Explicit error state with user-friendly message                                             |
+| Mnemonic in component memory while revealed                 | Cleared on unmount; minimal exposure window                                                 |
+| Shared component extraction may require WalletGate refactor | WalletGate grid is simple (6 lines) — extraction is low-risk                                |
 
 ## Implementation Checklist
 

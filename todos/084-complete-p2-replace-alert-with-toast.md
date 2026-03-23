@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "084"
+issue_id: '084'
 tags: [code-review, ux, quality]
 dependencies: []
 ---

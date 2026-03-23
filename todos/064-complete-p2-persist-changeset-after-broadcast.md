@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "064"
+issue_id: '064'
 tags: [code-review, security]
 dependencies: []
 ---
@@ -18,9 +18,9 @@ The wallet changeset (recording spent UTXOs) is persisted to IndexedDB before th
 
 ```typescript
 wallet.sign(psbt, new SignOptions())
-persistChangeset(wallet)          // persisted here
+persistChangeset(wallet) // persisted here
 const tx = psbt.extract_tx()
-await esplora.broadcast(tx)       // broadcast here (may fail)
+await esplora.broadcast(tx) // broadcast here (may fail)
 ```
 
 Flagged by: security-sentinel
@@ -28,6 +28,7 @@ Flagged by: security-sentinel
 ## Proposed Solutions
 
 ### Option A: Persist after broadcast (Recommended)
+
 Move `persistChangeset(wallet)` to after `await esplora.broadcast(tx)`. If broadcast succeeds but persistence fails, the next sync reconciles.
 
 - Pros: Strictly safer — no stale state on broadcast failure

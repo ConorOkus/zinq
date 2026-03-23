@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p3
-issue_id: "069"
+issue_id: '069'
 tags: [code-review, quality]
 dependencies: []
 ---
@@ -21,6 +21,7 @@ Flagged by: kieran-typescript-reviewer, architecture-strategist
 ## Proposed Solutions
 
 ### Option A: Add network to ONCHAIN_CONFIG
+
 Add `network: 'signet'` to config.ts and reference it everywhere.
 
 - Effort: Small

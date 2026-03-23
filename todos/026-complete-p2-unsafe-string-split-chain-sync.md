@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "026"
+issue_id: '026'
 tags: [code-review, quality, input-validation]
 dependencies: []
 ---
@@ -20,10 +20,12 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Read outpoint from WatchedOutput directly
+
 - The WatchedOutput is already stored in the map value — use `output.get_outpoint()` instead of parsing the key
 - **Effort:** Small
 
 ### Option B: Add guard on split result
+
 - Validate the split produces two parts and parseInt is not NaN
 - **Effort:** Small
 
@@ -34,6 +36,6 @@ dependencies: []
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

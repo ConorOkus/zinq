@@ -19,7 +19,7 @@ interface DohResponse {
 export async function resolveBip353(
   user: string,
   domain: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<ParsedPaymentInput | null> {
   const name = `${user}.user._bitcoin-payment.${domain}`
   const url = `${DOH_URL}?name=${encodeURIComponent(name)}&type=TXT`

@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "030"
+issue_id: '030'
 tags: [code-review, reliability]
 dependencies: []
 ---
@@ -28,6 +28,6 @@ Add `{ signal: AbortSignal.timeout(15_000) }` to all fetch calls.
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

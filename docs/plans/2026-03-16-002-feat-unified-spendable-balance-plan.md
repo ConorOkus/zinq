@@ -1,5 +1,5 @@
 ---
-title: "feat: Unified spendable balance with auto-routing"
+title: 'feat: Unified spendable balance with auto-routing'
 type: feat
 status: completed
 date: 2026-03-16
@@ -29,11 +29,11 @@ A thin hook that consumes `useOnchain()` and `useLdk()`, returning:
 
 ```typescript
 interface UnifiedBalance {
-  total: bigint           // onchain spendable + lightning spendable (sats)
-  onchain: bigint         // confirmed + trustedPending (sats)
-  lightning: bigint       // floor(outboundCapacityMsat / 1000) (sats)
-  pending: bigint         // untrustedPending (sats)
-  isLoading: boolean      // either provider still loading
+  total: bigint // onchain spendable + lightning spendable (sats)
+  onchain: bigint // confirmed + trustedPending (sats)
+  lightning: bigint // floor(outboundCapacityMsat / 1000) (sats)
+  pending: bigint // untrustedPending (sats)
+  isLoading: boolean // either provider still loading
 }
 ```
 
@@ -55,9 +55,9 @@ Use **floor division** (`msat / 1000n`) for balance display — never overstate 
 
 ### Balance Reactivity Cadence
 
-| Source | Update Trigger | Cadence |
-|--------|---------------|---------|
-| Onchain (BDK) | Sync loop polls Esplora | Every 30s |
+| Source          | Update Trigger                        | Cadence   |
+| --------------- | ------------------------------------- | --------- |
+| Onchain (BDK)   | Sync loop polls Esplora               | Every 30s |
 | Lightning (LDK) | Event processing + capacity recompute | Every 10s |
 
 The unified balance will update at whichever cadence fires. Worst case staleness: 30s for onchain, 10s for Lightning. This is acceptable for a wallet UI.
@@ -120,11 +120,11 @@ LDK's `get_outbound_capacity_msat()` already deducts the channel reserve (typica
 
 ## Dependencies & Risks
 
-| Risk | Likelihood | Mitigation |
-|------|-----------|------------|
-| Users confused that unified balance isn't spendable in one tx | Medium | Always-visible breakdown makes the split clear; per-rail validation on send screens shows actual available |
-| Lightning balance staleness (up to 10s) | Low | Acceptable for wallet UX; could add manual refresh later |
-| Re-renders from new `lightningBalanceSats` state | Low | Same cadence as existing event processing; only components consuming `useLdk()` are affected |
+| Risk                                                          | Likelihood | Mitigation                                                                                                 |
+| ------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------- |
+| Users confused that unified balance isn't spendable in one tx | Medium     | Always-visible breakdown makes the split clear; per-rail validation on send screens shows actual available |
+| Lightning balance staleness (up to 10s)                       | Low        | Acceptable for wallet UX; could add manual refresh later                                                   |
+| Re-renders from new `lightningBalanceSats` state              | Low        | Same cadence as existing event processing; only components consuming `useLdk()` are affected               |
 
 ## Implementation Guide
 
@@ -189,15 +189,11 @@ export function useUnifiedBalance(): UnifiedBalance {
   const isLoading = onchain.status === 'loading' || ldk.status === 'loading'
 
   const onchainBalance =
-    onchain.status === 'ready'
-      ? onchain.balance.confirmed + onchain.balance.trustedPending
-      : 0n
+    onchain.status === 'ready' ? onchain.balance.confirmed + onchain.balance.trustedPending : 0n
 
-  const lightningBalance =
-    ldk.status === 'ready' ? ldk.lightningBalanceSats : 0n
+  const lightningBalance = ldk.status === 'ready' ? ldk.lightningBalanceSats : 0n
 
-  const pending =
-    onchain.status === 'ready' ? onchain.balance.untrustedPending : 0n
+  const pending = onchain.status === 'ready' ? onchain.balance.untrustedPending : 0n
 
   return {
     total: onchainBalance + lightningBalance,
@@ -221,9 +217,8 @@ const newBalanceSats = capacityMsat / 1000n
 // Only update state if changed (avoid unnecessary re-renders)
 if (newBalanceSats !== lightningBalanceSatsRef.current) {
   lightningBalanceSatsRef.current = newBalanceSats
-  setState(prev => prev.status === 'ready'
-    ? { ...prev, lightningBalanceSats: newBalanceSats }
-    : prev
+  setState((prev) =>
+    prev.status === 'ready' ? { ...prev, lightningBalanceSats: newBalanceSats } : prev
   )
 }
 ```

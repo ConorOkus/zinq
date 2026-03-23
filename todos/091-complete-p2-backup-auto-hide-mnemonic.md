@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "091"
+issue_id: '091'
 tags: [code-review, security, pr-14]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ Once the seed phrase is revealed on the Backup page, the 12 words persist in Rea
 ## Proposed Solutions
 
 ### Option A: Auto-hide timer + visibilitychange listener (Recommended)
+
 - Add 60-second auto-hide timer that resets state to `warning`
 - Add `visibilitychange` listener that hides words when tab loses focus
 - Add explicit "Hide" button below the word grid
@@ -29,6 +30,7 @@ Once the seed phrase is revealed on the Backup page, the 12 words persist in Rea
 - **Risk**: Low
 
 ### Option B: Timer only
+
 - Just the 60-second auto-hide, no visibility listener
 - **Pros**: Simplest change
 - **Cons**: Misses tab-switch scenario
@@ -53,8 +55,8 @@ Option A
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                     | Learnings                                         |
+| ---------- | -------------------------- | ------------------------------------------------- |
 | 2026-03-15 | Created from PR #14 review | Security sentinel flagged indefinite DOM exposure |
 
 ## Resources

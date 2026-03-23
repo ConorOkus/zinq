@@ -25,13 +25,16 @@ Flagged by: TypeScript reviewer, Security sentinel, Architecture strategist (all
 ## Proposed Solutions
 
 ### Option A: Copy before accessing buffer (Recommended)
+
 Replace `.buffer as ArrayBuffer` with `new Uint8Array(source).buffer`:
+
 ```typescript
 // vss-crypto.ts
 new Uint8Array(encryptionKey).buffer
 // keys.ts
 new Uint8Array(ldkSeed).buffer
 ```
+
 - **Pros**: Simple, eliminates the `as ArrayBuffer` cast, guaranteed safe
 - **Cons**: One extra copy (~32 bytes, negligible)
 - **Effort**: Small

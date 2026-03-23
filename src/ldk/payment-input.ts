@@ -13,8 +13,20 @@ import {
 import type { LnurlPayMetadata } from '../lnurl/resolve-lnurl'
 
 export type ParsedPaymentInput =
-  | { type: 'bolt11'; invoice: Bolt11Invoice; raw: string; amountMsat: bigint | null; description: string | null }
-  | { type: 'bolt12'; offer: Offer; raw: string; amountMsat: bigint | null; description: string | null }
+  | {
+      type: 'bolt11'
+      invoice: Bolt11Invoice
+      raw: string
+      amountMsat: bigint | null
+      description: string | null
+    }
+  | {
+      type: 'bolt12'
+      offer: Offer
+      raw: string
+      amountMsat: bigint | null
+      description: string | null
+    }
   | { type: 'bip353'; name: HumanReadableName; raw: string }
   | { type: 'lnurl'; domain: string; user: string; metadata: LnurlPayMetadata; raw: string }
   | { type: 'onchain'; address: string; amountSats: bigint | null }

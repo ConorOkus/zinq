@@ -63,7 +63,7 @@ export function Scan() {
         preferredCamera: 'environment',
         highlightScanRegion: false,
         highlightCodeOutline: false,
-      },
+      }
     )
 
     scanner.start().catch((err: unknown) => {
@@ -113,9 +113,7 @@ export function Scan() {
         {/* Persistent error (permission denied, no camera, in use) */}
         {isPersistentError && (
           <div className="relative z-10 flex flex-col items-center gap-4 px-8 text-center">
-            <p className="text-sm text-[var(--color-on-dark-muted)]">
-              {errorMessage(error)}
-            </p>
+            <p className="text-sm text-[var(--color-on-dark-muted)]">{errorMessage(error)}</p>
           </div>
         )}
 

@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "078"
+issue_id: '078'
 tags: [code-review, performance, architecture]
 dependencies: []
 ---

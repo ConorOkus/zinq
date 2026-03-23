@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "040"
+issue_id: '040'
 tags: [code-review, quality, proxy]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ Cloudflare Workers enforce a 1MB WebSocket message limit at the platform level. 
 ## Proposed Solutions
 
 ### Option A: Remove MAX_MESSAGE_SIZE entirely
+
 Remove from Env interface, wrangler.toml, and the size-checking if block. ~7 LOC removed.
 
 - **Effort:** Small

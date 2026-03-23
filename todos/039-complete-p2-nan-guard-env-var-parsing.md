@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "039"
+issue_id: '039'
 tags: [code-review, quality, proxy]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Validate env vars at handler start (Recommended)
+
 Return 500 if any parsed value is NaN.
 
 - **Effort:** Small

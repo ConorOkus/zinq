@@ -1,5 +1,5 @@
 ---
-title: "feat: Create mobile-first UI/UX design prototypes"
+title: 'feat: Create mobile-first UI/UX design prototypes'
 type: feat
 status: active
 date: 2026-03-15
@@ -34,14 +34,14 @@ design/
 
 ### Screens in Scope
 
-| Screen | Hash Route | Color Mode | Description |
-|--------|-----------|------------|-------------|
-| **Home (Wallet tab)** | `#home` | Accent bg | Unified balance, hide/show toggle, SEND + RECEIVE CTAs |
-| **Send: Amount** | `#send` | Dark bg | Custom numpad, large centered amount in sats, balance remaining |
-| **Send: Review** | `#send-review` | Dark bg | Recipient address, amount, fee, confirm button |
-| **Send: Success** | `#send-success` | Dark bg | Checkmark, amount sent, explorer link |
-| **Receive** | `#receive` | Dark modal overlay | Full-screen QR code, copyable address, dismiss X button |
-| **Activity tab** | `#activity` | Accent bg | Transaction list: direction arrow, label, amount, time ago |
+| Screen                | Hash Route      | Color Mode         | Description                                                     |
+| --------------------- | --------------- | ------------------ | --------------------------------------------------------------- |
+| **Home (Wallet tab)** | `#home`         | Accent bg          | Unified balance, hide/show toggle, SEND + RECEIVE CTAs          |
+| **Send: Amount**      | `#send`         | Dark bg            | Custom numpad, large centered amount in sats, balance remaining |
+| **Send: Review**      | `#send-review`  | Dark bg            | Recipient address, amount, fee, confirm button                  |
+| **Send: Success**     | `#send-success` | Dark bg            | Checkmark, amount sent, explorer link                           |
+| **Receive**           | `#receive`      | Dark modal overlay | Full-screen QR code, copyable address, dismiss X button         |
+| **Activity tab**      | `#activity`     | Accent bg          | Transaction list: direction arrow, label, amount, time ago      |
 
 ### Screens Explicitly Out of Scope (v1)
 
@@ -82,13 +82,13 @@ Back navigation:
 
 **Mixed scheme** (see brainstorm: accent for home, dark for sub-flows):
 
-| Token | Home/Activity screens | Send/Receive sub-flows |
-|-------|----------------------|----------------------|
-| Background | Bold accent color (TBD) | `#0a0a0a` (near-black) |
-| Primary text | `#0a0a0a` (dark on accent) | `#ffffff` |
-| Secondary text | `rgba(0,0,0,0.5)` | `rgba(255,255,255,0.5)` |
-| CTA buttons | `#0a0a0a` fill, white text | White outline, white text |
-| Tab bar | Dark (`#1a1a1a`) | Same dark |
+| Token          | Home/Activity screens      | Send/Receive sub-flows    |
+| -------------- | -------------------------- | ------------------------- |
+| Background     | Bold accent color (TBD)    | `#0a0a0a` (near-black)    |
+| Primary text   | `#0a0a0a` (dark on accent) | `#ffffff`                 |
+| Secondary text | `rgba(0,0,0,0.5)`          | `rgba(255,255,255,0.5)`   |
+| CTA buttons    | `#0a0a0a` fill, white text | White outline, white text |
+| Tab bar        | Dark (`#1a1a1a`)           | Same dark                 |
 
 **Accent color** is the one open question from the brainstorm. The prototype will start with 2-3 candidates (e.g., electric blue `#2563EB`, violet `#7C3AED`, coral `#F97316`) defined as CSS custom properties so they can be swapped in one line.
 
@@ -194,12 +194,12 @@ Back navigation:
 
 ## Dependencies & Risks
 
-| Risk | Mitigation |
-|------|-----------|
-| Accent color indecision stalls work | Start with CSS custom properties + 3 candidates; swap and compare |
-| Display font doesn't match Payy's boldness | Load 3 options, evaluate visually before committing |
+| Risk                                             | Mitigation                                                                                 |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Accent color indecision stalls work              | Start with CSS custom properties + 3 candidates; swap and compare                          |
+| Display font doesn't match Payy's boldness       | Load 3 options, evaluate visually before committing                                        |
 | Prototype diverges from what's feasible in React | Keep HTML structure close to React component boundaries (each `<section>` = one component) |
-| Scope creep into production code | This is explicitly a design artifact — `design/` folder is gitignored from Vite build |
+| Scope creep into production code                 | This is explicitly a design artifact — `design/` folder is gitignored from Vite build      |
 
 ## Sources & References
 

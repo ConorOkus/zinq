@@ -1,5 +1,5 @@
 ---
-title: "refactor: Remove onboarding screens, auto-create wallet silently"
+title: 'refactor: Remove onboarding screens, auto-create wallet silently'
 type: refactor
 status: completed
 date: 2026-03-16
@@ -136,7 +136,10 @@ export type WalletContextValue =
 Replace the state machine with auto-create logic:
 
 ```typescript
-let walletInitPromise: Promise<{ ldkSeed: Uint8Array; bdkDescriptors: { external: string; internal: string } }> | null = null
+let walletInitPromise: Promise<{
+  ldkSeed: Uint8Array
+  bdkDescriptors: { external: string; internal: string }
+}> | null = null
 
 async function doInitializeWallet() {
   let mnemonic = await getMnemonic()

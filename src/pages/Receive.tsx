@@ -61,8 +61,7 @@ export function Receive() {
   useEffect(() => {
     const el = overlayRef.current
     if (!el) return
-    const getFocusable = () =>
-      el.querySelectorAll<HTMLElement>('button, a, input, [tabindex]')
+    const getFocusable = () => el.querySelectorAll<HTMLElement>('button, a, input, [tabindex]')
     const focusable = getFocusable()
     if (focusable.length > 0) focusable[0]?.focus()
 
@@ -166,10 +165,7 @@ export function Receive() {
       <div className="fixed inset-0 z-200 mx-auto flex max-w-[430px] flex-col items-center justify-center bg-dark px-6">
         <p className="text-lg font-semibold text-on-dark">Failed to load wallet</p>
         <p className="mt-2 text-sm text-red-400">{onchain.error.message}</p>
-        <button
-          className="mt-6 text-sm text-accent"
-          onClick={() => void navigate('/')}
-        >
+        <button className="mt-6 text-sm text-accent" onClick={() => void navigate('/')}>
           Close
         </button>
       </div>
@@ -178,9 +174,7 @@ export function Receive() {
 
   // QR uses uppercase for optimal alphanumeric QR encoding
   const qrValue = bip321Uri.toUpperCase()
-  const truncated = address
-    ? `bitcoin:${address.slice(0, 8)}...${address.slice(-6)}`
-    : ''
+  const truncated = address ? `bitcoin:${address.slice(0, 8)}...${address.slice(-6)}` : ''
 
   return (
     <div
@@ -223,12 +217,8 @@ export function Receive() {
       ) : (
         <div className="flex flex-1 flex-col">
           <div className="flex flex-1 flex-col items-center justify-center gap-8 px-8">
-            {addressError && (
-              <p className="text-sm text-red-400">{addressError}</p>
-            )}
-            {invoiceError && (
-              <p className="text-sm text-red-400">{invoiceError}</p>
-            )}
+            {addressError && <p className="text-sm text-red-400">{addressError}</p>}
+            {invoiceError && <p className="text-sm text-red-400">{invoiceError}</p>}
             {address && (
               <>
                 {confirmedAmountSats > 0n && (
@@ -236,7 +226,9 @@ export function Receive() {
                     className="text-sm text-accent transition-colors active:text-accent/80"
                     onClick={handleEditAmount}
                   >
-                    <span className="font-display text-lg font-bold text-on-dark">{formatBtc(confirmedAmountSats)}</span>
+                    <span className="font-display text-lg font-bold text-on-dark">
+                      {formatBtc(confirmedAmountSats)}
+                    </span>
                   </button>
                 )}
 

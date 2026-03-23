@@ -8,7 +8,9 @@ function assertHex(value: string, label: string, expectedLength?: number): void 
     throw new Error(`[Esplora] Invalid hex in ${label}: ${value.slice(0, 20)}...`)
   }
   if (expectedLength !== undefined && value.length !== expectedLength) {
-    throw new Error(`[Esplora] Invalid hex length in ${label}: expected ${expectedLength}, got ${value.length}`)
+    throw new Error(
+      `[Esplora] Invalid hex length in ${label}: expected ${expectedLength}, got ${value.length}`
+    )
   }
 }
 
@@ -87,10 +89,14 @@ export class EsploraClient {
   async getTxMerkleProof(txid: string): Promise<MerkleProof> {
     assertHex(txid, 'txid', 64)
     const res = await fetch(`${this.baseUrl}/tx/${txid}/merkle-proof`, { signal: this.getSignal() })
-    if (!res.ok)
-      throw new Error(`[Esplora] GET /tx/${txid}/merkle-proof failed: ${res.status}`)
+    if (!res.ok) throw new Error(`[Esplora] GET /tx/${txid}/merkle-proof failed: ${res.status}`)
     const data: unknown = await res.json()
-    if (typeof data !== 'object' || data === null || !('pos' in data) || !('block_height' in data)) {
+    if (
+      typeof data !== 'object' ||
+      data === null ||
+      !('pos' in data) ||
+      !('block_height' in data)
+    ) {
       throw new Error('[Esplora] Malformed merkle proof response')
     }
     return data as MerkleProof
@@ -98,9 +104,10 @@ export class EsploraClient {
 
   async getOutspend(txid: string, vout: number): Promise<OutspendStatus> {
     assertHex(txid, 'txid', 64)
-    const res = await fetch(`${this.baseUrl}/tx/${txid}/outspend/${vout}`, { signal: this.getSignal() })
-    if (!res.ok)
-      throw new Error(`[Esplora] GET /tx/${txid}/outspend/${vout} failed: ${res.status}`)
+    const res = await fetch(`${this.baseUrl}/tx/${txid}/outspend/${vout}`, {
+      signal: this.getSignal(),
+    })
+    if (!res.ok) throw new Error(`[Esplora] GET /tx/${txid}/outspend/${vout} failed: ${res.status}`)
     const data: unknown = await res.json()
     if (typeof data !== 'object' || data === null || !('spent' in data)) {
       throw new Error('[Esplora] Malformed outspend response')

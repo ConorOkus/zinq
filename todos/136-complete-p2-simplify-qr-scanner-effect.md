@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "136"
+issue_id: '136'
 tags: [code-review, quality, simplicity]
 ---
 

@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "132"
+issue_id: '132'
 tags: [code-review, quality]
 ---
 
@@ -21,6 +21,7 @@ tags: [code-review, quality]
 ## Proposed Solutions
 
 ### Option A: Delete method and update tests
+
 - Remove `getTipHeight()` from `EsploraClient`
 - Remove from chain-sync test mock
 - Remove any standalone tests for it

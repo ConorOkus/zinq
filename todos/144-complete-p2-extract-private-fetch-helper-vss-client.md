@@ -21,6 +21,7 @@ Flagged by: TypeScript reviewer, Simplicity reviewer.
 ## Proposed Solutions
 
 Extract a private method:
+
 ```typescript
 async #post(endpoint: string, body: Uint8Array): Promise<Response> {
   try {

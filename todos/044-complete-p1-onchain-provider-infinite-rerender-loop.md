@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "044"
+issue_id: '044'
 tags: [code-review, typescript, react, bug]
 dependencies: []
 ---
@@ -22,7 +22,9 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Extract stable function reference (Recommended)
+
 Extract `setBdkWallet` into a stable reference before the effect:
+
 ```typescript
 const ldk = useLdk()
 const setBdkWalletRef = useRef<((w: Wallet | null) => void) | null>(null)
@@ -32,19 +34,23 @@ useEffect(() => {
   // ...use setBdkWalletRef.current
 }, [bdkDescriptors, generateAddress])
 ```
+
 - **Pros:** Minimal change, stable deps
 - **Cons:** Ref indirection
 - **Effort:** Small
 - **Risk:** Low
 
 ### Option B: Move setBdkWallet coordination to WalletGate
+
 Have WalletGate own the handshake between LDK and OnchainProvider via a callback prop.
+
 - **Pros:** Eliminates OnchainProvider's dependency on LDK context entirely
 - **Cons:** Larger refactor, changes component responsibilities
 - **Effort:** Medium
 - **Risk:** Low
 
 ## Acceptance Criteria
+
 - [ ] OnchainProvider useEffect does not re-run on LDK state changes
 - [ ] BDK sync loop initializes once and remains stable
 - [ ] setBdkWallet is called when BDK wallet is ready and LDK is available

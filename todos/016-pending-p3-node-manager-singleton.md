@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p3
-issue_id: "016"
+issue_id: '016'
 tags: [code-review, architecture, agent-native]
 dependencies: []
 ---

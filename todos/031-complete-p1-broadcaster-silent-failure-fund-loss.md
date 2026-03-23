@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "031"
+issue_id: '031'
 tags: [code-review, security, fund-safety]
 dependencies: []
 ---
@@ -23,6 +23,7 @@ Note: Previously tracked as todo 014 (P3), but escalated to P1 after security an
 ## Proposed Solutions
 
 ### Option A: Add retry logic similar to persistWithRetry
+
 - Retry 3-5x with backoff for failed broadcasts
 - Add onBroadcastFailure callback for error reporting
 - Consider re-queuing failed broadcasts on the sync loop
@@ -36,6 +37,6 @@ Note: Previously tracked as todo 014 (P3), but escalated to P1 after security an
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                                       |
+| ---------- | ------- | --------------------------------------------- |
 | 2026-03-11 | Created | From PR #3 re-review, escalated from todo 014 |

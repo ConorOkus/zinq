@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "038"
+issue_id: '038'
 tags: [code-review, security, proxy]
 dependencies: []
 ---
@@ -20,12 +20,14 @@ The `maxMessageSize` check on line 54 of `index.ts` only triggers for `ArrayBuff
 ## Proposed Solutions
 
 ### Option A: Reject text frames entirely (Recommended)
+
 Lightning peers only send binary data. Close the connection on text frames.
 
 - **Effort:** Small
 - **Risk:** Low
 
 ### Option B: Add size check for strings
+
 Add `typeof data === 'string' && data.length > maxMessageSize` check.
 
 - **Effort:** Small

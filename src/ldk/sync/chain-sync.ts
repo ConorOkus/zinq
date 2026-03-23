@@ -20,7 +20,7 @@ export async function syncOnce(
   watchState: WatchState,
   esplora: EsploraClient,
   lastSyncTipHash: string | null,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<string> {
   esplora.setSignal(signal)
   try {
@@ -110,7 +110,9 @@ export async function syncOnce(
       )
       const failedOutputChecks = outputResults.filter((r) => r.status === 'rejected')
       if (failedOutputChecks.length > 0) {
-        console.warn(`[LDK Sync] ${failedOutputChecks.length}/${outputEntries.length} output checks failed`)
+        console.warn(
+          `[LDK Sync] ${failedOutputChecks.length}/${outputEntries.length} output checks failed`
+        )
         for (const r of failedOutputChecks) {
           if (r.status === 'rejected') console.error('[LDK Sync] Output check error:', r.reason)
         }
@@ -175,11 +177,7 @@ export function startSyncLoop(config: SyncLoopConfig): SyncLoopHandle {
     if (!config.rgsUrl || rgsHandle || rgsInitStarted) return
     rgsInitStarted = true
     try {
-      rgsHandle = await initRapidGossipSync(
-        config.networkGraph,
-        config.logger,
-        config.rgsUrl,
-      )
+      rgsHandle = await initRapidGossipSync(config.networkGraph, config.logger, config.rgsUrl)
       console.log('[LDK Sync] Rapid Gossip Sync initialized')
     } catch (err) {
       console.warn('[LDK Sync] RGS init failed, will retry:', err)
@@ -201,7 +199,7 @@ export function startSyncLoop(config: SyncLoopConfig): SyncLoopHandle {
           config.watchState,
           config.esplora,
           lastTipHash,
-          controller.signal,
+          controller.signal
         )
       } catch (err) {
         // Reset lastTipHash on timeout to force full retry next tick

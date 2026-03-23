@@ -26,31 +26,29 @@ LDK's `UtilMethods.constructor_create_invoice_from_channelmanager` was not expos
 
 ```typescript
 // src/ldk/context.tsx:159-178
-const createInvoice = useCallback(
-  (description = 'Zinq Wallet'): string => {
-    const node = nodeRef.current
-    if (!node) throw new Error('Node not initialized')
+const createInvoice = useCallback((description = 'Zinq Wallet'): string => {
+  const node = nodeRef.current
+  if (!node) throw new Error('Node not initialized')
 
-    const result = UtilMethods.constructor_create_invoice_from_channelmanager(
-      node.channelManager,
-      Option_u64Z_None.constructor_none(),  // zero-amount
-      description,
-      3600,                                  // 1 hour expiry
-      Option_u16Z_None.constructor_none(),   // default CLTV
-    )
+  const result = UtilMethods.constructor_create_invoice_from_channelmanager(
+    node.channelManager,
+    Option_u64Z_None.constructor_none(), // zero-amount
+    description,
+    3600, // 1 hour expiry
+    Option_u16Z_None.constructor_none() // default CLTV
+  )
 
-    if (!(result instanceof Result_Bolt11InvoiceSignOrCreationErrorZ_OK)) {
-      console.error('[ldk] create_invoice failed:', result)
-      throw new Error('Failed to create invoice')
-    }
+  if (!(result instanceof Result_Bolt11InvoiceSignOrCreationErrorZ_OK)) {
+    console.error('[ldk] create_invoice failed:', result)
+    throw new Error('Failed to create invoice')
+  }
 
-    return result.res.to_str()
-  },
-  [],
-)
+  return result.res.to_str()
+}, [])
 ```
 
 **Key LDK types needed:**
+
 - `Option_u64Z_None` — signals no amount restriction (zero-amount invoice)
 - `Option_u16Z_None` — use default min_final_cltv_expiry_delta
 - `Result_Bolt11InvoiceSignOrCreationErrorZ_OK` — result pattern matching via `instanceof`
