@@ -490,11 +490,12 @@ describe('createPersister', () => {
       // Let the serialized manifest write chain flush
       await vi.advanceTimersByTimeAsync(0)
 
-      expect(vssClient.putObject).toHaveBeenCalledTimes(1)
-      const [key, data, version] = vi.mocked(vssClient.putObject).mock.calls[0]!
+      const putMock = vi.mocked(vssClient.putObject)
+      expect(putMock).toHaveBeenCalledTimes(1)
+      const [key, data, version] = putMock.mock.calls[0]!
       expect(key).toBe(MONITOR_MANIFEST_KEY)
       expect(version).toBe(0)
-      const manifest = JSON.parse(new TextDecoder().decode(data as Uint8Array)) as string[]
+      const manifest = JSON.parse(new TextDecoder().decode(data)) as string[]
       expect(manifest).toEqual(['a'.repeat(64) + ':0'])
       expect(versionCache.get(MONITOR_MANIFEST_KEY)).toBe(1)
     })
@@ -512,7 +513,7 @@ describe('createPersister', () => {
       backfillManifest()
       await vi.advanceTimersByTimeAsync(0)
 
-      expect(vssClient.putObject).not.toHaveBeenCalled()
+      expect(vi.mocked(vssClient.putObject)).not.toHaveBeenCalled()
     })
 
     it('is no-op when monitorKeys is empty', async () => {
@@ -525,7 +526,7 @@ describe('createPersister', () => {
       backfillManifest()
       await vi.advanceTimersByTimeAsync(0)
 
-      expect(vssClient.putObject).not.toHaveBeenCalled()
+      expect(vi.mocked(vssClient.putObject)).not.toHaveBeenCalled()
     })
   })
 })
