@@ -184,6 +184,15 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
           for (const key of monitorKeys) {
             const obj = await vssClient.getObject(key)
             if (!obj) throw new Error(`Monitor "${key}" listed in manifest but missing from VSS`)
+            // Validate the blob deserializes before persisting to IDB
+            const readResult = UtilMethods.constructor_C2Tuple_ThirtyTwoBytesChannelMonitorZ_read(
+              obj.value,
+              keysManager.as_EntropySource(),
+              bdkSignerProvider,
+            )
+            if (!(readResult instanceof Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK)) {
+              throw new Error(`Monitor "${key}" from VSS failed deserialization — data is corrupt`)
+            }
             await idbPut('ldk_channel_monitors', key, obj.value)
             writtenMonitorKeys.push(key)
             recoveredVersions.set(key, obj.version)
@@ -191,6 +200,10 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
 
           const cm = await vssClient.getObject('channel_manager')
           if (!cm) throw new Error('ChannelManager missing from VSS')
+          // Basic sanity: LDK ChannelManager serialization has a minimum viable size
+          if (cm.value.byteLength < 32) {
+            throw new Error(`ChannelManager from VSS is too small (${cm.value.byteLength} bytes) — likely corrupt`)
+          }
           await idbPut('ldk_channel_manager', 'primary', cm.value)
           wroteChannelManager = true
           initialCmVersion = cm.version

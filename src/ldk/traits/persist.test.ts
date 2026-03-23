@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createPersister, type PersisterOptions } from './persist'
+import { createPersister, parseMonitorManifest, MONITOR_MANIFEST_KEY, type PersisterOptions } from './persist'
 import { VssError, type VssClient } from '../storage/vss-client'
 import { ErrorCode } from '../storage/proto/vss_pb'
 
@@ -474,5 +474,108 @@ describe('createPersister', () => {
     expect(versionCache).toBeInstanceOf(Map)
     versionCache.set('test:0', 5)
     expect(versionCache.get('test:0')).toBe(5)
+  })
+
+  describe('backfillManifest', () => {
+    it('calls writeManifest when monitorKeys exist and manifest version not cached', async () => {
+      const vssClient = makeVssClient({
+        putObject: vi.fn().mockResolvedValue(1),
+      })
+      const { backfillManifest, versionCache } = createTestPersister({
+        vssClient,
+        initialMonitorKeys: ['a'.repeat(64) + ':0'],
+      })
+
+      backfillManifest()
+      // Let the serialized manifest write chain flush
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(vssClient.putObject).toHaveBeenCalledTimes(1)
+      const [key, data, version] = vi.mocked(vssClient.putObject).mock.calls[0]!
+      expect(key).toBe(MONITOR_MANIFEST_KEY)
+      expect(version).toBe(0)
+      const manifest = JSON.parse(new TextDecoder().decode(data as Uint8Array)) as string[]
+      expect(manifest).toEqual(['a'.repeat(64) + ':0'])
+      expect(versionCache.get(MONITOR_MANIFEST_KEY)).toBe(1)
+    })
+
+    it('is no-op when manifest version is already cached', async () => {
+      const vssClient = makeVssClient()
+      const { backfillManifest, versionCache } = createTestPersister({
+        vssClient,
+        initialMonitorKeys: ['a'.repeat(64) + ':0'],
+      })
+
+      // Pre-seed manifest version — simulates recovery having already set it
+      versionCache.set(MONITOR_MANIFEST_KEY, 3)
+
+      backfillManifest()
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(vssClient.putObject).not.toHaveBeenCalled()
+    })
+
+    it('is no-op when monitorKeys is empty', async () => {
+      const vssClient = makeVssClient()
+      const { backfillManifest } = createTestPersister({
+        vssClient,
+        initialMonitorKeys: [],
+      })
+
+      backfillManifest()
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(vssClient.putObject).not.toHaveBeenCalled()
+    })
+  })
+})
+
+describe('parseMonitorManifest', () => {
+  const validKey = 'a'.repeat(64) + ':0'
+
+  it('parses a valid manifest', () => {
+    const result = parseMonitorManifest(JSON.stringify([validKey]))
+    expect(result).toEqual([validKey])
+  })
+
+  it('parses multiple valid keys', () => {
+    const key2 = 'b'.repeat(64) + ':42'
+    const result = parseMonitorManifest(JSON.stringify([validKey, key2]))
+    expect(result).toEqual([validKey, key2])
+  })
+
+  it('throws on non-array input', () => {
+    expect(() => parseMonitorManifest('"not-an-array"')).toThrow('not a non-empty array')
+    expect(() => parseMonitorManifest('{}')).toThrow('not a non-empty array')
+    expect(() => parseMonitorManifest('42')).toThrow('not a non-empty array')
+  })
+
+  it('throws on empty array', () => {
+    expect(() => parseMonitorManifest('[]')).toThrow('not a non-empty array')
+  })
+
+  it('throws when exceeding max entries', () => {
+    const keys = Array.from({ length: 101 }, (_, i) => 'a'.repeat(64) + `:${i}`)
+    expect(() => parseMonitorManifest(JSON.stringify(keys))).toThrow('exceeds max')
+  })
+
+  it('throws on invalid key format', () => {
+    expect(() => parseMonitorManifest(JSON.stringify(['not-a-valid-key']))).toThrow('Invalid monitor key')
+    // Too short hex
+    expect(() => parseMonitorManifest(JSON.stringify(['abcd:0']))).toThrow('Invalid monitor key')
+    // Uppercase hex
+    expect(() => parseMonitorManifest(JSON.stringify(['A'.repeat(64) + ':0']))).toThrow('Invalid monitor key')
+    // Missing index
+    expect(() => parseMonitorManifest(JSON.stringify(['a'.repeat(64)]))).toThrow('Invalid monitor key')
+  })
+
+  it('throws on non-string entries', () => {
+    expect(() => parseMonitorManifest(JSON.stringify([123]))).toThrow('Invalid monitor key')
+    expect(() => parseMonitorManifest(JSON.stringify([null]))).toThrow('Invalid monitor key')
+  })
+
+  it('deduplicates entries', () => {
+    const result = parseMonitorManifest(JSON.stringify([validKey, validKey, validKey]))
+    expect(result).toEqual([validKey])
   })
 })
