@@ -1,5 +1,5 @@
 ---
-title: "feat: Deploy staging environment to Vercel over Signet"
+title: 'feat: Deploy staging environment to Vercel over Signet'
 type: feat
 status: completed
 date: 2026-03-16

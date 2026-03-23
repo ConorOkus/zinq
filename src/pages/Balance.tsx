@@ -36,7 +36,15 @@ export function Balance() {
           <div className="flex items-center justify-between rounded-xl bg-dark-elevated p-4">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500/20">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-orange-400">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5 text-orange-400"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <path d="M12 6v12M9 9h4.5a2.5 2.5 0 0 1 0 5H9" />
                 </svg>
@@ -49,7 +57,15 @@ export function Balance() {
           <div className="flex items-center justify-between rounded-xl bg-dark-elevated p-4">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-500/20">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-yellow-400">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5 text-yellow-400"
+                >
                   <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                 </svg>
               </div>

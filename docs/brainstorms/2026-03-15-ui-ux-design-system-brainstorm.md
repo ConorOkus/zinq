@@ -20,6 +20,7 @@ Alongside the redesign, we're establishing an **in-browser prototyping workflow*
 ### Design Direction: Payy-Inspired with Unique Identity
 
 We're adopting Payy's structural patterns:
+
 - **Bold, oversized typography** for balance and amounts
 - **Minimal chrome** — no card shadows, no heavy borders, generous whitespace
 - **Bottom tab navigation** (Wallet / Activity)
@@ -38,6 +39,7 @@ Users see a single balance and single send/receive flow. The wallet automaticall
 ### Prototyping Workflow: Single-Page Hash Router
 
 **Structure:**
+
 ```
 design/
   index.html     -- All screens as <section> elements, hash-router navigation
@@ -47,6 +49,7 @@ design/
 ```
 
 **Why this approach:**
+
 - Feels like a real app when demoing (no page reloads)
 - Shared styles stay DRY across all screens
 - Zero build tools — open `index.html` in a browser and start iterating
@@ -54,6 +57,7 @@ design/
 - Designs can later inform React component extraction
 
 **Workflow:**
+
 1. Open `design/index.html` in browser
 2. Edit HTML/CSS, refresh to see changes
 3. Use browser DevTools responsive mode (375px width) for mobile-first
@@ -61,18 +65,18 @@ design/
 
 ## Key Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Design inspiration | Payy | Bold, modern payments-app feel — not a crypto dashboard |
-| Color identity | Bold & unique (TBD) | Stand apart from generic Bitcoin orange branding |
-| Mobile-first | Yes | Primary use case is mobile browser / PWA |
-| Balance display | Unified (on-chain + Lightning) | Payments UX — users shouldn't think about rails |
-| Prototype format | Single-page HTML with hash router | App-like feel, no build tools, fast iteration |
-| First screens | Home, Send, Receive | Core payment loop — the 80% use case |
-| Prototyping tool | Browser + text editor | Design-in-browser philosophy, no external tools |
-| Color base | Mixed (like Payy) | Bold accent on home, dark for sub-flows — creates visual layers |
-| Activity feed | Separate tab | Home stays clean: balance + actions only. Activity gets its own tab. |
-| Typography | Display font for headings | Explore Space Grotesk, Clash Display, or Satoshi for amounts/headings. Inter for body. |
+| Decision           | Choice                            | Rationale                                                                              |
+| ------------------ | --------------------------------- | -------------------------------------------------------------------------------------- |
+| Design inspiration | Payy                              | Bold, modern payments-app feel — not a crypto dashboard                                |
+| Color identity     | Bold & unique (TBD)               | Stand apart from generic Bitcoin orange branding                                       |
+| Mobile-first       | Yes                               | Primary use case is mobile browser / PWA                                               |
+| Balance display    | Unified (on-chain + Lightning)    | Payments UX — users shouldn't think about rails                                        |
+| Prototype format   | Single-page HTML with hash router | App-like feel, no build tools, fast iteration                                          |
+| First screens      | Home, Send, Receive               | Core payment loop — the 80% use case                                                   |
+| Prototyping tool   | Browser + text editor             | Design-in-browser philosophy, no external tools                                        |
+| Color base         | Mixed (like Payy)                 | Bold accent on home, dark for sub-flows — creates visual layers                        |
+| Activity feed      | Separate tab                      | Home stays clean: balance + actions only. Activity gets its own tab.                   |
+| Typography         | Display font for headings         | Explore Space Grotesk, Clash Display, or Satoshi for amounts/headings. Inter for body. |
 
 ## Open Questions
 
@@ -83,6 +87,7 @@ design/
 Source: Payy app (13 screenshots captured 2026-03-15)
 
 Key screens analyzed:
+
 - Home/wallet view (neon yellow-green, hidden balance, VISA card, SEND/REQUEST buttons)
 - Send flow (dark, custom numpad, large centered amount)
 - Request flow (light bg, circle amount display, VIA QR / VIA LINK options, numpad)

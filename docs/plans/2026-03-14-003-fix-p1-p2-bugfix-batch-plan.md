@@ -1,5 +1,5 @@
 ---
-title: "fix: P1 + P2 bugfix batch — fund safety, input validation, and quick wins"
+title: 'fix: P1 + P2 bugfix batch — fund safety, input validation, and quick wins'
 type: fix
 status: active
 date: 2026-03-14
@@ -12,6 +12,7 @@ date: 2026-03-14
 Batch fix addressing all 5 truly-pending P1 bugs (fund safety / critical) plus 7 quick-win P2 fixes (input validation, dedup, guards). Also updates 6 todo files whose code was already fixed in prior commits but whose status was never updated.
 
 **Code audit findings:** Several todos listed as "pending" are already fixed in the current codebase:
+
 - 011 (WASM reinit guard) — `initWasm()` + `initPromise` dedup in `init.ts:68-112`
 - 018 (orphaned monitors) — throws error in `init.ts:236-242`
 - 019 (monitor deserialization) — throws error in `init.ts:327-330`
@@ -21,19 +22,19 @@ Batch fix addressing all 5 truly-pending P1 bugs (fund safety / critical) plus 7
 
 ## Scope
 
-| # | Todo | Priority | Category | Effort |
-|---|------|----------|----------|--------|
-| 031 | Broadcaster silent failure → fund loss | P1 | fund-safety | medium |
-| 034 | Peer address validation (path traversal + hex injection) | P1 | security | small |
-| 017+033 | Wire onPersistFailure callback | P1 | fund-safety | small |
-| 008 | Fee estimator unbounded rates | P2 | input-validation | small |
-| 009 | Seed runtime type validation | P2 | type-safety | small |
-| 010 | Archive comment contradicts delete | P2 | quality | trivial |
-| 026 | Unsafe string split in chain-sync | P2 | input-validation | small |
-| 035 | Duplicated bytesToHex + unsafe ArrayBuffer cast | P2 | quality | small |
-| 032 | CM persistence flag cleared on failure | P2 | fund-safety | small |
-| 022 | Web Locks fallback unsafe | P2 | fund-safety | small |
-| — | Update 6 already-fixed todos to complete | housekeeping | quality | trivial |
+| #       | Todo                                                     | Priority     | Category         | Effort  |
+| ------- | -------------------------------------------------------- | ------------ | ---------------- | ------- |
+| 031     | Broadcaster silent failure → fund loss                   | P1           | fund-safety      | medium  |
+| 034     | Peer address validation (path traversal + hex injection) | P1           | security         | small   |
+| 017+033 | Wire onPersistFailure callback                           | P1           | fund-safety      | small   |
+| 008     | Fee estimator unbounded rates                            | P2           | input-validation | small   |
+| 009     | Seed runtime type validation                             | P2           | type-safety      | small   |
+| 010     | Archive comment contradicts delete                       | P2           | quality          | trivial |
+| 026     | Unsafe string split in chain-sync                        | P2           | input-validation | small   |
+| 035     | Duplicated bytesToHex + unsafe ArrayBuffer cast          | P2           | quality          | small   |
+| 032     | CM persistence flag cleared on failure                   | P2           | fund-safety      | small   |
+| 022     | Web Locks fallback unsafe                                | P2           | fund-safety      | small   |
+| —       | Update 6 already-fixed todos to complete                 | housekeeping | quality          | trivial |
 
 **Out of scope:** 020 (Esplora response validation — needs runtime schema), 021 (sync backoff), 023 (shutdown persistence), 025 (parallel HTTP), 027 (WatchState cleanup), 045 (plaintext mnemonic — deferred to mainnet), 046 (prompt() — needs UI component), 048 (IDB module placement — architectural refactor).
 
@@ -67,7 +68,10 @@ async function broadcastWithRetry(esploraUrl: string, txHex: string): Promise<vo
       }
       const body = await res.text()
       // Don't retry if the tx is already in mempool/chain
-      if (body.includes('Transaction already in block chain') || body.includes('txn-already-known')) {
+      if (
+        body.includes('Transaction already in block chain') ||
+        body.includes('txn-already-known')
+      ) {
         console.info(`[LDK Broadcaster] Tx already known, skipping retry`)
         return
       }
@@ -75,7 +79,7 @@ async function broadcastWithRetry(esploraUrl: string, txHex: string): Promise<vo
     } catch (err: unknown) {
       console.error(
         `[LDK Broadcaster] Broadcast attempt ${attempt}/${MAX_BROADCAST_RETRIES} failed:`,
-        err,
+        err
       )
       if (attempt < MAX_BROADCAST_RETRIES) {
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * 2 ** (attempt - 1)))
@@ -87,6 +91,7 @@ async function broadcastWithRetry(esploraUrl: string, txHex: string): Promise<vo
 ```
 
 **Key decisions:**
+
 - 5 retries (vs 3 for persist) because broadcast failure is more dangerous — justice tx has a timelock deadline
 - Exponential backoff: 1s, 2s, 4s, 8s, 16s (~31s total)
 - Short-circuit on "already known" responses (not an error)
@@ -248,6 +253,7 @@ const peerPubkey = bytesToHex(peerPubkeyBytes)
 ```
 
 Update the import at the top of `peer-connection.ts`:
+
 ```typescript
 import { hexToBytes, bytesToHex } from '../utils'
 ```
@@ -314,7 +320,7 @@ if (!navigator.locks) {
 if (!navigator.locks) {
   throw new Error(
     '[LDK Init] Web Locks API not available. ' +
-    'A modern browser with Web Locks support is required to prevent multi-tab fund loss.'
+      'A modern browser with Web Locks support is required to prevent multi-tab fund loss.'
   )
 }
 ```
@@ -327,20 +333,21 @@ if (!navigator.locks) {
 
 Update the `status:` field from `pending` to `complete` in these 6 todo files whose fixes are already in the codebase:
 
-| File | Fix location |
-|------|-------------|
-| `todos/011-pending-p2-wasm-reinit-guard.md` | `init.ts:68-78` (initWasm dedup) + `init.ts:102-112` (initPromise dedup) |
-| `todos/018-pending-p1-orphaned-monitors-silently-discarded.md` | `init.ts:236-242` (throws error) |
-| `todos/019-pending-p1-monitor-deserialization-failure-skipped.md` | `init.ts:327-330` (throws error) |
-| `todos/024-pending-p2-wasm-init-caches-failed-promise.md` | `init.ts:72-74` (clears on error) |
-| `todos/044-pending-p1-onchain-provider-infinite-rerender-loop.md` | `onchain/context.tsx:91-98` (ref pattern) |
-| `todos/047-pending-p2-seed-mnemonic-consistency-check.md` | `init.ts:124-129` (comparison check) |
+| File                                                              | Fix location                                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `todos/011-pending-p2-wasm-reinit-guard.md`                       | `init.ts:68-78` (initWasm dedup) + `init.ts:102-112` (initPromise dedup) |
+| `todos/018-pending-p1-orphaned-monitors-silently-discarded.md`    | `init.ts:236-242` (throws error)                                         |
+| `todos/019-pending-p1-monitor-deserialization-failure-skipped.md` | `init.ts:327-330` (throws error)                                         |
+| `todos/024-pending-p2-wasm-init-caches-failed-promise.md`         | `init.ts:72-74` (clears on error)                                        |
+| `todos/044-pending-p1-onchain-provider-infinite-rerender-loop.md` | `onchain/context.tsx:91-98` (ref pattern)                                |
+| `todos/047-pending-p2-seed-mnemonic-consistency-check.md`         | `init.ts:124-129` (comparison check)                                     |
 
 Also update 017 and 033 to complete after the fix in Phase 1.3.
 
 ## Acceptance Criteria
 
 ### Fund Safety (P1)
+
 - [ ] Broadcaster retries failed broadcasts up to 5 times with exponential backoff
 - [ ] Broadcaster short-circuits retry on "already known" response
 - [ ] `parsePeerAddress` rejects non-hex pubkeys via `/^[0-9a-f]{66}$/` regex
@@ -349,6 +356,7 @@ Also update 017 and 033 to complete after the fix in Phase 1.3.
 - [ ] Persist failure logs a CRITICAL-level message with the channel key
 
 ### Input Validation & Guards (P2)
+
 - [ ] Fee estimator skips non-numeric/non-finite values from Esplora
 - [ ] Fee estimator caps at 500,000 sat/KW (~2,000 sat/vB)
 - [ ] `getSeed()` validates `raw instanceof Uint8Array` before returning
@@ -360,6 +368,7 @@ Also update 017 and 033 to complete after the fix in Phase 1.3.
 - [ ] `acquireWalletLock()` throws when Web Locks API is unavailable
 
 ### Housekeeping
+
 - [ ] 6 already-fixed todo files updated to `status: complete`
 - [ ] Todos 017 and 033 updated to `status: complete` after fix
 
@@ -383,12 +392,14 @@ Also update 017 and 033 to complete after the fix in Phase 1.3.
 ## Sources & References
 
 ### Internal References
+
 - Persist retry pattern: `src/ldk/traits/persist.ts:19-39`
 - WASM init dedup pattern: `src/ldk/init.ts:68-78`
 - Seed consistency check: `src/ldk/init.ts:120-129`
 - BDK ref pattern (044 fix): `src/onchain/context.tsx:88-98`
 
 ### Todo Files
+
 - P1: 017, 031, 034
 - P2: 008, 009, 010, 022, 026, 032, 033, 035
 - Housekeeping: 011, 018, 019, 024, 044, 047

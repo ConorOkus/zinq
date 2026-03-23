@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "011"
+issue_id: '011'
 tags: [code-review, architecture, reliability]
 dependencies: []
 ---

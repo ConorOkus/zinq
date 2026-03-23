@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p3
-issue_id: "141"
+issue_id: '141'
 tags: [code-review, ux]
 ---
 

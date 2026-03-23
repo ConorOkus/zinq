@@ -60,7 +60,7 @@ export async function deriveVssStoreId(ldkSeed: Uint8Array): Promise<string> {
  */
 export function deriveBdkDescriptors(
   mnemonic: string,
-  network: 'signet' | 'bitcoin',
+  network: 'signet' | 'bitcoin'
 ): { external: string; internal: string } {
   const coinType = network === 'bitcoin' ? 0 : 1
   const path = `m/84'/${coinType}'/0'`

@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "019"
+issue_id: '019'
 tags: [code-review, security, fund-safety]
 dependencies: []
 ---
@@ -22,6 +22,7 @@ In `src/ldk/init.ts`, the `deserializeMonitors` function skips any monitor that 
 ## Proposed Solutions
 
 ### Option A: Hard error on any deserialization failure
+
 - Throw an error halting initialization if any monitor fails to deserialize
 - **Pros:** Safe, prevents silent fund loss
 - **Cons:** One corrupted monitor blocks the entire wallet
@@ -36,8 +37,8 @@ In `src/ldk/init.ts`, the `deserializeMonitors` function skips any monitor that 
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |
 
 ## Resources

@@ -4,7 +4,13 @@ category: integration-issues
 date: 2026-03-17
 severity: critical
 tags: [bdk, ldk, channel-funding, chain-sync, esplora, nlocktime, wasm]
-modules: [src/ldk/traits/event-handler.ts, src/ldk/sync/chain-sync.ts, src/ldk/sync/esplora-client.ts, src/ldk/init.ts]
+modules:
+  [
+    src/ldk/traits/event-handler.ts,
+    src/ldk/sync/chain-sync.ts,
+    src/ldk/sync/esplora-client.ts,
+    src/ldk/init.ts,
+  ]
 ---
 
 # BDK 0.3.0 Upgrade: nlocktime Finality and Chain Sync Tip Consistency
@@ -34,8 +40,9 @@ The same bug existed in `init.ts` where `BestBlock` was constructed for a fresh 
 
 ```typescript
 // src/ldk/traits/event-handler.ts — FundingGenerationReady handler
-const psbt = bdkWallet.build_tx()
-  .nlocktime(0)           // ← LDK rejects non-final locktime
+const psbt = bdkWallet
+  .build_tx()
+  .nlocktime(0) // ← LDK rejects non-final locktime
   .add_recipient(recipient)
   .finish()
 ```

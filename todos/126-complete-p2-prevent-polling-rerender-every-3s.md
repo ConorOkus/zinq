@@ -19,6 +19,7 @@ The Receive page polls `checkReceivability()` every 3 seconds and calls `setRece
 ## Proposed Solutions
 
 ### Option A: Functional state update with reference equality (Recommended)
+
 Use `setReceivability(prev => ...)` and return `prev` when status is identical.
 
 - **Effort**: Small (5 lines)

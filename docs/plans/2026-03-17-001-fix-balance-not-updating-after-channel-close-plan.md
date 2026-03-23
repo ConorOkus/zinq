@@ -1,5 +1,5 @@
 ---
-title: "fix: Balance not updating after cooperative channel close"
+title: 'fix: Balance not updating after cooperative channel close'
 type: fix
 status: completed
 date: 2026-03-17

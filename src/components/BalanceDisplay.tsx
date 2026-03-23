@@ -62,9 +62,7 @@ export function BalanceDisplay({ balance, pending, breakdown, loading }: Balance
         </div>
       )}
       {breakdown && visible && (
-        <div className="mt-1 text-sm text-[var(--color-on-accent-muted)]">
-          {breakdown}
-        </div>
+        <div className="mt-1 text-sm text-[var(--color-on-accent-muted)]">{breakdown}</div>
       )}
       <button
         className="mt-3 flex items-center gap-2 py-2 text-sm font-medium text-[var(--color-on-accent-muted)]"

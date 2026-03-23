@@ -7,7 +7,7 @@ function renderAdvanced() {
   return render(
     <MemoryRouter>
       <Advanced />
-    </MemoryRouter>,
+    </MemoryRouter>
   )
 }
 

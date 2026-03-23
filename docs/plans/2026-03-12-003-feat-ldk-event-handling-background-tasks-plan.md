@@ -30,6 +30,7 @@ The wallet initializes all core LDK components (ChannelManager, ChainMonitor, Pe
 ### Scope Decisions
 
 **In scope (this PR):**
+
 - EventHandler trait implementation with handlers for all event variants
 - Payment events: `PaymentClaimable` → `claim_funds()`, `PaymentClaimed`, `PaymentSent`, `PaymentFailed`
 - HTLC forwarding: `PendingHTLCsForwardable` → `process_pending_htlc_forwards()` with `time_forwardable` delay
@@ -40,6 +41,7 @@ The wallet initializes all core LDK components (ChannelManager, ChainMonitor, Pe
 - Immediate ChannelManager persistence flush after event processing
 
 **Out of scope (deferred — no wallet/UTXO layer exists):**
+
 - `FundingGenerationReady` → log warning, return `ok()` (needs coin selection + tx construction)
 - `FundingTxBroadcastSafe` → log, return `ok()`
 - `SpendableOutputs` sweep execution (descriptors persisted but not swept until wallet layer exists)
@@ -72,18 +74,18 @@ The wallet initializes all core LDK components (ChannelManager, ChainMonitor, Pe
 
 `handle_event` is synchronous. The approach per event type:
 
-| Event | Operations | Strategy |
-|---|---|---|
-| `PaymentClaimable` | `claim_funds()` (sync WASM call) | Inline sync — call and return `ok()` |
-| `PendingHTLCsForwardable` | `process_pending_htlc_forwards()` (sync) | Schedule via `setTimeout(fn, time_forwardable)`, return `ok()` |
-| `PaymentClaimed/Sent/Failed` | State update + log | Inline sync — update in-memory state, return `ok()` |
-| `ChannelPending/Ready/Closed` | State update + log | Inline sync, return `ok()` |
-| `ConnectionNeeded` | `connectToPeer()` (async WebSocket) | Fire-and-forget `void connectToPeer(...)`, return `ok()` |
-| `SpendableOutputs` | Persist descriptors to IDB (async) | Fire-and-forget IDB write, return `ok()`. Descriptors saved for future sweep. |
-| `FundingGenerationReady` | Needs wallet layer | Log warning, return `ok()` |
-| `BumpTransaction` | Needs wallet layer | Log warning, return `ok()` |
-| `OpenChannelRequest` | Policy decision | Auto-reject, return `ok()` |
-| All others | Log | Log at appropriate level, return `ok()` |
+| Event                         | Operations                               | Strategy                                                                      |
+| ----------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------- |
+| `PaymentClaimable`            | `claim_funds()` (sync WASM call)         | Inline sync — call and return `ok()`                                          |
+| `PendingHTLCsForwardable`     | `process_pending_htlc_forwards()` (sync) | Schedule via `setTimeout(fn, time_forwardable)`, return `ok()`                |
+| `PaymentClaimed/Sent/Failed`  | State update + log                       | Inline sync — update in-memory state, return `ok()`                           |
+| `ChannelPending/Ready/Closed` | State update + log                       | Inline sync, return `ok()`                                                    |
+| `ConnectionNeeded`            | `connectToPeer()` (async WebSocket)      | Fire-and-forget `void connectToPeer(...)`, return `ok()`                      |
+| `SpendableOutputs`            | Persist descriptors to IDB (async)       | Fire-and-forget IDB write, return `ok()`. Descriptors saved for future sweep. |
+| `FundingGenerationReady`      | Needs wallet layer                       | Log warning, return `ok()`                                                    |
+| `BumpTransaction`             | Needs wallet layer                       | Log warning, return `ok()`                                                    |
+| `OpenChannelRequest`          | Policy decision                          | Auto-reject, return `ok()`                                                    |
+| All others                    | Log                                      | Log at appropriate level, return `ok()`                                       |
 
 **Fund safety for SpendableOutputs:** Descriptors are persisted to a new `ldk_spendable_outputs` IDB store. Even if the browser closes before sweep, descriptors survive for retry on next startup. This is the same pattern as the Persist trait's `InProgress` approach (see `docs/solutions/integration-issues/ldk-wasm-foundation-layer-patterns.md`).
 
@@ -94,9 +96,11 @@ The wallet initializes all core LDK components (ChannelManager, ChainMonitor, Pe
 #### Phase 1: EventHandler Trait + Core Payment Events
 
 **Files to create:**
+
 - `src/ldk/traits/event-handler.ts` — EventHandler factory
 
 **Files to modify:**
+
 - `src/ldk/init.ts` — Create EventHandler, add to `LdkNode` interface
 - `src/ldk/storage/idb.ts` — Add `ldk_spendable_outputs` store
 
@@ -149,7 +153,7 @@ export function createEventHandler(deps: EventHandlerDeps) {
 
       if (event instanceof Event_SpendableOutputs) {
         // Persist descriptors to IDB for future sweep
-        void deps.persistSpendableOutputs(/* serialized descriptors */)
+        void (deps.persistSpendableOutputs(/* serialized descriptors */))
         console.log('[LDK Event] SpendableOutputs: persisted for future sweep')
         return Result_NoneReplayEventZ.constructor_ok()
       }
@@ -185,6 +189,7 @@ export function createEventHandler(deps: EventHandlerDeps) {
 #### Phase 2: Background Task Integration
 
 **Files to modify:**
+
 - `src/ldk/context.tsx` — Add event processing to peer timer, add concurrency guard, flush persistence after events
 - `src/ldk/config.ts` — Add `eventProcessIntervalMs` if needed
 
@@ -201,10 +206,8 @@ const peerTimer = setInterval(() => {
   if (!isProcessingEvents) {
     isProcessingEvents = true
     try {
-      node.channelManager.as_EventsProvider()
-        .process_pending_events(node.eventHandler)
-      node.chainMonitor.as_EventsProvider()
-        .process_pending_events(node.eventHandler)
+      node.channelManager.as_EventsProvider().process_pending_events(node.eventHandler)
+      node.chainMonitor.as_EventsProvider().process_pending_events(node.eventHandler)
 
       // Flush ChannelManager state immediately after processing events
       if (node.channelManager.get_and_clear_needs_persistence()) {
@@ -220,6 +223,7 @@ const peerTimer = setInterval(() => {
 #### Phase 3: Tests
 
 **Files to create:**
+
 - `src/ldk/traits/event-handler.test.ts` — Unit tests for event handler
 
 **Test cases:**
@@ -260,12 +264,12 @@ EventHandler:
 
 ### Error Propagation
 
-| Error | Impact | Handling |
-|---|---|---|
-| `claim_funds()` throws | Payment not claimed; LDK replays on restart if CM not persisted | Log error, return `ok()` — CM flush will persist the claim attempt |
-| IDB write for SpendableOutputs fails | Descriptors lost if browser closes | Log error; descriptors may be re-emitted if CM state is not persisted |
-| `connectToPeer()` fails | Peer not reconnected | Fire-and-forget; LDK will re-emit `ConnectionNeeded` |
-| Event handler throws | Current event lost, remaining events in batch skipped | Wrap handler in try/catch; log and return `ok()` to prevent batch abort |
+| Error                                | Impact                                                          | Handling                                                                |
+| ------------------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `claim_funds()` throws               | Payment not claimed; LDK replays on restart if CM not persisted | Log error, return `ok()` — CM flush will persist the claim attempt      |
+| IDB write for SpendableOutputs fails | Descriptors lost if browser closes                              | Log error; descriptors may be re-emitted if CM state is not persisted   |
+| `connectToPeer()` fails              | Peer not reconnected                                            | Fire-and-forget; LDK will re-emit `ConnectionNeeded`                    |
+| Event handler throws                 | Current event lost, remaining events in batch skipped           | Wrap handler in try/catch; log and return `ok()` to prevent batch abort |
 
 ### State Lifecycle Risks
 
@@ -313,12 +317,12 @@ EventHandler:
 
 ### Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| `claim_funds()` + browser close before persistence | Low | High (payment loss) | Immediate CM flush after event processing |
-| SpendableOutputs IDB write fails silently | Low | High (fund loss) | Log error prominently; retry on next startup |
-| `PendingHTLCsForwardable` timer fires after component unmount | Medium | Low (no-op) | Check if cancelled before calling `process_pending_htlc_forwards` |
-| LDK adds new event variants in future versions | Certain | Low | Default branch logs unknown events rather than silently swallowing |
+| Risk                                                          | Likelihood | Impact              | Mitigation                                                         |
+| ------------------------------------------------------------- | ---------- | ------------------- | ------------------------------------------------------------------ |
+| `claim_funds()` + browser close before persistence            | Low        | High (payment loss) | Immediate CM flush after event processing                          |
+| SpendableOutputs IDB write fails silently                     | Low        | High (fund loss)    | Log error prominently; retry on next startup                       |
+| `PendingHTLCsForwardable` timer fires after component unmount | Medium     | Low (no-op)         | Check if cancelled before calling `process_pending_htlc_forwards`  |
+| LDK adds new event variants in future versions                | Certain    | Low                 | Default branch logs unknown events rather than silently swallowing |
 
 ## Sources & References
 

@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "018"
+issue_id: '018'
 tags: [code-review, security, fund-safety]
 dependencies: []
 ---
@@ -22,6 +22,7 @@ In `src/ldk/init.ts`, when ChannelManager bytes are missing from IndexedDB but C
 ## Proposed Solutions
 
 ### Option A: Hard error — halt initialization
+
 - Throw an error that surfaces in the React context as an error state
 - Display a recovery-needed UI explaining the situation
 - **Pros:** Safe, prevents silent fund loss
@@ -30,6 +31,7 @@ In `src/ldk/init.ts`, when ChannelManager bytes are missing from IndexedDB but C
 - **Risk:** Low
 
 ### Option B: Force-close all orphaned channels
+
 - Use monitors' `get_latest_holder_commitment_txn()` to broadcast force-close transactions
 - Then start fresh
 - **Pros:** Recovers funds automatically
@@ -45,8 +47,8 @@ In `src/ldk/init.ts`, when ChannelManager bytes are missing from IndexedDB but C
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |
 
 ## Resources

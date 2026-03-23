@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 // Mock ChangeSet to avoid needing real BDK WASM descriptors in tests.
 // The real ChangeSet.from_json / merge / to_json are tested implicitly
 // through integration; here we verify the merge-before-persist logic.
@@ -10,7 +12,10 @@ vi.mock('@bitcoindevkit/bdk-wallet-web', () => ({
       const data = JSON.parse(json)
       return {
         _data: data,
-        merge: mockMerge.mockImplementation(function (this: { _data: Record<string, unknown> }, other: { _data: Record<string, unknown> }) {
+        merge: mockMerge.mockImplementation(function (
+          this: { _data: Record<string, unknown> },
+          other: { _data: Record<string, unknown> }
+        ) {
           Object.assign(this._data, other._data)
         }),
         to_json: function (this: { _data: Record<string, unknown> }) {

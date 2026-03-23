@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "035"
+issue_id: '035'
 tags: [code-review, security, proxy]
 dependencies: []
 ---
@@ -21,6 +21,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Block well-known private hostnames explicitly (Recommended for now)
+
 Add a blocklist for `localhost`, `*.local`, `*.internal`, and IPv6 literals (`::1`, `::ffff:*`). This is not a complete fix but closes the most obvious vectors.
 
 - **Pros:** Simple, no external dependencies, catches common cases
@@ -29,6 +30,7 @@ Add a blocklist for `localhost`, `*.local`, `*.internal`, and IPv6 literals (`::
 - **Risk:** Low
 
 ### Option B: Resolve DNS before validation
+
 Perform a DNS lookup (via `fetch` to a DoH endpoint) before calling `connect()`, validate the resolved IP. This has a TOCTOU race but significantly raises the bar.
 
 - **Pros:** Catches DNS rebinding
@@ -37,6 +39,7 @@ Perform a DNS lookup (via `fetch` to a DoH endpoint) before calling `connect()`,
 - **Risk:** Medium
 
 ### Option C: Document as accepted risk
+
 The proxy is port-restricted to 9735 and Cloudflare Workers run in isolated network contexts. Document this limitation with a code comment and tracking issue.
 
 - **Pros:** Zero code change

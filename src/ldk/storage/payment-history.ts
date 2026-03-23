@@ -39,7 +39,7 @@ export async function updatePaymentStatus(
   paymentHash: string,
   status: 'succeeded' | 'failed',
   feePaidMsat?: bigint | null,
-  failureReason?: string,
+  failureReason?: string
 ): Promise<void> {
   const raw = await idbGet<SerializedPayment>(STORE, paymentHash)
   if (!raw) return

@@ -10,7 +10,18 @@ function formatBtc(satoshis) {
 }
 
 // --- Hash Router ---
-const routes = ['home', 'send', 'send-review', 'send-success', 'activity', 'settings', 'advanced', 'open-channel', 'close-channel', 'peers']
+const routes = [
+  'home',
+  'send',
+  'send-review',
+  'send-success',
+  'activity',
+  'settings',
+  'advanced',
+  'open-channel',
+  'close-channel',
+  'peers',
+]
 const overlays = ['receive']
 
 function navigate(hash) {

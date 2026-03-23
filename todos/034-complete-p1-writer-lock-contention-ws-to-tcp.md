@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "034"
+issue_id: '034'
 tags: [code-review, quality, proxy]
 dependencies: []
 ---
@@ -21,21 +21,22 @@ Every incoming WebSocket message calls `tcp.writable.getWriter()`, writes, then 
 ## Proposed Solutions
 
 ### Option A: Hold writer for connection lifetime (Recommended)
+
 Acquire the writer once after TCP connect, reuse for all messages. The `WritableStream` writer already queues writes internally.
 
 ```typescript
 const writer = tcp.writable.getWriter()
 server.addEventListener('message', (event: MessageEvent) => {
   const data: unknown = event.data
-  void writer.write(
-    data instanceof ArrayBuffer
-      ? new Uint8Array(data)
-      : new TextEncoder().encode(String(data)),
-  ).catch(() => {
-    if (server.readyState === WebSocket.OPEN) {
-      server.close(1011, 'TCP write error')
-    }
-  })
+  void writer
+    .write(
+      data instanceof ArrayBuffer ? new Uint8Array(data) : new TextEncoder().encode(String(data))
+    )
+    .catch(() => {
+      if (server.readyState === WebSocket.OPEN) {
+        server.close(1011, 'TCP write error')
+      }
+    })
 })
 server.addEventListener('close', () => void writer.close())
 server.addEventListener('error', () => void writer.abort())

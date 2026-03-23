@@ -38,9 +38,10 @@ export function OpenChannel() {
   const onchain = useOnchain()
 
   const routeState = (location.state ?? {}) as OpenChannelState
-  const peerPubkey = typeof routeState.peerPubkey === 'string' && PUBKEY_HEX_RE.test(routeState.peerPubkey)
-    ? routeState.peerPubkey
-    : undefined
+  const peerPubkey =
+    typeof routeState.peerPubkey === 'string' && PUBKEY_HEX_RE.test(routeState.peerPubkey)
+      ? routeState.peerPubkey
+      : undefined
   const peerHost = typeof routeState.peerHost === 'string' ? routeState.peerHost : undefined
   const peerPort = typeof routeState.peerPort === 'number' ? routeState.peerPort : undefined
   const needsConnect = Boolean(peerHost && peerPort)
@@ -59,9 +60,7 @@ export function OpenChannel() {
   }, [peerPubkey, navigate])
 
   const balance =
-    onchain.status === 'ready'
-      ? onchain.balance.confirmed + onchain.balance.trustedPending
-      : 0n
+    onchain.status === 'ready' ? onchain.balance.confirmed + onchain.balance.trustedPending : 0n
 
   // Fetch fee rate from Esplora
   useEffect(() => {
@@ -149,7 +148,10 @@ export function OpenChannel() {
       if (ok) {
         setCurrentStep({ step: 'success' })
       } else {
-        setCurrentStep({ step: 'error', message: 'Failed to initiate channel opening. The peer may have disconnected.' })
+        setCurrentStep({
+          step: 'error',
+          message: 'Failed to initiate channel opening. The peer may have disconnected.',
+        })
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
@@ -173,9 +175,11 @@ export function OpenChannel() {
   }
 
   const gatewayError =
-    ldk.status === 'error' ? { title: 'Lightning node error', msg: ldk.error.message } :
-    onchain.status === 'error' ? { title: 'Wallet error', msg: onchain.error.message } :
-    null
+    ldk.status === 'error'
+      ? { title: 'Lightning node error', msg: ldk.error.message }
+      : onchain.status === 'error'
+        ? { title: 'Wallet error', msg: onchain.error.message }
+        : null
 
   if (gatewayError) {
     return (
@@ -212,11 +216,10 @@ export function OpenChannel() {
           <Check className="h-10 w-10 text-white" />
         </div>
         <div>
-          <div className="font-display text-2xl font-bold text-on-dark">
-            Channel Opening
-          </div>
+          <div className="font-display text-2xl font-bold text-on-dark">Channel Opening</div>
           <div className="mt-2 text-sm text-[var(--color-on-dark-muted)]">
-            Your channel is being set up. It will be ready once the funding transaction confirms on-chain.
+            Your channel is being set up. It will be ready once the funding transaction confirms
+            on-chain.
           </div>
         </div>
         <button
@@ -237,13 +240,9 @@ export function OpenChannel() {
           <XClose className="h-10 w-10 text-red-400" />
         </div>
         <div>
-          <div className="font-display text-2xl font-bold text-on-dark">
-            Channel Open Failed
-          </div>
+          <div className="font-display text-2xl font-bold text-on-dark">Channel Open Failed</div>
           <div className="mt-2 text-sm text-red-400">{currentStep.message}</div>
-          <div className="mt-1 text-sm text-[var(--color-on-dark-muted)]">
-            Your funds are safe.
-          </div>
+          <div className="mt-1 text-sm text-[var(--color-on-dark-muted)]">Your funds are safe.</div>
         </div>
         <button
           className="mt-4 h-14 w-full max-w-[280px] rounded-xl bg-white font-display text-lg font-bold text-dark transition-transform active:scale-[0.98]"
@@ -268,7 +267,9 @@ export function OpenChannel() {
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Channel Size</span>
+            <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">
+              Channel Size
+            </span>
             <span className="font-semibold">{formatBtc(currentStep.amountSats)}</span>
           </div>
           <div className="flex justify-between">
@@ -313,15 +314,9 @@ export function OpenChannel() {
         >
           {formatBtc(amountSats)}
         </div>
-        {amountError && (
-          <p className="mt-1 text-sm text-red-400">{amountError}</p>
-        )}
+        {amountError && <p className="mt-1 text-sm text-red-400">{amountError}</p>}
       </div>
-      <Numpad
-        onKey={handleNumpadKey}
-        onNext={handleAmountNext}
-        nextDisabled={amountSats <= 0n}
-      />
+      <Numpad onKey={handleNumpadKey} onNext={handleAmountNext} nextDisabled={amountSats <= 0n} />
     </div>
   )
 }

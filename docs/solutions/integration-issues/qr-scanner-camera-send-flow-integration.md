@@ -1,5 +1,5 @@
 ---
-title: "QR Scanner: Camera Integration & Send Flow Data Passing"
+title: 'QR Scanner: Camera Integration & Send Flow Data Passing'
 category: integration-issues
 date: 2026-03-18
 severity: LOW
@@ -63,7 +63,7 @@ For no-amount inputs, store the raw string in `scannedInput` state. In `handleAm
 ```typescript
 if (scannedInput) {
   const input = scannedInput
-  setScannedInput(null)  // Clear after use to prevent stale re-use
+  setScannedInput(null) // Clear after use to prevent stale re-use
   void processRecipientInput(input)
   return
 }

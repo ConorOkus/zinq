@@ -44,6 +44,7 @@ generate_channel_keys_id(_inbound, _channel_value_satoshis, _user_channel_id) {
 ```
 
 This is safe because:
+
 - LDK doesn't require `generate_channel_keys_id` to be deterministic
 - The `channel_keys_id` is persisted in the ChannelMonitor and used via `derive_channel_signer` on restore
 - 32 random bytes provide sufficient uniqueness (collision probability ~2^-128)

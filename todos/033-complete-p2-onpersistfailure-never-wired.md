@@ -1,9 +1,9 @@
 ---
 status: complete
 priority: p2
-issue_id: "033"
+issue_id: '033'
 tags: [code-review, quality]
-dependencies: ["017"]
+dependencies: ['017']
 ---
 
 # onPersistFailure callback is returned but never wired up
@@ -20,11 +20,13 @@ dependencies: ["017"]
 ## Proposed Solutions
 
 ### Option A: Wire it up in init.ts
+
 - Destructure `onPersistFailure` and store the handler on LdkNode or pass to context
 - Context can display a critical error banner
 - **Effort:** Small
 
 ### Option B: Remove the callback (YAGNI)
+
 - Remove `PersistError`, `onPersistFailure`, `failureHandler` — rely on console.error + LDK's built-in halt
 - Add it back when UI error reporting is built
 - **Effort:** Small
@@ -35,6 +37,6 @@ dependencies: ["017"]
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details              |
+| ---------- | ------- | -------------------- |
 | 2026-03-11 | Created | From PR #3 re-review |

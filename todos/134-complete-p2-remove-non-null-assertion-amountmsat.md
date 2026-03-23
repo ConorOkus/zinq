@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "134"
+issue_id: '134'
 tags: [code-review, typescript, security]
 ---
 

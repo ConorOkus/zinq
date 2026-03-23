@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "063"
+issue_id: '063'
 tags: [code-review, security]
 dependencies: []
 ---
@@ -23,6 +23,7 @@ Flagged by: security-sentinel
 ## Proposed Solutions
 
 ### Option A: Pass reviewed fee rate to send functions (Recommended)
+
 Add `feeRateSatVb` parameter to `sendToAddress` and `sendMax` so the confirmed rate is used.
 
 - Pros: User pays exactly the fee they reviewed

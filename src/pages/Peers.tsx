@@ -154,7 +154,10 @@ export function Peers() {
       <div className="flex flex-col gap-5 px-6 pt-2">
         {/* Connect form */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="peer-address" className="text-sm font-medium text-[var(--color-on-dark-muted)]">
+          <label
+            htmlFor="peer-address"
+            className="text-sm font-medium text-[var(--color-on-dark-muted)]"
+          >
             Connect & Open Channel
           </label>
           <input
@@ -168,9 +171,7 @@ export function Peers() {
               if (e.key === 'Enter') handleConnect()
             }}
           />
-          {connectError && (
-            <p className="text-sm text-red-400">{connectError}</p>
-          )}
+          {connectError && <p className="text-sm text-red-400">{connectError}</p>}
           <button
             className="h-12 w-full rounded-xl bg-accent font-display font-bold text-white transition-transform disabled:cursor-not-allowed disabled:opacity-30 active:scale-[0.98]"
             onClick={handleConnect}
@@ -186,17 +187,12 @@ export function Peers() {
             <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">
               Peers ({connectedCount} connected, {peers.length} saved)
             </span>
-            <button
-              className="text-xs text-accent"
-              onClick={() => void refreshPeers()}
-            >
+            <button className="text-xs text-accent" onClick={() => void refreshPeers()}>
               Refresh
             </button>
           </div>
 
-          {forgetError && (
-            <p className="text-sm text-red-400">{forgetError}</p>
-          )}
+          {forgetError && <p className="text-sm text-red-400">{forgetError}</p>}
 
           {peers.length === 0 ? (
             <p className="py-4 text-center text-sm text-[var(--color-on-dark-muted)]">
@@ -230,14 +226,21 @@ export function Peers() {
                         className="shrink-0 text-xs text-red-400 disabled:opacity-30"
                         onClick={() => void handleForget(peer.pubkey)}
                         disabled={peer.channels.length > 0}
-                        title={peer.channels.length > 0 ? 'Cannot forget peer with open channels' : 'Remove from saved peers'}
+                        title={
+                          peer.channels.length > 0
+                            ? 'Cannot forget peer with open channels'
+                            : 'Remove from saved peers'
+                        }
                       >
                         Forget
                       </button>
                     )}
                   </div>
                   {peer.channels.map((ch) => (
-                    <div key={ch.channelIdHex} className="ml-5 flex flex-col gap-1 border-l border-dark-border pl-3">
+                    <div
+                      key={ch.channelIdHex}
+                      className="ml-5 flex flex-col gap-1 border-l border-dark-border pl-3"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[var(--color-on-dark-muted)]">
                           {ch.isUsable ? 'Active' : ch.isReady ? 'Ready' : 'Pending'}
@@ -253,9 +256,14 @@ export function Peers() {
                         </div>
                         <button
                           className="shrink-0 text-xs font-semibold text-red-400 transition-colors active:text-red-300"
-                          onClick={() => void navigate('/settings/advanced/peers/close-channel', {
-                            state: { channelIdHex: ch.channelIdHex, counterpartyPubkey: ch.counterpartyPubkey },
-                          })}
+                          onClick={() =>
+                            void navigate('/settings/advanced/peers/close-channel', {
+                              state: {
+                                channelIdHex: ch.channelIdHex,
+                                counterpartyPubkey: ch.counterpartyPubkey,
+                              },
+                            })
+                          }
                         >
                           Close
                         </button>

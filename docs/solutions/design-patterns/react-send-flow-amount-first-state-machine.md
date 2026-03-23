@@ -34,11 +34,22 @@ Replace type-specific amount states with generic `amount` and `recipient` steps:
 ```typescript
 // src/pages/Send.tsx:22-52
 type SendStep =
-  | { step: 'amount' }                    // First screen — numpad
-  | { step: 'recipient' }                 // Second screen — text input
-  | { step: 'oc-review'; address: string; amount: bigint; fee: bigint; feeRate: bigint; isSendMax: boolean }
-  | { step: 'ln-review'; parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }; amountMsat: bigint }
-  // ... terminal states unchanged
+  | { step: 'amount' } // First screen — numpad
+  | { step: 'recipient' } // Second screen — text input
+  | {
+      step: 'oc-review'
+      address: string
+      amount: bigint
+      fee: bigint
+      feeRate: bigint
+      isSendMax: boolean
+    }
+  | {
+      step: 'ln-review'
+      parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' | 'bip353' }
+      amountMsat: bigint
+    }
+// ... terminal states unchanged
 ```
 
 ### Two-Phase Validation
@@ -70,7 +81,10 @@ Show combined on-chain + Lightning balance since payment type is unknown:
 const unified = useUnifiedBalance()
 // ...
 // src/pages/Send.tsx:689
-{formatBtc(unified.total)} available
+{
+  formatBtc(unified.total)
+}
+available
 ```
 
 ### Send Max Approximation
@@ -94,9 +108,8 @@ When a BOLT 11 invoice or BIP 321 URI carries a fixed amount, use the parsed amo
 
 ```typescript
 // src/pages/Send.tsx:233-240
-const effectiveMsat = (parsed.type !== 'bip353' && parsed.amountMsat !== null)
-  ? parsed.amountMsat
-  : amountSats * 1000n
+const effectiveMsat =
+  parsed.type !== 'bip353' && parsed.amountMsat !== null ? parsed.amountMsat : amountSats * 1000n
 ```
 
 ### Error Retry Preserves State
@@ -120,7 +133,11 @@ if (sendStep.canRetry) {
 // src/pages/Send.tsx:154,161
 if (processingRef.current) return
 processingRef.current = true
-try { /* ... */ } finally { processingRef.current = false }
+try {
+  /* ... */
+} finally {
+  processingRef.current = false
+}
 ```
 
 ## Prevention

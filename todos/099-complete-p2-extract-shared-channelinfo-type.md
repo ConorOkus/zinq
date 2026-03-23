@@ -21,6 +21,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Extract shared type to `src/types/channel.ts`
+
 Create a `ChannelSummary` type with the serializable fields (hex strings, bigints, booleans). CloseChannel extends it with the non-serializable `channelId: ChannelId`. Standardize on `outboundCapacityMsat`/`inboundCapacityMsat` naming to match LDK API.
 
 - **Pros**: Single source of truth, naming consistency
@@ -29,6 +30,7 @@ Create a `ChannelSummary` type with the serializable fields (hex strings, bigint
 - **Risk**: Low
 
 ### Option B: Use `Omit` from CloseChannel's type
+
 Define the full type in CloseChannel and import `Omit<ChannelInfo, 'channelId'>` in Peers.
 
 - **Pros**: No new file

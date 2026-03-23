@@ -25,8 +25,8 @@ export class FixedHeaderProvider implements VssHeaderProvider {
   constructor(headers: Record<string, string>) {
     this.#headers = { ...headers }
   }
-  async getHeaders(): Promise<Record<string, string>> {
-    return { ...this.#headers }
+  getHeaders(): Promise<Record<string, string>> {
+    return Promise.resolve({ ...this.#headers })
   }
 }
 
@@ -51,7 +51,7 @@ export class VssClient {
     baseUrl: string,
     storeId: string,
     encryptionKey: Uint8Array,
-    auth: VssHeaderProvider,
+    auth: VssHeaderProvider
   ) {
     this.#baseUrl = baseUrl
     this.#storeId = storeId
@@ -59,9 +59,7 @@ export class VssClient {
     this.#auth = auth
   }
 
-  async getObject(
-    key: string,
-  ): Promise<{ value: Uint8Array; version: number } | null> {
+  async getObject(key: string): Promise<{ value: Uint8Array; version: number } | null> {
     const obfuscatedKey = await obfuscateKey(this.#encryptionKey, key)
 
     const request = create(GetObjectRequestSchema, {
@@ -91,11 +89,7 @@ export class VssClient {
    * The VSS protocol increments the server-side version by 1 on each successful write,
    * so the returned value is `version + 1`.
    */
-  async putObject(
-    key: string,
-    value: Uint8Array,
-    version: number,
-  ): Promise<number> {
+  async putObject(key: string, value: Uint8Array, version: number): Promise<number> {
     const obfuscatedKey = await obfuscateKey(this.#encryptionKey, key)
     const encrypted = vssEncrypt(this.#encryptionKey, value)
 
@@ -116,7 +110,7 @@ export class VssClient {
   }
 
   async putObjects(
-    items: Array<{ key: string; value: Uint8Array; version: number }>,
+    items: Array<{ key: string; value: Uint8Array; version: number }>
   ): Promise<void> {
     const transactionItems: KeyValue[] = []
     for (const item of items) {
@@ -127,7 +121,7 @@ export class VssClient {
           key: obfuscatedKey,
           version: BigInt(item.version),
           value: encrypted,
-        }),
+        })
       )
     }
 
@@ -155,20 +149,14 @@ export class VssClient {
     if (!res.ok) throw await this.#parseError(res)
   }
 
-  async listKeyVersions(): Promise<
-    Array<{ key: string; version: number }>
-  > {
+  async listKeyVersions(): Promise<Array<{ key: string; version: number }>> {
     const results: Array<{ key: string; version: number }> = []
     let pageToken: string | undefined
     let pages = 0
 
     do {
       if (++pages > MAX_LIST_PAGES) {
-        throw new VssError(
-          '[VSS] listKeyVersions exceeded max page limit',
-          ErrorCode.UNKNOWN,
-          0,
-        )
+        throw new VssError('[VSS] listKeyVersions exceeded max page limit', ErrorCode.UNKNOWN, 0)
       }
 
       const request = create(ListKeyVersionsRequestSchema, {
@@ -176,7 +164,10 @@ export class VssClient {
         pageToken,
       })
 
-      const res = await this.#post('listKeyVersions', toBinary(ListKeyVersionsRequestSchema, request))
+      const res = await this.#post(
+        'listKeyVersions',
+        toBinary(ListKeyVersionsRequestSchema, request)
+      )
       if (!res.ok) throw await this.#parseError(res)
 
       const responseBytes = new Uint8Array(await res.arrayBuffer())
@@ -207,7 +198,7 @@ export class VssClient {
       throw new VssError(
         `[VSS] ${endpoint} network error: ${err instanceof Error ? err.message : String(err)}`,
         ErrorCode.UNKNOWN,
-        0,
+        0
       )
     }
   }
@@ -216,16 +207,12 @@ export class VssClient {
     try {
       const bytes = new Uint8Array(await res.arrayBuffer())
       const errorResponse = fromBinary(ErrorResponseSchema, bytes)
-      return new VssError(
-        `[VSS] ${errorResponse.message}`,
-        errorResponse.errorCode,
-        res.status,
-      )
+      return new VssError(`[VSS] ${errorResponse.message}`, errorResponse.errorCode, res.status)
     } catch {
       return new VssError(
         `[VSS] HTTP ${res.status}: ${res.statusText}`,
         ErrorCode.UNKNOWN,
-        res.status,
+        res.status
       )
     }
   }

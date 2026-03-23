@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "068"
+issue_id: '068'
 tags: [code-review, security, architecture]
 dependencies: []
 ---
@@ -23,6 +23,7 @@ Flagged by: security-sentinel, code-simplicity-reviewer
 ## Proposed Solutions
 
 ### Option A: Remove wallet from context (Recommended)
+
 Delete `wallet: Wallet` from the ready variant. If a future feature needs raw access, add it then.
 
 - Effort: Small

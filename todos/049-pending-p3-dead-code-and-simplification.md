@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p3
-issue_id: "049"
+issue_id: '049'
 tags: [code-review, simplicity, cleanup]
 dependencies: []
 ---
@@ -25,8 +25,10 @@ Several items identified as unnecessary complexity or dead code.
 ## Proposed Solutions
 
 Address each item individually — all are small, low-risk changes.
+
 - **Effort:** Small | **Risk:** Low
 
 ## Acceptance Criteria
+
 - [ ] No unused exports in onchain/ or ldk/ modules
 - [ ] `import type` used for type-only imports from BDK-WASM

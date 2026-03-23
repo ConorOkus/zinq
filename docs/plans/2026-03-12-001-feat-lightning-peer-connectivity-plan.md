@@ -63,6 +63,7 @@ export const SIGNET_CONFIG = {
 **1b. CSP update** (`index.html`)
 
 Add `wss:` to `connect-src`:
+
 ```html
 connect-src 'self' https://mutinynet.com wss:;
 ```
@@ -87,6 +88,7 @@ const peerManager = PeerManager.constructor_new(
 ```
 
 Add `peerManager` to `LdkNode` interface:
+
 ```typescript
 export interface LdkNode {
   // ...existing fields
@@ -103,10 +105,7 @@ import { SocketDescriptor, type PeerManager } from 'lightningdevkit'
 
 let nextSocketId = BigInt(1)
 
-export function createSocketDescriptor(
-  ws: WebSocket,
-  peerManager: PeerManager
-): SocketDescriptor {
+export function createSocketDescriptor(ws: WebSocket, peerManager: PeerManager): SocketDescriptor {
   const socketId = nextSocketId++
 
   return SocketDescriptor.new_impl({
@@ -340,13 +339,13 @@ Separately: every 10s, `timer_tick_occurred()` pings connected peers and disconn
 
 ## Dependencies & Risks
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Public WS proxy down or rate-limited | Cannot connect to peers | Make proxy URL configurable, document self-hosting |
-| Proxy URL format differs from Mutiny | Connection fails | Verify format against actual proxy, add tests |
-| PeerManager WASM API differs from docs | Build failures | Verify against `.d.mts` type definitions |
-| CSP too restrictive (`wss:` wildcard) | Minor security concern | Can restrict to specific proxy domain if needed |
-| Noise handshake timing | Promise may never resolve if handshake stalls | Add connection timeout (e.g., 15s) |
+| Risk                                   | Impact                                        | Mitigation                                         |
+| -------------------------------------- | --------------------------------------------- | -------------------------------------------------- |
+| Public WS proxy down or rate-limited   | Cannot connect to peers                       | Make proxy URL configurable, document self-hosting |
+| Proxy URL format differs from Mutiny   | Connection fails                              | Verify format against actual proxy, add tests      |
+| PeerManager WASM API differs from docs | Build failures                                | Verify against `.d.mts` type definitions           |
+| CSP too restrictive (`wss:` wildcard)  | Minor security concern                        | Can restrict to specific proxy domain if needed    |
+| Noise handshake timing                 | Promise may never resolve if handshake stalls | Add connection timeout (e.g., 15s)                 |
 
 ## Sources & References
 

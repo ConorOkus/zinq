@@ -13,6 +13,7 @@ dependencies: []
 The `syncRequested` flag in `syncNow()` is set to `true` then immediately set back to `false` in the same synchronous block (lines 103-111 of `src/onchain/sync.ts`). This means the guard `if (stopped || syncRequested) return` can never be tripped by `syncRequested` — it's always `false` when checked.
 
 This creates two issues:
+
 1. Multiple rapid `syncNow()` calls (e.g., batch channel closes) each fire a new `void tick()`, causing overlapping async sync operations on the non-thread-safe BDK WASM Wallet.
 2. Overlapping `tick()` calls cause `take_staged()` interleaving — one call consumes the changeset, the second gets empty, potentially losing persistence of the closing tx discovery.
 
@@ -26,12 +27,14 @@ This creates two issues:
 ## Proposed Solutions
 
 ### Option A: Fix syncRequested as debounce + add isSyncing guard
+
 - Clear `syncRequested` in `scheduleNext()` when retries exhaust, not in `syncNow()`
 - Add `isSyncing` flag in `tick()` to prevent overlapping async operations
 - **Effort**: Small (10 lines)
 - **Risk**: Low — strictly more correct than current behavior
 
 ### Option B: Remove syncRequested, rely on single-threaded JS
+
 - Remove the flag entirely since JS event loop prevents true parallel execution
 - The timeout clear + `void tick()` pattern is inherently sequential
 - **Effort**: Small (4 lines removed)
@@ -50,8 +53,8 @@ This creates two issues:
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                          | Learnings                                  |
+| ---------- | ------------------------------- | ------------------------------------------ |
 | 2026-03-17 | Created from PR #30 code review | All 4 reviewers flagged this independently |
 
 ## Resources

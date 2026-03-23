@@ -33,7 +33,10 @@ function lnurlCorsProxy(): Plugin {
         fetch(targetUrl)
           .then(async (upstream) => {
             res.statusCode = upstream.status
-            res.setHeader('Content-Type', upstream.headers.get('Content-Type') ?? 'application/json')
+            res.setHeader(
+              'Content-Type',
+              upstream.headers.get('Content-Type') ?? 'application/json'
+            )
             res.end(await upstream.text())
           })
           .catch((err: unknown) => {

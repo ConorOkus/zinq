@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "024"
+issue_id: '024'
 tags: [code-review, reliability]
 dependencies: []
 ---
@@ -20,12 +20,14 @@ If `initializeWasmWebFetch` fails (network error, 404), `wasmInitPromise` caches
 ## Proposed Solutions
 
 ### Option A: Reset promise on rejection
+
 ```typescript
 wasmInitPromise = initializeWasmWebFetch('/liblightningjs.wasm').catch((err) => {
   wasmInitPromise = null
   throw err
 })
 ```
+
 - **Effort:** Small
 
 ## Acceptance Criteria
@@ -35,6 +37,6 @@ wasmInitPromise = initializeWasmWebFetch('/liblightningjs.wasm').catch((err) => 
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

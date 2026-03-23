@@ -1,5 +1,5 @@
 ---
-title: "feat: Add VSS Remote State Recovery"
+title: 'feat: Add VSS Remote State Recovery'
 type: feat
 status: active
 date: 2026-03-18
@@ -21,6 +21,7 @@ Today, if a user clears browser data or loses their device, all Lightning channe
 Dual-write all critical LDK state to both IndexedDB (fast local reads) and VSS (durable remote backup). Writes to VSS must succeed before LDK state advances. Recovery fetches state from VSS, populates IndexedDB, and restarts the LDK node via the existing init path.
 
 **Phased rollout** (see brainstorm: `docs/brainstorms/2026-03-18-vss-integration-brainstorm.md`):
+
 - **Phase 1 (this plan):** ChannelMonitors + ChannelManager — fund-critical state
 - **Phase 2 (future):** NetworkGraph + Scorer + known peers
 - **Phase 3 (future):** Payment history, BDK changeset, remaining metadata
@@ -75,11 +76,13 @@ Browser (zinq)
 **Pre-requisite refactor:** Before adding VSS writes, consolidate the three separate ChannelManager persist paths into a single function.
 
 Current locations:
+
 1. `src/ldk/sync/chain-sync.ts:225` — sync loop, has retry via `cmNeedsPersist` flag
 2. `src/ldk/context.tsx:542` — event timer, fire-and-forget with `.catch(console.error)`
 3. `src/ldk/context.tsx:661` — visibility handler, best-effort
 
 New design:
+
 - Create `persistChannelManager(cm: ChannelManager, vssClient?: VssClient): Promise<void>` in `src/ldk/storage/persist-cm.ts`
 - Paths 1 and 2 call this function (VSS + IDB)
 - Path 3 (visibility handler) calls IDB-only variant (browser may kill tab before network request completes)
@@ -92,6 +95,7 @@ New design:
 Current behavior (`persist.ts:16-38`): 3 attempts, 500ms × attempt, then abandon permanently. Channel is halted until app restart.
 
 New behavior:
+
 - Exponential backoff: 500ms, 1s, 2s, 4s, 8s, 16s, 32s, 60s (cap)
 - Continue retrying indefinitely while the app is running
 - After 10 seconds of failure: surface a UI banner ("Backup service unavailable. Lightning payments paused. Retrying...")
@@ -104,6 +108,7 @@ New behavior:
 ### Version Conflict Resolution
 
 **Decision:** On `CONFLICT_EXCEPTION` from `putObjects`:
+
 1. Log a warning with the key, expected version, and server response
 2. Re-fetch the current object via `getObject` to learn the server's version
 3. Compare server data with local data (are they the same serialized bytes?)
@@ -129,6 +134,7 @@ New files and dependencies. No changes to existing persistence yet.
 - [x] Add `deriveVssStoreId(ldkSeed)` to `src/wallet/keys.ts` — SHA256 of the node public key hex derived from the seed
 
 **`src/ldk/storage/vss-crypto.ts`** (NEW):
+
 ```typescript
 // Encryption: ChaCha20-Poly1305 via @noble/ciphers
 // - Random 12-byte nonce from crypto.getRandomValues()
@@ -144,6 +150,7 @@ export function obfuscateKey(encryptionKey: Uint8Array, plaintextKey: string): s
 ```
 
 **`src/ldk/storage/vss-client.ts`** (NEW):
+
 ```typescript
 // Follows EsploraClient pattern (src/ldk/sync/esplora-client.ts)
 // - Class-based, per-request AbortSignal.timeout(15_000)
@@ -170,6 +177,7 @@ class VssClient {
 The client handles encryption/decryption and key obfuscation internally — callers pass plaintext keys and values.
 
 **Success criteria:**
+
 - [ ] `VssClient` can `putObject` and `getObject` against a running VSS server
 - [ ] Round-trip encryption works: encrypt → upload → download → decrypt = original
 - [ ] Key obfuscation is deterministic: same input always produces same obfuscated key
@@ -193,40 +201,48 @@ Wire VSS into the ChannelMonitor persistence hot path.
 - [x] Wire `onVssUnavailable` into `LdkContext` to show a degradation banner
 
 **Key changes to `src/ldk/traits/persist.ts`:**
+
 ```typescript
 // Before (current):
 async function persistWithRetry(store, key, data) {
   for (let attempt = 1; attempt <= 3; attempt++) {
-    try { await idbPut(store, key, data); return; }
-    catch { await delay(500 * attempt); }
+    try {
+      await idbPut(store, key, data)
+      return
+    } catch {
+      await delay(500 * attempt)
+    }
   }
-  throw new Error('persist failed');
+  throw new Error('persist failed')
 }
 
 // After (new):
 async function persistWithRetry(store, key, data, vssClient?, vssVersion?) {
-  let backoff = 500;
+  let backoff = 500
   while (true) {
     try {
       // VSS first (durable remote)
       if (vssClient) {
-        const newVersion = await vssClient.putObject(key, data, vssVersion ?? 0);
-        versionCache.set(key, newVersion);
+        const newVersion = await vssClient.putObject(key, data, vssVersion ?? 0)
+        versionCache.set(key, newVersion)
       }
       // IDB second (fast local)
-      await idbPut(store, key, data);
-      return;
+      await idbPut(store, key, data)
+      return
     } catch (e) {
-      if (isVssConflict(e)) { /* resolve conflict, retry */ }
-      await delay(backoff);
-      backoff = Math.min(backoff * 2, 60_000);
-      if (backoff >= 10_000) onVssUnavailable?.();
+      if (isVssConflict(e)) {
+        /* resolve conflict, retry */
+      }
+      await delay(backoff)
+      backoff = Math.min(backoff * 2, 60_000)
+      if (backoff >= 10_000) onVssUnavailable?.()
     }
   }
 }
 ```
 
 **Success criteria:**
+
 - [ ] ChannelMonitor writes go to both VSS and IDB
 - [ ] `channel_monitor_updated` is only called after both writes succeed
 - [ ] VSS failure blocks channel operations (no state advancement)
@@ -247,6 +263,7 @@ Consolidate CM persist paths and add VSS writes.
 - [x] Track CM version in memory, same pattern as monitors
 
 **Success criteria:**
+
 - [ ] All three CM persist paths go through the consolidated function
 - [ ] CM writes to VSS + IDB (except visibility handler: IDB-only)
 - [ ] No regression in existing CM persistence behavior
@@ -268,6 +285,7 @@ Wire VSS into startup and handle existing users.
 - [x] Initialize the in-memory version cache by fetching `listKeyVersions` from VSS at startup
 
 **Key integration point in `src/ldk/init.ts`:**
+
 ```typescript
 // After seed verification, before ChannelMonitor restoration:
 // 1. Create VssClient with derived encryptionKey + storeId
@@ -277,6 +295,7 @@ Wire VSS into startup and handle existing users.
 ```
 
 **Success criteria:**
+
 - [ ] New wallets: VSS writes begin immediately after first channel open
 - [ ] Existing wallets: IDB state is uploaded to VSS on first startup
 - [ ] Version cache is populated at startup from VSS
@@ -312,6 +331,7 @@ The init function throws if monitors exist without a ChannelManager. The recover
 The Web Lock is held by a never-resolving promise. Recovery cannot re-init in-place. A full page reload is the simplest and safest teardown mechanism — it releases the lock, clears all WASM state, and resets the `initPromise` singleton.
 
 **Success criteria:**
+
 - [ ] User can restore a wallet from mnemonic + VSS backup
 - [ ] Restored wallet has all channels and correct balances
 - [ ] Recovery works from a completely fresh browser (no existing IDB data)
@@ -319,24 +339,24 @@ The Web Lock is held by a never-resolving promise. Recovery cannot re-init in-pl
 
 ### File Map
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/ldk/storage/vss-client.ts` | NEW | VSS HTTP client with protobuf, encryption, auth |
-| `src/ldk/storage/vss-crypto.ts` | NEW | ChaCha20-Poly1305 encryption, HMAC key obfuscation |
-| `src/ldk/storage/proto/vss.proto` | NEW | VSS protobuf schema (copied from vss-server) |
-| `src/ldk/storage/proto/vss_pb.ts` | NEW | Generated protobuf TypeScript types |
-| `src/ldk/storage/persist-cm.ts` | NEW | Consolidated ChannelManager persist function |
-| `src/ldk/traits/persist.ts` | MODIFY | Add VSS writes, indefinite retry, version cache |
-| `src/ldk/init.ts` | MODIFY | Create VssClient, populate version cache, migration |
-| `src/ldk/config.ts` | MODIFY | Add `vssUrl` config |
-| `src/wallet/keys.ts` | MODIFY | Add `deriveVssEncryptionKey`, `deriveVssStoreId` |
-| `src/wallet/context.tsx` | MODIFY | Derive and pass VSS keys |
-| `src/ldk/context.tsx` | MODIFY | Instantiate VssClient, wire to persist, degradation UI |
-| `src/ldk/ldk-context.ts` | MODIFY | Add VSS status to context type |
-| `src/ldk/sync/chain-sync.ts` | MODIFY | Use consolidated `persistChannelManager()` |
-| `src/pages/settings/restore.tsx` | NEW | Restore from backup UI |
-| `package.json` | MODIFY | Add dependencies |
-| `vite.config.ts` | MODIFY | If protobuf build step needed |
+| File                              | Action | Purpose                                                |
+| --------------------------------- | ------ | ------------------------------------------------------ |
+| `src/ldk/storage/vss-client.ts`   | NEW    | VSS HTTP client with protobuf, encryption, auth        |
+| `src/ldk/storage/vss-crypto.ts`   | NEW    | ChaCha20-Poly1305 encryption, HMAC key obfuscation     |
+| `src/ldk/storage/proto/vss.proto` | NEW    | VSS protobuf schema (copied from vss-server)           |
+| `src/ldk/storage/proto/vss_pb.ts` | NEW    | Generated protobuf TypeScript types                    |
+| `src/ldk/storage/persist-cm.ts`   | NEW    | Consolidated ChannelManager persist function           |
+| `src/ldk/traits/persist.ts`       | MODIFY | Add VSS writes, indefinite retry, version cache        |
+| `src/ldk/init.ts`                 | MODIFY | Create VssClient, populate version cache, migration    |
+| `src/ldk/config.ts`               | MODIFY | Add `vssUrl` config                                    |
+| `src/wallet/keys.ts`              | MODIFY | Add `deriveVssEncryptionKey`, `deriveVssStoreId`       |
+| `src/wallet/context.tsx`          | MODIFY | Derive and pass VSS keys                               |
+| `src/ldk/context.tsx`             | MODIFY | Instantiate VssClient, wire to persist, degradation UI |
+| `src/ldk/ldk-context.ts`          | MODIFY | Add VSS status to context type                         |
+| `src/ldk/sync/chain-sync.ts`      | MODIFY | Use consolidated `persistChannelManager()`             |
+| `src/pages/settings/restore.tsx`  | NEW    | Restore from backup UI                                 |
+| `package.json`                    | MODIFY | Add dependencies                                       |
+| `vite.config.ts`                  | MODIFY | If protobuf build step needed                          |
 
 ## System-Wide Impact
 
@@ -350,15 +370,15 @@ The Web Lock is held by a never-resolving promise. Recovery cannot re-init in-pl
 
 ### Error Propagation
 
-| Error | Source | Handler | User Impact |
-|-------|--------|---------|-------------|
-| VSS network timeout | `VssClient.putObject()` | Exponential backoff retry in `persistWithRetry()` | Banner after 10s, channel ops paused |
-| VSS `CONFLICT_EXCEPTION` | `VssClient.putObject()` | Re-fetch version, retry | None (transparent) |
-| VSS `AUTH_EXCEPTION` | `VssClient.putObject()` | Log CRITICAL, surface error | Wallet degraded, needs auth fix |
-| IDB write failure (after VSS success) | `idbPut()` | Log CRITICAL, LDK will re-persist on restart | Brief inconsistency, self-healing |
-| Protobuf decode error | Response parsing | Throw, caught by retry loop | Retry, likely persistent (server bug) |
-| Encryption failure | `vssEncrypt()` | Should never happen (deterministic), throw | Fatal error |
-| Recovery fetch failure | `VssClient.getObject()` | Show error in restore UI, user can retry | Recovery blocked until VSS available |
+| Error                                 | Source                  | Handler                                           | User Impact                           |
+| ------------------------------------- | ----------------------- | ------------------------------------------------- | ------------------------------------- |
+| VSS network timeout                   | `VssClient.putObject()` | Exponential backoff retry in `persistWithRetry()` | Banner after 10s, channel ops paused  |
+| VSS `CONFLICT_EXCEPTION`              | `VssClient.putObject()` | Re-fetch version, retry                           | None (transparent)                    |
+| VSS `AUTH_EXCEPTION`                  | `VssClient.putObject()` | Log CRITICAL, surface error                       | Wallet degraded, needs auth fix       |
+| IDB write failure (after VSS success) | `idbPut()`              | Log CRITICAL, LDK will re-persist on restart      | Brief inconsistency, self-healing     |
+| Protobuf decode error                 | Response parsing        | Throw, caught by retry loop                       | Retry, likely persistent (server bug) |
+| Encryption failure                    | `vssEncrypt()`          | Should never happen (deterministic), throw        | Fatal error                           |
+| Recovery fetch failure                | `VssClient.getObject()` | Show error in restore UI, user can retry          | Recovery blocked until VSS available  |
 
 ### State Lifecycle Risks
 
@@ -427,26 +447,26 @@ The Web Lock is held by a never-resolving promise. Recovery cannot re-init in-pl
 
 ### Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| VSS provider downtime during testing | Medium | Blocks development | Self-host fallback for dev |
-| Protobuf schema mismatch | Low | Writes fail silently | Pin proto version, test against server |
-| Encryption key derivation incompatible with vss-client | Low | Cannot migrate to native client later | Match vss-client's derivation if possible |
-| Large monitor blobs exceed VSS limits | Low (Phase 1) | Persist failures | Monitor blob size in tests, add chunking in Phase 2 |
-| Nonce collision (random 12-byte) | Negligible | Encryption break | 2^96 nonce space, not a practical concern |
+| Risk                                                   | Likelihood    | Impact                                | Mitigation                                          |
+| ------------------------------------------------------ | ------------- | ------------------------------------- | --------------------------------------------------- |
+| VSS provider downtime during testing                   | Medium        | Blocks development                    | Self-host fallback for dev                          |
+| Protobuf schema mismatch                               | Low           | Writes fail silently                  | Pin proto version, test against server              |
+| Encryption key derivation incompatible with vss-client | Low           | Cannot migrate to native client later | Match vss-client's derivation if possible           |
+| Large monitor blobs exceed VSS limits                  | Low (Phase 1) | Persist failures                      | Monitor blob size in tests, add chunking in Phase 2 |
+| Nonce collision (random 12-byte)                       | Negligible    | Encryption break                      | 2^96 nonce space, not a practical concern           |
 
 ## Crypto Contract
 
 Lock down these choices before implementation — they cannot change after wallets are deployed:
 
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| Encryption algorithm | ChaCha20-Poly1305 | Matches vss-client, fast in JS, AEAD |
-| Encryption key derivation | `m/535'/1'` from mnemonic | Deterministic, separate from LDK seed (`m/535'/0'`) |
-| Nonce strategy | Random 12 bytes, prepended to ciphertext | Stateless, no persistent counter needed |
-| Key obfuscation | HMAC-SHA256(encryptionKey, plaintextKey) → hex | Deterministic, non-reversible, fixed-length |
-| `store_id` derivation | `hex(SHA256(nodePublicKey))` | Deterministic from mnemonic, unique per wallet |
-| Protobuf wire format | `@bufbuild/protobuf` generated from `vss.proto` | Type-safe, tree-shakeable |
+| Parameter                 | Value                                           | Rationale                                           |
+| ------------------------- | ----------------------------------------------- | --------------------------------------------------- |
+| Encryption algorithm      | ChaCha20-Poly1305                               | Matches vss-client, fast in JS, AEAD                |
+| Encryption key derivation | `m/535'/1'` from mnemonic                       | Deterministic, separate from LDK seed (`m/535'/0'`) |
+| Nonce strategy            | Random 12 bytes, prepended to ciphertext        | Stateless, no persistent counter needed             |
+| Key obfuscation           | HMAC-SHA256(encryptionKey, plaintextKey) → hex  | Deterministic, non-reversible, fixed-length         |
+| `store_id` derivation     | `hex(SHA256(nodePublicKey))`                    | Deterministic from mnemonic, unique per wallet      |
+| Protobuf wire format      | `@bufbuild/protobuf` generated from `vss.proto` | Type-safe, tree-shakeable                           |
 
 ## Sources & References
 

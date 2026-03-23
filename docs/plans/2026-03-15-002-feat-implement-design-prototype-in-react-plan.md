@@ -1,5 +1,5 @@
 ---
-title: "feat: Implement design prototype UI in React"
+title: 'feat: Implement design prototype UI in React'
 type: feat
 status: completed
 date: 2026-03-15
@@ -100,7 +100,7 @@ Port prototype's CSS custom properties into Tailwind v4's `@theme` directive in 
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-display: 'Space Grotesk', system-ui, sans-serif;
 
-  --color-accent: #7C3AED;
+  --color-accent: #7c3aed;
   --color-dark: #0a0a0a;
   --color-dark-surface: #141414;
   --color-dark-elevated: #1a1a1a;
@@ -144,8 +144,13 @@ The prototype uses CSS `:has()` to hide the tab bar on sub-flows. In React, use 
 ```typescript
 // In Layout.tsx
 const location = useLocation()
-const isSubFlow = ['/send', '/receive', '/settings', '/settings/advanced', '/settings/advanced/peers']
-  .some(path => location.pathname.startsWith(path) && location.pathname !== '/')
+const isSubFlow = [
+  '/send',
+  '/receive',
+  '/settings',
+  '/settings/advanced',
+  '/settings/advanced/peers',
+].some((path) => location.pathname.startsWith(path) && location.pathname !== '/')
 ```
 
 Sub-flow routes (Send steps, Settings, Advanced, Peers) hide the tab bar. Home and Activity show it.
@@ -164,6 +169,7 @@ Ship with hardcoded mock transactions matching the prototype's 7 entries. Clear 
 ### Existing Test Impact
 
 All 3 test files (`Home.test.tsx`, `Send.test.tsx`, `Receive.test.tsx`) will break due to:
+
 - Changed heading text ("Browser Wallet" → removed, "Send Bitcoin" → "Send")
 - Changed amount format ("100000 sats" → "₿100,000")
 - Changed UI structure (form inputs → numpad, top nav → bottom tab bar)
@@ -192,12 +198,14 @@ Tests updated per-phase as components are rewritten.
 ## Acceptance Criteria
 
 ### Foundation
+
 - [x]Design tokens ported to `@theme` in `src/index.css`
 - [x]Space Grotesk self-hosted (no Google Fonts CDN)
 - [x]`formatBtc()` utility with tests, handles `bigint`, zero, and large values
 - [x]App shell: 430px max-width, dark side gutters, mobile-first viewport
 
 ### Layout & Navigation
+
 - [x]Bottom tab bar with 4 slots: Scan (placeholder), Wallet (active), Activity, Settings
 - [x]Tab bar hidden on sub-flow routes (Send, Receive, Settings, Advanced, Peers)
 - [x]Active tab indicator (dark pill on accent background)
@@ -205,6 +213,7 @@ Tests updated per-phase as components are rewritten.
 - [x]Back arrow header on all sub-flow screens
 
 ### Home Screen
+
 - [x]Accent (violet) background
 - [x]Unified balance in BIP 177 format (₿ + comma-separated, display font, hero size)
 - [x]Balance hide/show toggle with eye icon, persisted in localStorage
@@ -214,6 +223,7 @@ Tests updated per-phase as components are rewritten.
 - [x]Pending balance secondary indicator when untrusted pending > 0
 
 ### Send Flow
+
 - [x]Address screen: text input, BIP21 paste support, NEXT button
 - [x]Amount screen: custom numpad (1-9, 0, backspace), BIP 177 live display
 - [x]Amount screen: "available" balance shown, NEXT disabled when amount is 0
@@ -227,6 +237,7 @@ Tests updated per-phase as components are rewritten.
 - [x]Dust limit validation (294 sats minimum)
 
 ### Receive
+
 - [x]Full-screen dark overlay styling (route at `/receive`)
 - [x]QR code (existing `qrcode.react` library)
 - [x]Truncated address with Copy button
@@ -234,6 +245,7 @@ Tests updated per-phase as components are rewritten.
 - [x]Focus trap within overlay
 
 ### Activity
+
 - [x]Accent background, "Activity" heading
 - [x]Mock transaction list (7 entries matching prototype)
 - [x]Each row: direction icon, label, amount (BIP 177), relative time
@@ -242,6 +254,7 @@ Tests updated per-phase as components are rewritten.
 - [x]TODO comment for BDK integration
 
 ### Settings & Advanced
+
 - [x]Settings list: Wallet Backup, Recover Wallet, Advanced, How It Works, Get Help
 - [x]Each item: icon, label, detail text
 - [x]Non-functional items show "Coming soon" or no-op
@@ -249,6 +262,7 @@ Tests updated per-phase as components are rewritten.
 - [x]Peers screen: connected peer list, peer address input, connect button
 
 ### Tests
+
 - [x]`format-btc.test.ts`: BigInt inputs, zero, large numbers, comma formatting
 - [x]`Home.test.tsx`: updated for new UI (balance format, CTAs, no peer UI)
 - [x]`Send.test.tsx`: updated for numpad interaction, address screen, multi-step flow
@@ -331,15 +345,15 @@ Tests updated per-phase as components are rewritten.
 
 ## Dependencies & Risks
 
-| Risk | Mitigation |
-|------|-----------|
-| Space Grotesk self-hosting adds build complexity | Download woff2 files, add to `public/fonts/`, use `@font-face` in CSS |
-| Send flow is a fundamental rewrite (form → numpad) | Phase 4 is the largest phase — can be split into sub-PRs if needed |
-| All existing tests break | Update tests per-phase, not all at once |
-| Activity has no real data source | Ship with mock data, documented TODO |
-| Numpad digit limit (8) prevents sending >= 1 BTC | Acceptable for signet wallet; raise limit in follow-up if needed |
-| `:has()` CSS selector not used in React | Route-based tab bar visibility via `useLocation()` |
-| Muted text on accent bg may fail WCAG AA contrast | Verify contrast ratios during implementation, adjust `--on-accent-muted` opacity if needed |
+| Risk                                               | Mitigation                                                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Space Grotesk self-hosting adds build complexity   | Download woff2 files, add to `public/fonts/`, use `@font-face` in CSS                      |
+| Send flow is a fundamental rewrite (form → numpad) | Phase 4 is the largest phase — can be split into sub-PRs if needed                         |
+| All existing tests break                           | Update tests per-phase, not all at once                                                    |
+| Activity has no real data source                   | Ship with mock data, documented TODO                                                       |
+| Numpad digit limit (8) prevents sending >= 1 BTC   | Acceptable for signet wallet; raise limit in follow-up if needed                           |
+| `:has()` CSS selector not used in React            | Route-based tab bar visibility via `useLocation()`                                         |
+| Muted text on accent bg may fail WCAG AA contrast  | Verify contrast ratios during implementation, adjust `--on-accent-muted` opacity if needed |
 
 ## Sources & References
 

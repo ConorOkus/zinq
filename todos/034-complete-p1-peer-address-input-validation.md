@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "034"
+issue_id: '034'
 tags: [code-review, security, input-validation]
 dependencies: []
 ---
@@ -11,6 +11,7 @@ dependencies: []
 ## Problem Statement
 
 `parsePeerAddress` validates pubkey length (66 chars) and port range but does NOT validate:
+
 1. **Host**: slashes, query strings, fragments pass through to the WebSocket URL, enabling path traversal on the proxy (`wss://proxy/v1/../../admin/9735`)
 2. **Pubkey hex**: any 66-character string passes, including non-hex chars that produce silent NaN→0 corruption in `hexToBytes`
 
@@ -22,6 +23,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Add regex validation for both (Recommended)
+
 ```typescript
 if (!/^[0-9a-fA-F]{66}$/.test(pubkey)) {
   throw new Error('Invalid peer address: pubkey must be 66 hex characters')
@@ -30,6 +32,7 @@ if (/[/?#\\\s]/.test(host) || host.length === 0) {
   throw new Error('Invalid peer address: host contains invalid characters')
 }
 ```
+
 - **Effort:** Small
 
 ## Acceptance Criteria
@@ -40,6 +43,6 @@ if (/[/?#\\\s]/.test(host) || host.length === 0) {
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-12 | Created | From PR #4 code review |

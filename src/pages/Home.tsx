@@ -22,12 +22,8 @@ export function Home() {
           : 'Unknown error'
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center bg-accent px-6 pb-(--spacing-tab-bar)">
-        <p className="text-lg font-semibold text-on-accent">
-          Something went wrong
-        </p>
-        <p className="mt-2 text-sm text-[var(--color-on-accent-muted)]">
-          {errorMsg}
-        </p>
+        <p className="text-lg font-semibold text-on-accent">Something went wrong</p>
+        <p className="mt-2 text-sm text-[var(--color-on-accent-muted)]">{errorMsg}</p>
       </div>
     )
   }

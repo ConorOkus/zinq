@@ -45,7 +45,7 @@ function persistChangeset(wallet: Wallet): void {
   const staged = wallet.take_staged()
   if (staged && !staged.is_empty()) {
     void putChangeset(staged.to_json()).catch((err: unknown) =>
-      console.error('[Onchain] CRITICAL: failed to persist changeset:', err),
+      console.error('[Onchain] CRITICAL: failed to persist changeset:', err)
     )
   }
 }
@@ -57,7 +57,7 @@ function discardStagedChanges(wallet: Wallet): void {
 function mapSendError(err: unknown): Error {
   if (err instanceof InsufficientFunds) {
     return new Error(
-      `Insufficient funds. Available: ${err.available.to_sat().toString()} sats, needed: ${err.needed.to_sat().toString()} sats`,
+      `Insufficient funds. Available: ${err.available.to_sat().toString()} sats, needed: ${err.needed.to_sat().toString()} sats`
     )
   }
   if (err instanceof Error) {
@@ -138,7 +138,9 @@ export function OnchainProvider({
    * staged changes. Used by estimateFee and estimateMaxSendable.
    */
   const buildAndEstimate = useCallback(
-    async (buildPsbt: (feeRate: FeeRate) => Psbt): Promise<{ psbt: Psbt; fee: bigint; feeRate: bigint }> => {
+    async (
+      buildPsbt: (feeRate: FeeRate) => Psbt
+    ): Promise<{ psbt: Psbt; fee: bigint; feeRate: bigint }> => {
       const wallet = walletRef.current
       const esplora = esploraRef.current
       if (!wallet || !esplora) throw new Error('Wallet not ready')
@@ -152,7 +154,7 @@ export function OnchainProvider({
 
       return { psbt, fee, feeRate: feeRateSatVb }
     },
-    [],
+    []
   )
 
   /**
@@ -168,7 +170,7 @@ export function OnchainProvider({
 
       syncHandleRef.current?.pause()
       try {
-        const resolvedFeeRate = feeRateSatVb ?? await getFeeRate(esplora)
+        const resolvedFeeRate = feeRateSatVb ?? (await getFeeRate(esplora))
         const psbt = buildPsbt(new FeeRate(resolvedFeeRate))
 
         // Fee sanity check
@@ -198,7 +200,7 @@ export function OnchainProvider({
                   untrustedPending: b.untrusted_pending.to_sat(),
                 },
               }
-            : prev,
+            : prev
         )
 
         return txid
@@ -208,7 +210,7 @@ export function OnchainProvider({
         syncHandleRef.current?.resume()
       }
     },
-    [],
+    []
   )
 
   const estimateFee = useCallback(
@@ -223,12 +225,12 @@ export function OnchainProvider({
           .build_tx()
           .add_recipient(Recipient.from_address(addr, Amount.from_sat(amountSats)))
           .fee_rate(feeRate)
-          .finish(),
+          .finish()
       )
 
       return { fee, feeRate }
     },
-    [buildAndEstimate],
+    [buildAndEstimate]
   )
 
   const estimateMaxSendable = useCallback(
@@ -239,12 +241,7 @@ export function OnchainProvider({
       const addr = Address.from_string(address, ONCHAIN_CONFIG.network)
       const { fee, feeRate } = await buildAndEstimate((feeRate) =>
         // TxBuilder methods consume self — must chain calls
-        wallet
-          .build_tx()
-          .drain_wallet()
-          .drain_to(addr.script_pubkey)
-          .fee_rate(feeRate)
-          .finish(),
+        wallet.build_tx().drain_wallet().drain_to(addr.script_pubkey).fee_rate(feeRate).finish()
       )
 
       // Total inputs minus fee = amount sent
@@ -254,7 +251,7 @@ export function OnchainProvider({
 
       return { amount, fee, feeRate }
     },
-    [buildAndEstimate],
+    [buildAndEstimate]
   )
 
   const sendToAddress = useCallback(
@@ -271,10 +268,10 @@ export function OnchainProvider({
             .add_recipient(Recipient.from_address(addr, Amount.from_sat(amountSats)))
             .fee_rate(feeRate)
             .finish(),
-        feeRateSatVb,
+        feeRateSatVb
       )
     },
-    [buildSignBroadcast],
+    [buildSignBroadcast]
   )
 
   const sendMax = useCallback(
@@ -286,16 +283,11 @@ export function OnchainProvider({
       return buildSignBroadcast(
         (feeRate) =>
           // TxBuilder methods consume self — must chain calls
-          wallet
-            .build_tx()
-            .drain_wallet()
-            .drain_to(addr.script_pubkey)
-            .fee_rate(feeRate)
-            .finish(),
-        feeRateSatVb,
+          wallet.build_tx().drain_wallet().drain_to(addr.script_pubkey).fee_rate(feeRate).finish(),
+        feeRateSatVb
       )
     },
-    [buildSignBroadcast],
+    [buildSignBroadcast]
   )
 
   useEffect(() => {
@@ -311,25 +303,21 @@ export function OnchainProvider({
         // Register BDK wallet with LDK event handler for channel funding
         setBdkWalletRef.current?.(wallet)
 
-        const handle = startOnchainSyncLoop(
-          wallet,
-          esploraClient,
-          (balance: OnchainBalance) => {
-            if (cancelled) return
-            setState({
-              status: 'ready',
-              balance,
-              listTransactions,
-              generateAddress,
-              estimateFee,
-              estimateMaxSendable,
-              sendToAddress,
-              sendMax,
-              syncNow,
-              error: null,
-            })
-          },
-        )
+        const handle = startOnchainSyncLoop(wallet, esploraClient, (balance: OnchainBalance) => {
+          if (cancelled) return
+          setState({
+            status: 'ready',
+            balance,
+            listTransactions,
+            generateAddress,
+            estimateFee,
+            estimateMaxSendable,
+            sendToAddress,
+            sendMax,
+            syncNow,
+            error: null,
+          })
+        })
         syncHandleRef.current = handle
 
         // Register syncNow with LDK if it became ready before the sync loop started
@@ -355,7 +343,16 @@ export function OnchainProvider({
       walletRef.current = null
       esploraRef.current = null
     }
-  }, [bdkDescriptors, listTransactions, generateAddress, estimateFee, estimateMaxSendable, sendToAddress, sendMax, syncNow])
+  }, [
+    bdkDescriptors,
+    listTransactions,
+    generateAddress,
+    estimateFee,
+    estimateMaxSendable,
+    sendToAddress,
+    sendMax,
+    syncNow,
+  ])
 
   return <OnchainContext value={state}>{children}</OnchainContext>
 }

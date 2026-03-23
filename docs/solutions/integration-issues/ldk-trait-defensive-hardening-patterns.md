@@ -2,7 +2,8 @@
 title: LDK Trait Defensive Hardening Patterns
 category: integration-issues
 date: 2026-03-14
-tags: [ldk, wasm, fund-safety, retry, validation, indexeddb, persistence, broadcaster, fee-estimator]
+tags:
+  [ldk, wasm, fund-safety, retry, validation, indexeddb, persistence, broadcaster, fee-estimator]
 modules: [src/ldk/traits, src/ldk/init, src/ldk/sync, src/ldk/peers, src/ldk/storage]
 severity: HIGH
 ---
@@ -71,7 +72,7 @@ if (cmNeedsPersist || channelManager.get_and_clear_needs_persistence()) {
   try {
     await idbPut('ldk_channel_manager', 'primary', channelManager.write())
   } catch (err) {
-    cmNeedsPersist = true  // Retry next tick
+    cmNeedsPersist = true // Retry next tick
     throw err
   }
 }
@@ -85,8 +86,7 @@ if (cmNeedsPersist || channelManager.get_and_clear_needs_persistence()) {
 const MAX_FEE_SAT_KW = 500_000 // ~2,000 sat/vB
 
 for (const [blocks, feePerVbyte] of Object.entries(estimates)) {
-  if (typeof feePerVbyte !== 'number' || !Number.isFinite(feePerVbyte) || feePerVbyte <= 0)
-    continue  // Skip invalid entries
+  if (typeof feePerVbyte !== 'number' || !Number.isFinite(feePerVbyte) || feePerVbyte <= 0) continue // Skip invalid entries
   const satKw = Math.round(feePerVbyte * 250)
   rates.set(Number(blocks), Math.min(satKw, MAX_FEE_SAT_KW))
 }
@@ -116,7 +116,9 @@ export async function getSeed(): Promise<Uint8Array | undefined> {
 if (!/^[0-9a-f]{66}$/.test(pubkey))
   throw new Error('Invalid peer address: pubkey must be 66 lowercase hex characters')
 if (!/^[a-zA-Z0-9._-]+$/.test(host))
-  throw new Error('Invalid peer address: host must contain only alphanumeric, dot, hyphen, or underscore')
+  throw new Error(
+    'Invalid peer address: host must contain only alphanumeric, dot, hyphen, or underscore'
+  )
 ```
 
 **Key insight:** The host gets interpolated into a WebSocket URL. A blocklist (`/[/?#]/`) misses `@`, `\`, spaces, percent-encoded sequences. A DNS-safe allowlist is strictly better.

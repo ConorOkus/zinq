@@ -1,5 +1,5 @@
 ---
-title: "LDK WASM get_node_id() returns Uint8Array directly — .write() is not needed"
+title: 'LDK WASM get_node_id() returns Uint8Array directly — .write() is not needed'
 category: integration-issues
 severity: moderate
 date: 2026-03-15
@@ -11,10 +11,10 @@ tags:
   - peer-management
 module: src/pages/Peers, src/ldk/context
 symptoms:
-  - "TypeError: ch.get_counterparty().get_node_id().write is not a function"
-  - "Peers page crashes when channels exist"
-  - "forgetPeer safety guard silently fails — peers with channels can be forgotten"
-  - "Pubkey hex comparison never matches (framing bytes prepended by .write())"
+  - 'TypeError: ch.get_counterparty().get_node_id().write is not a function'
+  - 'Peers page crashes when channels exist'
+  - 'forgetPeer safety guard silently fails — peers with channels can be forgotten'
+  - 'Pubkey hex comparison never matches (framing bytes prepended by .write())'
 ---
 
 # LDK WASM: get_node_id() Returns Uint8Array Directly

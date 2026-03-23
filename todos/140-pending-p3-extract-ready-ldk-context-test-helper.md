@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p3
-issue_id: "140"
+issue_id: '140'
 tags: [code-review, testing]
 ---
 

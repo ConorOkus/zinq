@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "053"
+issue_id: '053'
 tags: [code-review, simplicity, duplication]
 dependencies: []
 ---
@@ -22,6 +22,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Import bytesToHex from ../ldk/utils in event handler (already done)
+
 - Replace `txBytesToHex(rawTxBytes)` with `bytesToHex(rawTxBytes)` on line 248
 - Remove `txBytesToHex` export from tx-bridge.ts and its tests
 - **Effort**: Small (~15 lines removed)
@@ -38,8 +39,8 @@ dependencies: []
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                              | Learnings                                          |
+| ---------- | ----------------------------------- | -------------------------------------------------- |
 | 2026-03-12 | Identified during PR #8 code review | Avoid duplicating utility functions across modules |
 
 ## Resources

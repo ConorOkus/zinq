@@ -24,9 +24,7 @@ export function Bolt12Offer() {
     return () => clearTimeout(id)
   }, [copied])
 
-  const truncated = bolt12Offer
-    ? `${bolt12Offer.slice(0, 12)}...${bolt12Offer.slice(-8)}`
-    : ''
+  const truncated = bolt12Offer ? `${bolt12Offer.slice(0, 12)}...${bolt12Offer.slice(-8)}` : ''
 
   return (
     <div className="flex min-h-dvh flex-col bg-dark text-on-dark">

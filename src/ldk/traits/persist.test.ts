@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createPersister, parseMonitorManifest, MONITOR_MANIFEST_KEY, type PersisterOptions } from './persist'
+import {
+  createPersister,
+  parseMonitorManifest,
+  MONITOR_MANIFEST_KEY,
+  type PersisterOptions,
+} from './persist'
 import { VssError, type VssClient } from '../storage/vss-client'
 import { ErrorCode } from '../storage/proto/vss_pb'
 
@@ -23,6 +28,8 @@ vi.mock('lightningdevkit', () => {
 })
 
 import { idbPut, idbDelete } from '../storage/idb'
+
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/unbound-method, @typescript-eslint/require-await, @typescript-eslint/no-unnecessary-type-assertion */
 
 function makeOutpoint(txid: string, index: number) {
   const txidBytes = new Uint8Array(txid.split('').map((c) => c.charCodeAt(0)))
@@ -171,7 +178,7 @@ describe('createPersister', () => {
       expect(vssClient.putObject).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(Uint8Array),
-        0, // version 0 for new channel
+        0 // version 0 for new channel
       )
       // Version cache should now have version 1
       const key = Array.from(versionCache.keys())[0]
@@ -185,7 +192,9 @@ describe('createPersister', () => {
 
       const { persist, versionCache } = createTestPersister({ vssClient })
       const outpoint = makeOutpoint('abcd', 0)
-      const monitorKey = `${Array.from(outpoint.get_txid()).map((b) => b.toString(16).padStart(2, '0')).join('')}:0`
+      const monitorKey = `${Array.from(outpoint.get_txid())
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')}:0`
 
       // First: persist_new_channel (also triggers writeManifest)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -194,11 +203,17 @@ describe('createPersister', () => {
 
       // Second: update_persisted_channel — should use cached version 1
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(persist as any).update_persisted_channel(outpoint, null, makeMonitor(new Uint8Array([2]), 2n))
+      ;(persist as any).update_persisted_channel(
+        outpoint,
+        null,
+        makeMonitor(new Uint8Array([2]), 2n)
+      )
       await vi.advanceTimersByTimeAsync(0)
 
       // Filter to monitor-only putObject calls (exclude _monitor_keys manifest)
-      const monitorCalls = vi.mocked(vssClient.putObject).mock.calls.filter(([k]) => k === monitorKey)
+      const monitorCalls = vi
+        .mocked(vssClient.putObject)
+        .mock.calls.filter(([k]) => k === monitorKey)
       expect(monitorCalls).toHaveLength(2)
       expect(monitorCalls[1]![2]).toBe(1) // second call uses cached version 1
 
@@ -305,15 +320,15 @@ describe('createPersister', () => {
         const conflictError = new VssError('conflict', ErrorCode.CONFLICT_EXCEPTION, 409)
 
         const vssClient = makeVssClient({
-          putObject: vi.fn()
-            .mockRejectedValueOnce(conflictError)
-            .mockResolvedValueOnce(2), // manifest write (not the conflict retry)
+          putObject: vi.fn().mockRejectedValueOnce(conflictError).mockResolvedValueOnce(2), // manifest write (not the conflict retry)
           getObject: vi.fn().mockResolvedValue({ value: data, version: 5 }),
         })
 
         const { persist, versionCache, mockChainMonitor } = createTestPersister({ vssClient })
         const outpoint = makeOutpoint('abcd', 0)
-        const monitorKey = `${Array.from(outpoint.get_txid()).map((b) => b.toString(16).padStart(2, '0')).join('')}:0`
+        const monitorKey = `${Array.from(outpoint.get_txid())
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')}:0`
         const monitor = makeMonitor(data, 1n)
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -344,7 +359,9 @@ describe('createPersister', () => {
 
         const { persist, versionCache, mockChainMonitor } = createTestPersister({ vssClient })
         const outpoint = makeOutpoint('abcd', 0)
-        const monitorKey = `${Array.from(outpoint.get_txid()).map((b) => b.toString(16).padStart(2, '0')).join('')}:0`
+        const monitorKey = `${Array.from(outpoint.get_txid())
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')}:0`
         const monitor = makeMonitor(localData, 1n)
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -352,7 +369,9 @@ describe('createPersister', () => {
         await vi.advanceTimersByTimeAsync(0)
 
         // Filter to monitor-only putObject calls (exclude _monitor_keys manifest)
-        const monitorCalls = vi.mocked(vssClient.putObject).mock.calls.filter(([k]) => k === monitorKey)
+        const monitorCalls = vi
+          .mocked(vssClient.putObject)
+          .mock.calls.filter(([k]) => k === monitorKey)
         expect(monitorCalls).toHaveLength(2)
         expect(monitorCalls[1]![2]).toBe(5) // retried with corrected version from server
 
@@ -372,7 +391,9 @@ describe('createPersister', () => {
 
         const { persist } = createTestPersister({ vssClient })
         const outpoint = makeOutpoint('abcd', 0)
-        const monitorKey = `${Array.from(outpoint.get_txid()).map((b) => b.toString(16).padStart(2, '0')).join('')}:0`
+        const monitorKey = `${Array.from(outpoint.get_txid())
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')}:0`
         const monitor = makeMonitor(new Uint8Array([1, 2, 3]), 1n)
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -383,13 +404,17 @@ describe('createPersister', () => {
 
         // After 5 conflict retries, should enter exponential backoff (500ms)
         // putObject for monitor: 1 initial + 5 conflict retries = 6 calls (plus 1 manifest write)
-        const monitorCalls = vi.mocked(vssClient.putObject).mock.calls.filter(([k]) => k === monitorKey)
+        const monitorCalls = vi
+          .mocked(vssClient.putObject)
+          .mock.calls.filter(([k]) => k === monitorKey)
         expect(monitorCalls).toHaveLength(6)
 
         // Advance through first backoff (500ms) — triggers another batch
         // (1 attempt + 5 conflict retries = 6 more monitor calls)
         await vi.advanceTimersByTimeAsync(500)
-        const monitorCallsAfter = vi.mocked(vssClient.putObject).mock.calls.filter(([k]) => k === monitorKey)
+        const monitorCallsAfter = vi
+          .mocked(vssClient.putObject)
+          .mock.calls.filter(([k]) => k === monitorKey)
         expect(monitorCallsAfter).toHaveLength(12)
       })
 
@@ -397,7 +422,8 @@ describe('createPersister', () => {
         const conflictError = new VssError('conflict', ErrorCode.CONFLICT_EXCEPTION, 409)
 
         const vssClient = makeVssClient({
-          putObject: vi.fn()
+          putObject: vi
+            .fn()
             .mockRejectedValueOnce(conflictError)
             .mockResolvedValueOnce(1) // succeeds after version reset
             .mockResolvedValueOnce(1), // manifest write
@@ -408,7 +434,9 @@ describe('createPersister', () => {
         const outpoint = makeOutpoint('abcd', 0)
 
         // Pre-seed with a stale version
-        const monitorKey = `${Array.from(outpoint.get_txid()).map((b) => b.toString(16).padStart(2, '0')).join('')}:0`
+        const monitorKey = `${Array.from(outpoint.get_txid())
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')}:0`
         versionCache.set(monitorKey, 5)
 
         const monitor = makeMonitor(new Uint8Array([1, 2, 3]), 1n)
@@ -418,7 +446,9 @@ describe('createPersister', () => {
         await vi.advanceTimersByTimeAsync(0)
 
         // Filter to monitor-only putObject calls
-        const monitorCalls = vi.mocked(vssClient.putObject).mock.calls.filter(([k]) => k === monitorKey)
+        const monitorCalls = vi
+          .mocked(vssClient.putObject)
+          .mock.calls.filter(([k]) => k === monitorKey)
         expect(monitorCalls).toHaveLength(2)
         expect(monitorCalls[1]![2]).toBe(0) // reset to 0 because key not found on server
         expect(mockChainMonitor.channel_monitor_updated).toHaveBeenCalled()
@@ -441,7 +471,9 @@ describe('createPersister', () => {
         const outpoint = makeOutpoint('abcd', 0)
 
         // Pre-populate version cache
-        const key = `${Array.from(outpoint.get_txid()).map((b) => b.toString(16).padStart(2, '0')).join('')}:0`
+        const key = `${Array.from(outpoint.get_txid())
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')}:0`
         versionCache.set(key, 3)
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -562,13 +594,19 @@ describe('parseMonitorManifest', () => {
   })
 
   it('throws on invalid key format', () => {
-    expect(() => parseMonitorManifest(JSON.stringify(['not-a-valid-key']))).toThrow('Invalid monitor key')
+    expect(() => parseMonitorManifest(JSON.stringify(['not-a-valid-key']))).toThrow(
+      'Invalid monitor key'
+    )
     // Too short hex
     expect(() => parseMonitorManifest(JSON.stringify(['abcd:0']))).toThrow('Invalid monitor key')
     // Uppercase hex
-    expect(() => parseMonitorManifest(JSON.stringify(['A'.repeat(64) + ':0']))).toThrow('Invalid monitor key')
+    expect(() => parseMonitorManifest(JSON.stringify(['A'.repeat(64) + ':0']))).toThrow(
+      'Invalid monitor key'
+    )
     // Missing index
-    expect(() => parseMonitorManifest(JSON.stringify(['a'.repeat(64)]))).toThrow('Invalid monitor key')
+    expect(() => parseMonitorManifest(JSON.stringify(['a'.repeat(64)]))).toThrow(
+      'Invalid monitor key'
+    )
   })
 
   it('throws on non-string entries', () => {

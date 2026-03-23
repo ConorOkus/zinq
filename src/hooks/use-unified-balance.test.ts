@@ -1,11 +1,19 @@
 import { renderHook } from '@testing-library/react'
 import { createElement, type ReactNode } from 'react'
 import { describe, it, expect } from 'vitest'
-import { OnchainContext, defaultOnchainContextValue, type OnchainContextValue } from '../onchain/onchain-context'
+import {
+  OnchainContext,
+  defaultOnchainContextValue,
+  type OnchainContextValue,
+} from '../onchain/onchain-context'
 import { LdkContext, defaultLdkContextValue, type LdkContextValue } from '../ldk/ldk-context'
 import { useUnifiedBalance } from './use-unified-balance'
 
-function readyOnchain(overrides?: Partial<Extract<OnchainContextValue, { status: 'ready' }>>): OnchainContextValue {
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/require-await, react/display-name */
+
+function readyOnchain(
+  overrides?: Partial<Extract<OnchainContextValue, { status: 'ready' }>>
+): OnchainContextValue {
   return {
     status: 'ready',
     balance: { confirmed: 100_000n, trustedPending: 5_000n, untrustedPending: 500n },
@@ -21,7 +29,9 @@ function readyOnchain(overrides?: Partial<Extract<OnchainContextValue, { status:
   }
 }
 
-function readyLdk(overrides?: Partial<Extract<LdkContextValue, { status: 'ready' }>>): LdkContextValue {
+function readyLdk(
+  overrides?: Partial<Extract<LdkContextValue, { status: 'ready' }>>
+): LdkContextValue {
   return {
     status: 'ready',
     node: {} as never,
@@ -58,7 +68,7 @@ function wrapper(ldkValue: LdkContextValue, onchainValue: OnchainContextValue) {
     createElement(
       LdkContext,
       { value: ldkValue },
-      createElement(OnchainContext, { value: onchainValue }, children),
+      createElement(OnchainContext, { value: onchainValue }, children)
     )
 }
 
@@ -76,10 +86,7 @@ describe('useUnifiedBalance', () => {
 
   it('returns zero lightning when no channels', () => {
     const { result } = renderHook(() => useUnifiedBalance(), {
-      wrapper: wrapper(
-        readyLdk({ lightningBalanceSats: 0n }),
-        readyOnchain(),
-      ),
+      wrapper: wrapper(readyLdk({ lightningBalanceSats: 0n }), readyOnchain()),
     })
     expect(result.current.lightning).toBe(0n)
     expect(result.current.total).toBe(105_500n)
@@ -89,7 +96,7 @@ describe('useUnifiedBalance', () => {
     const { result } = renderHook(() => useUnifiedBalance(), {
       wrapper: wrapper(
         readyLdk(),
-        readyOnchain({ balance: { confirmed: 0n, trustedPending: 0n, untrustedPending: 0n } }),
+        readyOnchain({ balance: { confirmed: 0n, trustedPending: 0n, untrustedPending: 0n } })
       ),
     })
     expect(result.current.onchain).toBe(0n)
@@ -100,7 +107,7 @@ describe('useUnifiedBalance', () => {
     const { result } = renderHook(() => useUnifiedBalance(), {
       wrapper: wrapper(
         readyLdk({ lightningBalanceSats: 0n }),
-        readyOnchain({ balance: { confirmed: 0n, trustedPending: 0n, untrustedPending: 0n } }),
+        readyOnchain({ balance: { confirmed: 0n, trustedPending: 0n, untrustedPending: 0n } })
       ),
     })
     expect(result.current.total).toBe(0n)
@@ -139,7 +146,7 @@ describe('useUnifiedBalance', () => {
     const { result } = renderHook(() => useUnifiedBalance(), {
       wrapper: wrapper(
         readyLdk({ lightningBalanceSats: 0n }),
-        readyOnchain({ balance: { confirmed: 0n, trustedPending: 0n, untrustedPending: 50_000n } }),
+        readyOnchain({ balance: { confirmed: 0n, trustedPending: 0n, untrustedPending: 50_000n } })
       ),
     })
     expect(result.current.onchain).toBe(50_000n)

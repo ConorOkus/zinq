@@ -1,5 +1,5 @@
 ---
-title: "feat: Support Lightning Address and BIP 353 Address Resolution"
+title: 'feat: Support Lightning Address and BIP 353 Address Resolution'
 type: feat
 status: completed
 date: 2026-03-18
@@ -74,18 +74,19 @@ Route to existing amount/review flow based on resolved type
 ```typescript
 // resolve-bip353.ts
 export interface Bip353Result {
-  uri: string          // Raw BIP 21 URI from TXT record
-  parsed: ParsedPaymentInput  // Parsed via existing parseBip321
+  uri: string // Raw BIP 21 URI from TXT record
+  parsed: ParsedPaymentInput // Parsed via existing parseBip321
 }
 
 export async function resolveBip353(
   user: string,
   domain: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<Bip353Result | null>
 ```
 
 Implementation:
+
 - Construct DNS name: `${user}.user._bitcoin-payment.${domain}`
 - Fetch via Cloudflare DoH: `GET https://cloudflare-dns.com/dns-query?name=...&type=TXT` with `Accept: application/dns-json`
 - Validate response: check `AD: true` (DNSSEC authenticated), check `Status: 0` (NOERROR)
@@ -117,14 +118,14 @@ export interface LnurlPayMetadata {
 export async function resolveLnurlPay(
   user: string,
   domain: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<LnurlPayMetadata | null>
 
 export async function fetchLnurlInvoice(
   callback: string,
   amountMsat: bigint,
-  signal?: AbortSignal,
-): Promise<string>  // Returns BOLT 11 invoice string
+  signal?: AbortSignal
+): Promise<string> // Returns BOLT 11 invoice string
 ```
 
 **CORS proxy strategy:**
@@ -137,6 +138,7 @@ LNURL endpoints on arbitrary domains typically don't set CORS headers. Two optio
 For MVP, go with Option A. BIP 353 is the primary path and has no CORS issues.
 
 **Implementation details:**
+
 - Fetch `https://${domain}/.well-known/lnurlp/${user}`
 - Validate response: `tag === 'payRequest'`, `callback` is HTTPS URL, `minSendable`/`maxSendable` are valid
 - `fetchLnurlInvoice`: append `?amount=${amountMsat}` to callback URL, validate returned `pr` field is a valid BOLT 11 invoice, verify invoice amount matches request
@@ -165,6 +167,7 @@ export type ParsedPaymentInput =
 **Updated `processRecipientInput` flow:**
 
 When `classifyPaymentInput` returns `{ type: 'bip353' }`:
+
 1. Transition to `{ step: 'resolving', raw }` — shows spinner with "Resolving address..."
 2. Call `resolveBip353(user, domain, signal)` with AbortController
 3. If BIP 353 succeeds → re-enter flow with the resolved `ParsedPaymentInput` (bolt12, bolt11, or onchain)
@@ -191,6 +194,7 @@ The numpad validates against these constraints on "Next". Display the range belo
 **LNURL invoice fetch between amount and review:**
 
 After user confirms amount on numpad for LNURL type:
+
 1. Show resolving state briefly: "Requesting invoice..."
 2. Call `fetchLnurlInvoice(callback, amountMsat)`
 3. Parse returned BOLT 11 invoice via existing `parseBolt11()`
@@ -214,6 +218,7 @@ Add optional `recipientLabel` to the `ln-review` and `oc-review` steps. When set
 ### Phase 4: Future — bLIP 32 Native Resolution
 
 When bLIP 32 resolver nodes become available on signet:
+
 - Add resolver node pubkeys to `SIGNET_CONFIG`
 - Re-enable `sendBip353Payment()` with populated `dns_resolvers` array
 - Add as a third resolution tier: bLIP 32 (best privacy) > DoH (good) > LNURL (fallback)
@@ -283,7 +288,7 @@ interface DohResponse {
 export async function resolveBip353(
   user: string,
   domain: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<ParsedPaymentInput | null> {
   const name = `${user}.user._bitcoin-payment.${domain}`
   const url = `${DOH_URL}?name=${encodeURIComponent(name)}&type=TXT`
@@ -332,7 +337,7 @@ export interface LnurlPayMetadata {
 export async function resolveLnurlPay(
   user: string,
   domain: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<LnurlPayMetadata | null> {
   const url = `https://${domain}/.well-known/lnurlp/${user}`
 
@@ -346,8 +351,7 @@ export async function resolveLnurlPay(
   if (!data.callback || !data.minSendable || !data.maxSendable) return null
 
   const metadata = JSON.parse(data.metadata ?? '[]') as string[][]
-  const description =
-    metadata.find(([mime]) => mime === 'text/plain')?.[1] ?? `${user}@${domain}`
+  const description = metadata.find(([mime]) => mime === 'text/plain')?.[1] ?? `${user}@${domain}`
 
   return {
     domain,
@@ -362,7 +366,7 @@ export async function resolveLnurlPay(
 export async function fetchLnurlInvoice(
   callback: string,
   amountMsat: bigint,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<string> {
   const separator = callback.includes('?') ? '&' : '?'
   const url = `${callback}${separator}amount=${amountMsat}`
@@ -381,9 +385,7 @@ export async function fetchLnurlInvoice(
 ### Updated `src/ldk/payment-input.ts` — `parseBip353` function
 
 ```typescript
-import {
-  Result_HumanReadableNameNoneZ_OK,
-} from 'lightningdevkit'
+import { Result_HumanReadableNameNoneZ_OK } from 'lightningdevkit'
 
 function parseBip353(raw: string): ParsedPaymentInput {
   const cleaned = raw.replace(/^\u20bf/, '')
@@ -413,14 +415,14 @@ function parseBip353(raw: string): ParsedPaymentInput {
 
 ## Dependencies & Risks
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| DoH provider (Cloudflare) unavailable | BIP 353 resolution fails | Fall back to LNURL. Could add Google DoH as secondary. |
-| CORS blocks LNURL requests | LNURL resolution fails for most providers | BIP 353 is the primary path. Clear error message. Future: CORS proxy worker. |
-| DNSSEC not enabled on domain | DoH returns `AD: false`, resolution rejected | Fall through to LNURL. Most BIP 353-aware domains will have DNSSEC. |
-| DoH response format changes | Parsing breaks | Pin to `application/dns-json` format which is RFC 8484 standard. |
-| LNURL server returns wrong invoice amount | User overpays | Verify invoice amount matches requested amount before paying. |
-| No BIP 353 records exist on signet test domains | Can't test BIP 353 flow | Create test records via [twelve.cash](https://twelve.cash) or self-hosted DNS. |
+| Risk                                            | Impact                                       | Mitigation                                                                     |
+| ----------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------ |
+| DoH provider (Cloudflare) unavailable           | BIP 353 resolution fails                     | Fall back to LNURL. Could add Google DoH as secondary.                         |
+| CORS blocks LNURL requests                      | LNURL resolution fails for most providers    | BIP 353 is the primary path. Clear error message. Future: CORS proxy worker.   |
+| DNSSEC not enabled on domain                    | DoH returns `AD: false`, resolution rejected | Fall through to LNURL. Most BIP 353-aware domains will have DNSSEC.            |
+| DoH response format changes                     | Parsing breaks                               | Pin to `application/dns-json` format which is RFC 8484 standard.               |
+| LNURL server returns wrong invoice amount       | User overpays                                | Verify invoice amount matches requested amount before paying.                  |
+| No BIP 353 records exist on signet test domains | Can't test BIP 353 flow                      | Create test records via [twelve.cash](https://twelve.cash) or self-hosted DNS. |
 
 ## Sources & References
 

@@ -7,15 +7,11 @@ import {
   type OnchainContextValue,
   defaultOnchainContextValue,
 } from '../onchain/onchain-context'
-import {
-  LdkContext,
-  defaultLdkContextValue,
-  type LdkContextValue,
-} from '../ldk/ldk-context'
+import { LdkContext, defaultLdkContextValue, type LdkContextValue } from '../ldk/ldk-context'
 import { Receive } from './Receive'
 
 function readyContext(
-  overrides?: Partial<Extract<OnchainContextValue, { status: 'ready' }>>,
+  overrides?: Partial<Extract<OnchainContextValue, { status: 'ready' }>>
 ): OnchainContextValue {
   return {
     status: 'ready',
@@ -33,7 +29,7 @@ function readyContext(
 }
 
 function readyLdkContext(
-  overrides?: Partial<Extract<LdkContextValue, { status: 'ready' }>>,
+  overrides?: Partial<Extract<LdkContextValue, { status: 'ready' }>>
 ): LdkContextValue {
   return {
     ...defaultLdkContextValue,
@@ -75,7 +71,7 @@ function renderReceive(contextValue?: OnchainContextValue, ldkValue?: LdkContext
           <Receive />
         </OnchainContext>
       </LdkContext>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
 }
 
@@ -92,9 +88,7 @@ describe('Receive', () => {
 
   it('shows QR code when ready', () => {
     renderReceive()
-    expect(
-      screen.getByLabelText(/qr code for bitcoin address/i),
-    ).toBeInTheDocument()
+    expect(screen.getByLabelText(/qr code for bitcoin address/i)).toBeInTheDocument()
   })
 
   it('QR code uses uppercase BIP21 URI format', () => {
@@ -109,7 +103,7 @@ describe('Receive', () => {
         generateAddress: () => {
           throw new Error('BDK not initialized')
         },
-      }),
+      })
     )
     expect(screen.getByText(/BDK not initialized/)).toBeInTheDocument()
   })

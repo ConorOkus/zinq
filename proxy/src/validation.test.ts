@@ -72,9 +72,7 @@ describe('validateOrigin', () => {
   })
 
   it('does not allow substring match', () => {
-    expect(
-      validateOrigin('http://localhost:5173.evil.com', allowed),
-    ).toBe(false)
+    expect(validateOrigin('http://localhost:5173.evil.com', allowed)).toBe(false)
   })
 
   it('rejects when allowlist is empty', () => {
@@ -172,15 +170,11 @@ describe('validateTarget', () => {
   })
 
   it('blocks .internal domains', () => {
-    expect(
-      validateTarget('service.internal', 9735, allowedPorts),
-    ).not.toBeNull()
+    expect(validateTarget('service.internal', 9735, allowedPorts)).not.toBeNull()
   })
 
   it('blocks .localhost domains', () => {
-    expect(
-      validateTarget('app.localhost', 9735, allowedPorts),
-    ).not.toBeNull()
+    expect(validateTarget('app.localhost', 9735, allowedPorts)).not.toBeNull()
   })
 
   // IPv6 loopback and private literals
@@ -193,9 +187,7 @@ describe('validateTarget', () => {
   })
 
   it('blocks ::ffff: mapped addresses', () => {
-    expect(
-      validateTarget('::ffff:127.0.0.1', 9735, allowedPorts),
-    ).not.toBeNull()
+    expect(validateTarget('::ffff:127.0.0.1', 9735, allowedPorts)).not.toBeNull()
   })
 
   it('blocks fc00:: (IPv6 ULA)', () => {

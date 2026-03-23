@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const mockClaimFunds = vi.fn()
 const mockProcessPendingHtlcForwards = vi.fn()
-const mockFundingTransactionGenerated = vi.fn((): { is_ok: () => boolean } => ({ is_ok: () => true }))
+const mockFundingTransactionGenerated = vi.fn((): { is_ok: () => boolean } => ({
+  is_ok: () => true,
+}))
 const mockListChannels = vi.fn((): unknown[] => [])
 const mockOnChannelClosed = vi.fn()
 
@@ -12,8 +14,7 @@ vi.mock('lightningdevkit', () => {
     payment_hash = new Uint8Array([1, 2, 3])
     amount_msat = BigInt(100000)
     purpose = {
-      preimage: () =>
-        new Option_ThirtyTwoBytesZ_Some(new Uint8Array([4, 5, 6])),
+      preimage: () => new Option_ThirtyTwoBytesZ_Some(new Uint8Array([4, 5, 6])),
     }
   }
   class Event_PaymentClaimed extends MockEvent {
@@ -126,11 +127,9 @@ vi.mock('lightningdevkit', () => {
 
   return {
     EventHandler: {
-      new_impl: vi.fn(
-        (impl: { handle_event: (event: unknown) => unknown }) => ({
-          _impl: impl,
-        }),
-      ),
+      new_impl: vi.fn((impl: { handle_event: (event: unknown) => unknown }) => ({
+        _impl: impl,
+      })),
     },
     Event_PaymentClaimable,
     Event_PaymentClaimed,
@@ -183,7 +182,7 @@ vi.mock('../storage/idb', () => ({
   idbGetAll: vi.fn(() => Promise.resolve(new Map())),
 }))
 
-const mockBroadcastWithRetry = vi.fn((_url: string, _txHex: string) => Promise.resolve('txid123'))
+const mockBroadcastWithRetry = vi.fn((_url: string, _txHex: string) => Promise.resolve('txid123')) // eslint-disable-line @typescript-eslint/no-unused-vars
 vi.mock('./broadcaster', () => ({
   broadcastWithRetry: (url: string, txHex: string) => mockBroadcastWithRetry(url, txHex),
 }))
@@ -232,12 +231,15 @@ vi.mock('../utils', () => ({
   bytesToHex: vi.fn((bytes: Uint8Array) =>
     Array.from(bytes)
       .map((b) => b.toString(16).padStart(2, '0'))
-      .join(''),
+      .join('')
   ),
 }))
 
 import { createEventHandler } from './event-handler'
 import { idbPut } from '../storage/idb'
+
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-argument */
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ldk: any = await import('lightningdevkit')
 const {
@@ -295,9 +297,8 @@ describe('createEventHandler', () => {
     const km = createMockKeysManager()
     const result = createEventHandler(cm, km, undefined, mockOnChannelClosed)
     cleanup = result.cleanup
-    handleEvent = (
-      result.handler as unknown as { _impl: { handle_event: HandleEventFn } }
-    )._impl.handle_event
+    handleEvent = (result.handler as unknown as { _impl: { handle_event: HandleEventFn } })._impl
+      .handle_event
   })
 
   afterEach(() => {
@@ -321,7 +322,7 @@ describe('createEventHandler', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('no preimage'),
       expect.any(String),
-      expect.stringContaining('cannot be claimed'),
+      expect.stringContaining('cannot be claimed')
     )
   })
 
@@ -331,16 +332,13 @@ describe('createEventHandler', () => {
       expect.stringContaining('PaymentClaimed'),
       expect.any(String),
       expect.any(String),
-      expect.any(String),
+      expect.any(String)
     )
   })
 
   it('logs PaymentSent', () => {
     handleEvent(new Event_PaymentSent())
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('PaymentSent'),
-      expect.any(String),
-    )
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('PaymentSent'), expect.any(String))
   })
 
   it('warns on PaymentFailed', () => {
@@ -348,7 +346,7 @@ describe('createEventHandler', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('PaymentFailed'),
       expect.any(String),
-      expect.any(String),
+      expect.any(String)
     )
   })
 
@@ -380,11 +378,9 @@ describe('createEventHandler', () => {
 
   it('persists SpendableOutputs to IDB', () => {
     handleEvent(new Event_SpendableOutputs())
-    expect(idbPut).toHaveBeenCalledWith(
-      'ldk_spendable_outputs',
-      expect.any(String),
-      [expect.any(Uint8Array)],
-    )
+    expect(idbPut).toHaveBeenCalledWith('ldk_spendable_outputs', expect.any(String), [
+      expect.any(Uint8Array),
+    ])
   })
 
   it('logs "persisting" for SpendableOutputs', () => {
@@ -392,7 +388,7 @@ describe('createEventHandler', () => {
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('persisting'),
       expect.any(Number),
-      expect.any(String),
+      expect.any(String)
     )
   })
 
@@ -400,16 +396,13 @@ describe('createEventHandler', () => {
     handleEvent(new Event_ChannelPending())
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('ChannelPending'),
-      expect.any(String),
+      expect.any(String)
     )
   })
 
   it('logs ChannelReady', () => {
     handleEvent(new Event_ChannelReady())
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('ChannelReady'),
-      expect.any(String),
-    )
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('ChannelReady'), expect.any(String))
   })
 
   it('logs ChannelClosed with reason', () => {
@@ -418,7 +411,7 @@ describe('createEventHandler', () => {
       expect.stringContaining('ChannelClosed'),
       expect.any(String),
       'reason:',
-      'Cooperative close',
+      'Cooperative close'
     )
   })
 
@@ -439,10 +432,15 @@ describe('createEventHandler', () => {
   it('calls onSyncNeeded when channel closes', () => {
     const mockSyncNeeded = vi.fn()
     const cm = createMockChannelManager()
-    const result = createEventHandler(cm, createMockKeysManager(), undefined, undefined, mockSyncNeeded)
-    const handler = (
-      result.handler as unknown as { _impl: { handle_event: HandleEventFn } }
-    )._impl.handle_event
+    const result = createEventHandler(
+      cm,
+      createMockKeysManager(),
+      undefined,
+      undefined,
+      mockSyncNeeded
+    )
+    const handler = (result.handler as unknown as { _impl: { handle_event: HandleEventFn } })._impl
+      .handle_event
 
     handler(new Event_ChannelClosed())
     expect(mockSyncNeeded).toHaveBeenCalledOnce()
@@ -454,15 +452,13 @@ describe('createEventHandler', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('ConnectionNeeded'),
       expect.any(String),
-      expect.stringContaining('not yet implemented'),
+      expect.stringContaining('not yet implemented')
     )
   })
 
   it('warns when FundingGenerationReady fires without BDK wallet', () => {
     handleEvent(new Event_FundingGenerationReady())
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('BDK wallet not available'),
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('BDK wallet not available'))
     expect(mockFundingTransactionGenerated).not.toHaveBeenCalled()
   })
 
@@ -470,9 +466,8 @@ describe('createEventHandler', () => {
     const cm = createMockChannelManager()
     const result = createEventHandler(cm, createMockKeysManager())
     result.setBdkWallet(mockBdkWallet as never)
-    const handler = (
-      result.handler as unknown as { _impl: { handle_event: HandleEventFn } }
-    )._impl.handle_event
+    const handler = (result.handler as unknown as { _impl: { handle_event: HandleEventFn } })._impl
+      .handle_event
 
     handler(new Event_FundingGenerationReady())
 
@@ -481,7 +476,7 @@ describe('createEventHandler', () => {
     expect(mockFundingTransactionGenerated).toHaveBeenCalledWith(
       expect.anything(), // temporary_channel_id
       expect.any(Uint8Array), // counterparty_node_id
-      mockExtractedTxBytes, // raw tx bytes from psbt.extract_tx().to_bytes()
+      mockExtractedTxBytes // raw tx bytes from psbt.extract_tx().to_bytes()
     )
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('funding tx registered'),
@@ -489,7 +484,7 @@ describe('createEventHandler', () => {
       expect.any(String),
       expect.any(String),
       expect.any(String),
-      expect.any(String),
+      expect.any(String)
     )
     result.cleanup()
   })
@@ -499,15 +494,14 @@ describe('createEventHandler', () => {
     const cm = createMockChannelManager()
     const result = createEventHandler(cm, createMockKeysManager())
     result.setBdkWallet(mockBdkWallet as never)
-    const handler = (
-      result.handler as unknown as { _impl: { handle_event: HandleEventFn } }
-    )._impl.handle_event
+    const handler = (result.handler as unknown as { _impl: { handle_event: HandleEventFn } })._impl
+      .handle_event
 
     handler(new Event_FundingGenerationReady())
 
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining('funding_transaction_generated failed'),
-      expect.anything(),
+      expect.anything()
     )
     result.cleanup()
   })
@@ -518,18 +512,14 @@ describe('createEventHandler', () => {
 
     const cm = createMockChannelManager()
     const result = createEventHandler(cm, createMockKeysManager())
-    const handler = (
-      result.handler as unknown as { _impl: { handle_event: HandleEventFn } }
-    )._impl.handle_event
+    const handler = (result.handler as unknown as { _impl: { handle_event: HandleEventFn } })._impl
+      .handle_event
 
     handler(new Event_FundingTxBroadcastSafe())
 
     // Allow the async IDB read + broadcast to resolve
     await vi.waitFor(() => {
-      expect(mockBroadcastWithRetry).toHaveBeenCalledWith(
-        'https://test.esplora/api',
-        'dead',
-      )
+      expect(mockBroadcastWithRetry).toHaveBeenCalledWith('https://test.esplora/api', 'dead')
     })
     result.cleanup()
   })
@@ -540,16 +530,14 @@ describe('createEventHandler', () => {
     await vi.waitFor(() => {
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('no persisted tx'),
-        expect.any(String),
+        expect.any(String)
       )
     })
   })
 
   it('warns on BumpTransaction', () => {
     handleEvent(new Event_BumpTransaction())
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('BumpTransaction'),
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('BumpTransaction'))
   })
 
   it('silently handles PaymentPathSuccessful', () => {
@@ -564,16 +552,14 @@ describe('createEventHandler', () => {
 
   it('logs OpenChannelRequest with timeout note', () => {
     handleEvent(new Event_OpenChannelRequest())
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('will timeout'),
-    )
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('will timeout'))
   })
 
   it('logs DiscardFunding', () => {
     handleEvent(new Event_DiscardFunding())
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('DiscardFunding'),
-      expect.any(String),
+      expect.any(String)
     )
   })
 
@@ -581,7 +567,7 @@ describe('createEventHandler', () => {
     expect(() => handleEvent({})).not.toThrow()
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('Unhandled event'),
-      expect.any(String),
+      expect.any(String)
     )
   })
 
@@ -593,7 +579,7 @@ describe('createEventHandler', () => {
     expect(() => handleEvent(badEvent)).not.toThrow()
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining('Unhandled error'),
-      expect.anything(),
+      expect.anything()
     )
   })
 })

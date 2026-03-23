@@ -1,5 +1,5 @@
 ---
-title: "feat: Implement Open Channel UI Flow"
+title: 'feat: Implement Open Channel UI Flow'
 type: feat
 status: completed
 date: 2026-03-15
@@ -49,7 +49,13 @@ A new `OpenChannel` page following the Send page's discriminated union state mac
 type OpenChannelStep =
   | { step: 'select-peer' }
   | { step: 'amount'; peer: ConnectedPeer }
-  | { step: 'reviewing'; peer: ConnectedPeer; amountSats: bigint; estimatedFeeSats: bigint; feeRate: bigint }
+  | {
+      step: 'reviewing'
+      peer: ConnectedPeer
+      amountSats: bigint
+      estimatedFeeSats: bigint
+      feeRate: bigint
+    }
   | { step: 'opening' }
   | { step: 'success' }
   | { step: 'error'; message: string }
@@ -67,6 +73,7 @@ Where `ConnectedPeer` is `{ pubkey: string; host?: string; port?: number }`.
 ### Error Handling
 
 `create_channel()` returns an LDK `Result` type. Known failure modes:
+
 - Peer not connected → "Peer is no longer connected. Please reconnect and try again."
 - Amount below minimum → "Channel amount must be at least 20,000 sats."
 - Generic failure → Log full error, show sanitized message to user
@@ -105,15 +112,19 @@ Where `ConnectedPeer` is `{ pubkey: string; host?: string; port?: number }`.
 ### Phase 1: Context Layer
 
 **Files:**
+
 - `src/ldk/ldk-context.ts` — Add `createChannel` to the `ready` variant of `LdkContextValue`
 - `src/ldk/context.tsx` — Implement `createChannel` as a `useCallback`, add to state
 
 **`createChannel` signature:**
+
 ```typescript
-createChannel: (counterpartyPubkey: Uint8Array, channelValueSats: bigint) => Result_ChannelIdAPIError
+createChannel: (counterpartyPubkey: Uint8Array, channelValueSats: bigint) =>
+  Result_ChannelIdAPIError
 ```
 
 **Implementation:**
+
 - Generate `userChannelId` from 16 random bytes → `BigInt`
 - Call `channelManager.create_channel(counterpartyPubkey, channelValueSats, 0n, userChannelId, null)`
 - Return the Result for the page to handle
@@ -121,11 +132,13 @@ createChannel: (counterpartyPubkey: Uint8Array, channelValueSats: bigint) => Res
 ### Phase 2: Page and Route
 
 **Files:**
+
 - `src/pages/OpenChannel.tsx` — New page component (primary work)
 - `src/routes/router.tsx` — Add route `settings/advanced/open-channel`
 - `src/pages/Advanced.tsx` — Change `route: null` to `'/settings/advanced/open-channel'` on line 15
 
 **Page structure (following Send.tsx pattern):**
+
 1. Early returns for `ldk.status !== 'ready'` or `onchain.status !== 'ready'`
 2. `useState<OpenChannelStep>({ step: 'select-peer' })` for state machine
 3. `useRef(false)` for double-submit guard
@@ -135,6 +148,7 @@ createChannel: (counterpartyPubkey: Uint8Array, channelValueSats: bigint) => Res
 7. `useCallback` handlers for: `handleSelectPeer`, `handleAmountConfirm`, `handleConfirm`, `handleBack`
 
 **Step renders:**
+
 - **select-peer**: ScreenHeader + list of connected peers as tappable rows (truncated pubkey + host)
 - **amount**: ScreenHeader + balance display + Numpad + "Next" button + validation error
 - **reviewing**: ScreenHeader + peer info + amount + estimated fee + fee rate + "Open Channel" button
@@ -150,6 +164,7 @@ createChannel: (counterpartyPubkey: Uint8Array, channelValueSats: bigint) => Res
 ## Sources & References
 
 ### Internal References
+
 - Send page state machine pattern: `src/pages/Send.tsx:11-24`
 - LDK context method pattern (`connectToPeer`): `src/ldk/context.tsx:22-31`
 - Event handler funding flow: `src/ldk/traits/event-handler.ts:214-298`
@@ -159,6 +174,7 @@ createChannel: (counterpartyPubkey: Uint8Array, channelValueSats: bigint) => Res
 - LdkNode interface: `src/ldk/init.ts:45-58`
 
 ### Institutional Learnings
+
 - BDK-LDK cross-WASM tx bridge: `docs/solutions/integration-issues/bdk-ldk-cross-wasm-transaction-bridge.md`
 - LDK event handler sync/async patterns: `docs/solutions/integration-issues/ldk-event-handler-patterns.md`
 - Discriminated union state machine pattern: `docs/solutions/design-patterns/secure-sensitive-data-display-with-state-machine.md`

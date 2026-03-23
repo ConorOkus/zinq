@@ -1,5 +1,5 @@
 ---
-title: "Standalone HTML Design Prototype Workflow with BIP 177 Amount Formatting"
+title: 'Standalone HTML Design Prototype Workflow with BIP 177 Amount Formatting'
 category: design-patterns
 date: 2026-03-15
 severity: p3
@@ -47,8 +47,18 @@ Zero build tools. Each `<section id="...">` maps 1:1 to a future React component
 Every screen is a `<section class="screen">` present in the DOM. Only one has `.active` (sets `display: flex`; others are `display: none`). Navigation is driven by `window.location.hash`.
 
 ```js
-const routes = ['home', 'send', 'send-review', 'send-success', 'activity',
-                'settings', 'advanced', 'open-channel', 'close-channel', 'peers']
+const routes = [
+  'home',
+  'send',
+  'send-review',
+  'send-success',
+  'activity',
+  'settings',
+  'advanced',
+  'open-channel',
+  'close-channel',
+  'peers',
+]
 const overlays = ['receive']
 
 function navigate(hash) {
@@ -83,10 +93,10 @@ All design decisions captured as CSS custom properties. Change one line to re-th
 ```css
 :root {
   /* Swap this one line to change the entire vibe */
-  --accent: #7C3AED;          /* violet */
-  /* --accent: #2563EB; */    /* electric blue */
-  /* --accent: #06B6D4; */    /* cyan */
-  /* --accent: #E11D48; */    /* rose */
+  --accent: #7c3aed; /* violet */
+  /* --accent: #2563EB; */ /* electric blue */
+  /* --accent: #06B6D4; */ /* cyan */
+  /* --accent: #E11D48; */ /* rose */
 
   --on-accent: #0a0a0a;
   --on-accent-muted: rgba(0, 0, 0, 0.5);
@@ -102,6 +112,7 @@ All design decisions captured as CSS custom properties. Change one line to re-th
 ```
 
 Two screen modes reference these tokens:
+
 - `.screen--accent` — bold accent background for Home/Activity
 - `.screen--dark` — near-black background for Send/Settings sub-flows
 
@@ -115,13 +126,14 @@ function formatBtc(satoshis) {
 }
 ```
 
-| Input (sats) | Display |
-|---|---|
-| 100000000 | ₿100,000,000 |
-| 50000 | ₿50,000 |
-| 245 | ₿245 |
+| Input (sats) | Display      |
+| ------------ | ------------ |
+| 100000000    | ₿100,000,000 |
+| 50000        | ₿50,000      |
+| 245          | ₿245         |
 
 Rules from [bitcoin.design BIP 177 guide](https://bitcoin.design/guide/designing-products/units-and-symbols/#-only-format):
+
 - Integer representation only (base units)
 - ₿ symbol prefix (or postfix per locale)
 - Comma-separated digit grouping for readability
@@ -152,13 +164,13 @@ HTML is a CSS Grid of 12 buttons with `data-key` attributes. Bottom-left is empt
 
 ## Pitfalls to Avoid When Porting
 
-| Prototype Pattern | Production Fix |
-|---|---|
-| `innerHTML` for icon swap (XSS risk) | Use React SVG components |
-| No `.catch()` on clipboard API | Always handle clipboard permission denial |
-| Hardcoded balance/fee values | Wire to wallet service state |
-| Module-level mutable `sendAmount` | React `useState` or `useReducer` |
-| `:has()` selector for tab bar hiding | Conditionally render based on route in React |
+| Prototype Pattern                       | Production Fix                                                                   |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
+| `innerHTML` for icon swap (XSS risk)    | Use React SVG components                                                         |
+| No `.catch()` on clipboard API          | Always handle clipboard permission denial                                        |
+| Hardcoded balance/fee values            | Wire to wallet service state                                                     |
+| Module-level mutable `sendAmount`       | React `useState` or `useReducer`                                                 |
+| `:has()` selector for tab bar hiding    | Conditionally render based on route in React                                     |
 | `parseFloat` for BTC-to-sats conversion | Use fixed-point string parsing (see `btcStringToSats` in `src/onchain/bip21.ts`) |
 
 ## Key Decision: CSS Strategy Before Porting

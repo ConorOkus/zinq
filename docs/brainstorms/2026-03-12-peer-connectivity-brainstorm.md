@@ -33,6 +33,7 @@ PeerManager integration with WebSocket-based networking so the browser wallet ca
 ## Scope
 
 ### In scope
+
 - PeerManager creation and wiring (ChannelMessageHandler, RoutingMessageHandler, etc.)
 - SocketDescriptor trait implementation wrapping browser WebSocket
 - Connect to a peer via WS-to-TCP proxy
@@ -44,6 +45,7 @@ PeerManager integration with WebSocket-based networking so the browser wallet ca
 - `connectToPeer(pubkey, host, port)` function exposed via context
 
 ### Out of scope
+
 - Channel open/close
 - Automatic reconnection on disconnect
 - Peer persistence (remembering peers across restarts)

@@ -24,7 +24,7 @@ export interface CmPersistContext {
  */
 export async function persistChannelManager(
   cm: ChannelManager,
-  ctx: CmPersistContext = {},
+  ctx: CmPersistContext = {}
 ): Promise<void> {
   const data = cm.write()
   const vssClient = ctx.vssClient ?? null

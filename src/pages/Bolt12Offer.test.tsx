@@ -5,7 +5,9 @@ import { describe, it, expect, vi } from 'vitest'
 import { LdkContext, defaultLdkContextValue, type LdkContextValue } from '../ldk/ldk-context'
 import { Bolt12Offer } from './Bolt12Offer'
 
-function readyLdk(overrides?: Partial<Extract<LdkContextValue, { status: 'ready' }>>): LdkContextValue {
+function readyLdk(
+  overrides?: Partial<Extract<LdkContextValue, { status: 'ready' }>>
+): LdkContextValue {
   return {
     status: 'ready',
     node: {} as never,
@@ -43,7 +45,7 @@ function renderBolt12Offer(ldkValue?: LdkContextValue) {
       <LdkContext value={ldkValue ?? defaultLdkContextValue}>
         <Bolt12Offer />
       </LdkContext>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
 }
 

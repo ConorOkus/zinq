@@ -1,5 +1,5 @@
 ---
-title: "feat: Close Channel with Fund Sweep to Onchain Wallet"
+title: 'feat: Close Channel with Fund Sweep to Onchain Wallet'
 type: feat
 status: active
 date: 2026-03-15
@@ -34,7 +34,7 @@ import { broadcastTransaction } from '../onchain/tx-bridge'
 export async function sweepSpendableOutputs(
   keysManager: KeysManager,
   bdkWallet: Wallet,
-  esploraUrl: string,
+  esploraUrl: string
 ): Promise<{ swept: number; skipped: number }> {
   const entries = await idbGetAll<Uint8Array[]>('ldk_spendable_outputs')
   if (entries.size === 0) return { swept: 0, skipped: 0 }
@@ -43,7 +43,7 @@ export async function sweepSpendableOutputs(
   const allDescriptors: SpendableOutputDescriptor[] = []
   const idbKeys: string[] = []
   for (const [key, serializedArray] of entries) {
-    const descriptors = serializedArray.map(bytes =>
+    const descriptors = serializedArray.map((bytes) =>
       SpendableOutputDescriptor.constructor_read(bytes)
     )
     allDescriptors.push(...descriptors)
@@ -62,7 +62,7 @@ export async function sweepSpendableOutputs(
     allDescriptors,
     [], // no additional outputs
     destinationScript.to_bytes(),
-    feeRate * 250, // convert sat/vB to sat/kw
+    feeRate * 250 // convert sat/vB to sat/kw
   )
 
   // Broadcast, then delete IDB entries
@@ -140,20 +140,22 @@ Implementation in `context.tsx` following the `createChannel` pattern:
 const closeChannel = useCallback(
   (channelId: Uint8Array, counterpartyNodeId: Uint8Array): boolean => {
     if (!nodeRef.current) throw new Error('Node not initialized')
-    const result = nodeRef.current.channelManager.close_channel(
-      channelId, counterpartyNodeId,
-    )
+    const result = nodeRef.current.channelManager.close_channel(channelId, counterpartyNodeId)
     return result.is_ok()
-  }, [],
+  },
+  []
 )
 
 const forceCloseChannel = useCallback(
   (channelId: Uint8Array, counterpartyNodeId: Uint8Array): boolean => {
     if (!nodeRef.current) throw new Error('Node not initialized')
-    const result = nodeRef.current.channelManager
-      .force_close_broadcasting_latest_txn(channelId, counterpartyNodeId)
+    const result = nodeRef.current.channelManager.force_close_broadcasting_latest_txn(
+      channelId,
+      counterpartyNodeId
+    )
     return result.is_ok()
-  }, [],
+  },
+  []
 )
 ```
 
@@ -170,21 +172,25 @@ type CloseChannelStep =
 ```
 
 **Select Channel screen:**
+
 - List all open channels from `channelManager.list_channels()`
 - Each card shows: status badge, capacity (sats), truncated peer pubkey, local/remote balance bar, "Close Channel" button
 - Follows the design prototype in `design/index.html:346-373`
 
 **Confirm screen:**
+
 - Channel details summary (peer, capacity, local/remote balance)
 - Toggle between Cooperative Close (default) and Force Close
 - Force close shows a warning: "Force close broadcasts your latest commitment transaction. Funds will be locked for ~144 blocks before they can be swept to your wallet."
 - Confirm button (red/destructive styling for force close)
 
 **Success screen:**
+
 - Cooperative: "Channel closing. Funds will return to your wallet once the closing transaction confirms."
 - Force: "Force close initiated. Funds will be available after the timelock expires (~144 blocks)."
 
 **Error screen:**
+
 - If cooperative close fails (peer offline), show error with "Force Close Instead" button
 - Generic errors show "Try Again" button
 
@@ -268,12 +274,12 @@ After force close, `Event_SpendableOutputs` will not fire until the CSV delay ex
 
 ## Dependencies & Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| `spend_spendable_outputs()` not available in WASM bindings | Medium | High — requires manual tx construction with @scure/btc-signer | Check WASM bindings first; manual fallback is viable but more complex |
-| Anchor channels need BumpTransaction handling | Low (current channels likely non-anchor) | Medium — force close tx stuck without CPFP | Document as known limitation; implement later |
-| Event_SpendableOutputs lost before IDB write | Very Low (~10ms window) | High — permanent fund loss | Startup recovery + consider WAL pattern if risk is unacceptable |
-| Sweep fee rate too low for timely confirmation | Low | Medium — slow confirmation | Use Esplora estimates; can manually rebroadcast with higher fee later |
+| Risk                                                       | Likelihood                               | Impact                                                        | Mitigation                                                            |
+| ---------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `spend_spendable_outputs()` not available in WASM bindings | Medium                                   | High — requires manual tx construction with @scure/btc-signer | Check WASM bindings first; manual fallback is viable but more complex |
+| Anchor channels need BumpTransaction handling              | Low (current channels likely non-anchor) | Medium — force close tx stuck without CPFP                    | Document as known limitation; implement later                         |
+| Event_SpendableOutputs lost before IDB write               | Very Low (~10ms window)                  | High — permanent fund loss                                    | Startup recovery + consider WAL pattern if risk is unacceptable       |
+| Sweep fee rate too low for timely confirmation             | Low                                      | Medium — slow confirmation                                    | Use Esplora estimates; can manually rebroadcast with higher fee later |
 
 ## Sources & References
 

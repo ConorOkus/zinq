@@ -38,14 +38,16 @@ export async function broadcastWithRetry(esploraUrl: string, txHex: string): Pro
       } catch (err: unknown) {
         console.error(
           `[LDK Broadcaster] Broadcast attempt ${attempt.toString()}/${MAX_BROADCAST_RETRIES.toString()} failed:`,
-          err,
+          err
         )
         if (attempt < MAX_BROADCAST_RETRIES) {
           await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * 2 ** (attempt - 1)))
         }
       }
     }
-    throw new Error(`All ${MAX_BROADCAST_RETRIES.toString()} broadcast attempts failed for tx ${txHex.slice(0, 16)}...`)
+    throw new Error(
+      `All ${MAX_BROADCAST_RETRIES.toString()} broadcast attempts failed for tx ${txHex.slice(0, 16)}...`
+    )
   } finally {
     inflightTxs.delete(txHex)
   }

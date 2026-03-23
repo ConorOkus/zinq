@@ -20,6 +20,7 @@ dependencies: []
 ## Proposed Solution
 
 Add length assertions to Esplora methods that accept txids or block hashes:
+
 ```typescript
 function assertTxid(value: string): void {
   assertHex(value, 'txid')

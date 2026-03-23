@@ -28,9 +28,7 @@ export function TabBar() {
 
       <button
         className={`flex h-11 w-full max-w-[120px] items-center justify-center rounded-full font-display text-sm font-bold uppercase tracking-wider transition-all ${
-          isWallet
-            ? 'bg-on-accent text-accent'
-            : 'text-[var(--color-on-accent-muted)]'
+          isWallet ? 'bg-on-accent text-accent' : 'text-[var(--color-on-accent-muted)]'
         }`}
         onClick={() => void navigate('/')}
       >
@@ -39,9 +37,7 @@ export function TabBar() {
 
       <button
         className={`flex h-11 w-full max-w-[120px] items-center justify-center rounded-full font-display text-sm font-bold uppercase tracking-wider transition-all ${
-          isActivity
-            ? 'bg-on-accent text-accent'
-            : 'text-[var(--color-on-accent-muted)]'
+          isActivity ? 'bg-on-accent text-accent' : 'text-[var(--color-on-accent-muted)]'
         }`}
         onClick={() => void navigate('/activity')}
       >

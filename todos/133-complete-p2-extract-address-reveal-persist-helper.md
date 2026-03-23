@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "133"
+issue_id: '133'
 tags: [code-review, quality]
 ---
 
@@ -21,6 +21,7 @@ The same 8-line sequence (next_unused_address → take_staged → is_empty check
 ## Proposed Solutions
 
 ### Option A: Extract helper function
+
 ```typescript
 function revealAddressScript(wallet: Wallet): Uint8Array {
   const addressInfo = wallet.next_unused_address('external')
@@ -31,6 +32,7 @@ function revealAddressScript(wallet: Wallet): Uint8Array {
   return addressInfo.address.script_pubkey.as_bytes()
 }
 ```
+
 - Pros: Single source of truth, ~10 LOC saved
 - Cons: Minor indirection
 - Effort: Small

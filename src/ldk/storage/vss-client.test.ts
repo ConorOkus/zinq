@@ -11,6 +11,8 @@ import {
 } from './proto/vss_pb'
 import { vssEncrypt, obfuscateKey } from './vss-crypto'
 
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-base-to-string */
+
 const TEST_KEY = crypto.getRandomValues(new Uint8Array(32))
 const TEST_STORE_ID = 'test-store'
 const TEST_URL = 'https://vss.example.com/vss'
@@ -20,7 +22,7 @@ function makeClient(): VssClient {
     TEST_URL,
     TEST_STORE_ID,
     TEST_KEY,
-    new FixedHeaderProvider({ Authorization: 'Bearer test' }),
+    new FixedHeaderProvider({ Authorization: 'Bearer test' })
   )
 }
 
@@ -32,20 +34,14 @@ describe('VssClient', () => {
   describe('putObject', () => {
     it('sends a protobuf-encoded PutObjectRequest', async () => {
       let capturedBody: Uint8Array | null = null
-      vi.spyOn(globalThis, 'fetch').mockImplementation(
-        async (input, init) => {
-          expect(String(input)).toBe(`${TEST_URL}/putObjects`)
-          capturedBody = new Uint8Array(init!.body as ArrayBuffer)
-          return new Response(new Uint8Array(0), { status: 200 })
-        },
-      )
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        expect(String(input)).toBe(`${TEST_URL}/putObjects`)
+        capturedBody = new Uint8Array(init!.body as ArrayBuffer)
+        return new Response(new Uint8Array(0), { status: 200 })
+      })
 
       const client = makeClient()
-      const newVersion = await client.putObject(
-        'my-key',
-        new TextEncoder().encode('my-value'),
-        0,
-      )
+      const newVersion = await client.putObject('my-key', new TextEncoder().encode('my-value'), 0)
 
       expect(newVersion).toBe(1)
       expect(capturedBody).not.toBeNull()
@@ -67,13 +63,11 @@ describe('VssClient', () => {
 
     it('includes auth headers', async () => {
       let capturedHeaders: Record<string, string> = {}
-      vi.spyOn(globalThis, 'fetch').mockImplementation(
-        async (_input, init) => {
-          const headers = init!.headers as Record<string, string>
-          capturedHeaders = headers
-          return new Response(new Uint8Array(0), { status: 200 })
-        },
-      )
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+        const headers = init!.headers as Record<string, string>
+        capturedHeaders = headers
+        return new Response(new Uint8Array(0), { status: 200 })
+      })
 
       const client = makeClient()
       await client.putObject('k', new Uint8Array(1), 0)
@@ -85,9 +79,7 @@ describe('VssClient', () => {
 
   describe('getObject', () => {
     it('returns null on 404', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(null, { status: 404 }),
-      )
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }))
 
       const client = makeClient()
       const result = await client.getObject('nonexistent')
@@ -108,9 +100,7 @@ describe('VssClient', () => {
       })
       const responseBytes = toBinary(GetObjectResponseSchema, responseMsg)
 
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(responseBytes, { status: 200 }),
-      )
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(responseBytes, { status: 200 }))
 
       const client = makeClient()
       const result = await client.getObject('my-key')
@@ -146,9 +136,7 @@ describe('VssClient', () => {
     })
 
     it('throws VssError on network failure', async () => {
-      vi.spyOn(globalThis, 'fetch').mockRejectedValue(
-        new TypeError('Failed to fetch'),
-      )
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
 
       const client = makeClient()
       await expect(client.getObject('k')).rejects.toThrow(VssError)
@@ -165,9 +153,7 @@ describe('VssClient', () => {
         nextPageToken: 'page2',
       })
       const page2 = create(ListKeyVersionsResponseSchema, {
-        keyVersions: [
-          create(KeyValueSchema, { key: 'c', version: 3n }),
-        ],
+        keyVersions: [create(KeyValueSchema, { key: 'c', version: 3n })],
         nextPageToken: '',
       })
 
@@ -175,10 +161,7 @@ describe('VssClient', () => {
       vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
         callCount++
         const data = callCount === 1 ? page1 : page2
-        return new Response(
-          toBinary(ListKeyVersionsResponseSchema, data),
-          { status: 200 },
-        )
+        return new Response(toBinary(ListKeyVersionsResponseSchema, data), { status: 200 })
       })
 
       const client = makeClient()

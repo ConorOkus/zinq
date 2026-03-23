@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p1
-issue_id: "061"
+issue_id: '061'
 tags: [code-review, security]
 dependencies: []
 ---
@@ -23,6 +23,7 @@ Flagged by: security-sentinel
 ## Proposed Solutions
 
 ### Option A: useRef guard (Recommended)
+
 Add a `sendingRef = useRef(false)` that is checked and set synchronously at the top of `handleConfirm`, preventing any double invocation.
 
 ```typescript

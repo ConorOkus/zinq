@@ -1,5 +1,5 @@
 ---
-title: "feat: Add on-chain send page with BIP21 support"
+title: 'feat: Add on-chain send page with BIP21 support'
 type: feat
 status: completed
 date: 2026-03-14
@@ -28,8 +28,8 @@ Add to the `'ready'` variant of `OnchainContextValue`:
 // src/onchain/onchain-context.ts — ready variant additions
 estimateFee: (address: string, amountSats: bigint) => Promise<{ fee: bigint; feeRate: bigint }>
 estimateMaxSendable: (address: string) => Promise<{ amount: bigint; fee: bigint; feeRate: bigint }>
-sendToAddress: (address: string, amountSats: bigint) => Promise<string>  // returns txid
-sendMax: (address: string) => Promise<string>  // returns txid
+sendToAddress: (address: string, amountSats: bigint) => Promise<string> // returns txid
+sendMax: (address: string) => Promise<string> // returns txid
 ```
 
 These helpers close over the `wallet`, `esploraClient`, and `putChangeset` inside the `OnchainProvider`, avoiding exposing BDK internals to page components.
@@ -102,10 +102,10 @@ Detect on paste event: if input starts with `bitcoin:`, parse and auto-fill. Ign
 
 Use `Address.from_string(address, 'signet')` from BDK WASM (see brainstorm). This validates format and network. Catch and map errors:
 
-| BDK Error | User Message |
-|---|---|
+| BDK Error          | User Message                                      |
+| ------------------ | ------------------------------------------------- |
 | Network validation | "This address is for a different Bitcoin network" |
-| Parse error | "Invalid Bitcoin address" |
+| Parse error        | "Invalid Bitcoin address"                         |
 
 Validate on blur of the address input and before building the transaction.
 
@@ -120,14 +120,14 @@ Validate on blur of the address input and before building the transaction.
 
 Catch BDK errors during the build-sign-broadcast pipeline and map to user messages:
 
-| Error | Message | Recovery |
-|---|---|---|
-| `InsufficientFunds` | "Insufficient funds. Available: {available} sats, needed: {needed} sats" | Back to input |
-| Address validation | "Invalid address" / "Wrong network" | Stay on input |
-| `OutputBelowDustLimit` | "Amount is below the minimum (294 sats)" | Stay on input |
-| Fee estimation failure | Silent fallback to 1 sat/vB | Continue |
-| Broadcast failure | "Broadcast failed: {message}. Your funds are safe." | Retry from review |
-| WASM panic | "Something went wrong. Please try again." | Back to input |
+| Error                  | Message                                                                  | Recovery          |
+| ---------------------- | ------------------------------------------------------------------------ | ----------------- |
+| `InsufficientFunds`    | "Insufficient funds. Available: {available} sats, needed: {needed} sats" | Back to input     |
+| Address validation     | "Invalid address" / "Wrong network"                                      | Stay on input     |
+| `OutputBelowDustLimit` | "Amount is below the minimum (294 sats)"                                 | Stay on input     |
+| Fee estimation failure | Silent fallback to 1 sat/vB                                              | Continue          |
+| Broadcast failure      | "Broadcast failed: {message}. Your funds are safe."                      | Retry from review |
+| WASM panic             | "Something went wrong. Please try again."                                | Back to input     |
 
 ### Double-Click Prevention
 
@@ -144,6 +144,7 @@ The `broadcasting` step disables the confirm button and shows a spinner. The `se
 ## Acceptance Criteria
 
 ### Core Send Flow
+
 - [x] User can navigate to `/send` from Home page and nav bar
 - [x] User can enter a destination address and amount in sats
 - [x] User can toggle "send max" to drain the entire wallet balance
@@ -154,11 +155,13 @@ The `broadcasting` step disables the confirm button and shows a spinner. The `se
 - [x] Navigation from success screen back to Home
 
 ### BIP21 Support
+
 - [x] Pasting a `bitcoin:address?amount=X` URI auto-fills address and amount
 - [x] Pasting a `bitcoin:address` URI (no amount) auto-fills only the address
 - [x] Plain address paste works normally
 
 ### Validation & Errors
+
 - [x] Invalid address shows "Invalid Bitcoin address" inline error
 - [x] Wrong-network address shows "This address is for a different Bitcoin network"
 - [x] Amount below dust (294 sats) shows inline error
@@ -168,6 +171,7 @@ The `broadcasting` step disables the confirm button and shows a spinner. The `se
 - [x] Fee estimation failure silently falls back to 1 sat/vB
 
 ### Context & Infrastructure
+
 - [x] `OnchainContextValue` ready variant exposes `estimateFee`, `estimateMaxSendable`, `sendToAddress`, `sendMax`
 - [x] Changeset is persisted after signing, before broadcast
 - [x] Sync loop paused during build-sign-broadcast, resumed after
@@ -175,6 +179,7 @@ The `broadcasting` step disables the confirm button and shows a spinner. The `se
 - [x] Fee sanity check rejects unreasonable fees (>50,000 sats)
 
 ### Testing
+
 - [x] Unit tests for BIP21 parser (`src/onchain/bip21.ts`)
 - [x] Send page tests: loading, error, and ready states
 - [x] Send page tests: input validation (invalid address, dust amount, exceeds balance)
@@ -184,12 +189,14 @@ The `broadcasting` step disables the confirm button and shows a spinner. The `se
 ## Files to Create/Modify
 
 ### New Files
+
 - `src/onchain/bip21.ts` — BIP21 URI parser
 - `src/onchain/bip21.test.ts` — BIP21 parser tests
 - `src/pages/Send.tsx` — Send page component
 - `src/pages/Send.test.tsx` — Send page tests
 
 ### Modified Files
+
 - `src/onchain/onchain-context.ts` — Add send/fee functions to ready variant
 - `src/onchain/context.tsx` — Implement send/fee helpers, sync pause/resume
 - `src/onchain/sync.ts` — Accept pause/resume controls

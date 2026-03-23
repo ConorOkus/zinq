@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "090"
+issue_id: '090'
 tags: [code-review, security, input-validation]
 dependencies: []
 ---

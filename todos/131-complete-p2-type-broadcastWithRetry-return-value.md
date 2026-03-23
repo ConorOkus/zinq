@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "131"
+issue_id: '131'
 tags: [code-review, quality, architecture]
 ---
 
@@ -21,17 +21,20 @@ tags: [code-review, quality, architecture]
 ## Proposed Solutions
 
 ### Option A: Discriminated union return type
+
 ```typescript
 type BroadcastResult =
   | { status: 'ok'; txid: string }
   | { status: 'in-flight' }
   | { status: 'already-broadcast' }
 ```
+
 - Pros: Type-safe, forces callers to handle each case
 - Cons: More verbose at call sites
 - Effort: Small
 
 ### Option B: Keep string but document sentinels in JSDoc
+
 - Pros: No caller changes needed
 - Cons: No compile-time safety
 - Effort: Tiny

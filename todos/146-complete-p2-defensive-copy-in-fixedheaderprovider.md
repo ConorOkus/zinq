@@ -19,6 +19,7 @@ FixedHeaderProvider stores a reference to the passed-in headers object. Callers 
 ## Proposed Solutions
 
 Copy in constructor and getHeaders:
+
 ```typescript
 constructor(headers: Record<string, string>) {
   this.#headers = { ...headers }

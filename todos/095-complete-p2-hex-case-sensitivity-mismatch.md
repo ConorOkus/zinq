@@ -23,6 +23,7 @@ Additionally, `hexToBytes` allows empty strings (using `*` instead of `+`), prod
 ## Proposed Solution
 
 Align both to lowercase-only with `+` quantifier:
+
 ```typescript
 // utils.ts
 if (hex.length % 2 !== 0) throw new Error('Hex string must have even length')

@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "035"
+issue_id: '035'
 tags: [code-review, quality]
 dependencies: []
 ---
@@ -25,6 +25,6 @@ dependencies: []
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-12 | Created | From PR #4 code review |

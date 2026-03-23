@@ -108,7 +108,7 @@ export default {
 
     // Validate origin before doing any work
     const origin = request.headers.get('Origin')
-    const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+    const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
     if (!validateOrigin(origin, allowedOrigins)) {
       return new Response('Forbidden', { status: 403 })
     }
@@ -120,7 +120,7 @@ export default {
       return new Response('Invalid path. Expected /v1/{host}/{port}', { status: 400 })
     }
 
-    const allowedPorts = env.ALLOWED_PORTS.split(',').map(s => parseInt(s.trim(), 10))
+    const allowedPorts = env.ALLOWED_PORTS.split(',').map((s) => parseInt(s.trim(), 10))
     const maxMessageSize = parseInt(env.MAX_MESSAGE_SIZE, 10)
 
     const targetError = validateTarget(target.host, target.port, allowedPorts)
@@ -149,7 +149,9 @@ export default {
         return
       }
       const writer = tcp.writable.getWriter()
-      writer.write(data instanceof ArrayBuffer ? new Uint8Array(data) : new TextEncoder().encode(data))
+      writer.write(
+        data instanceof ArrayBuffer ? new Uint8Array(data) : new TextEncoder().encode(data)
+      )
       writer.releaseLock()
     })
 
@@ -162,28 +164,32 @@ export default {
     })
 
     // Pipe: TCP -> WebSocket
-    tcp.readable.pipeTo(new WritableStream({
-      write(chunk) {
-        if (server.readyState === WebSocket.OPEN) {
-          server.send(chunk)
-        }
-      },
-      close() {
-        if (server.readyState === WebSocket.OPEN) {
-          server.close(1000, 'TCP connection closed')
-        }
-      },
-      abort() {
+    tcp.readable
+      .pipeTo(
+        new WritableStream({
+          write(chunk) {
+            if (server.readyState === WebSocket.OPEN) {
+              server.send(chunk)
+            }
+          },
+          close() {
+            if (server.readyState === WebSocket.OPEN) {
+              server.close(1000, 'TCP connection closed')
+            }
+          },
+          abort() {
+            if (server.readyState === WebSocket.OPEN) {
+              server.close(1011, 'TCP connection error')
+            }
+          },
+        })
+      )
+      .catch(() => {
+        // TCP read error — close WebSocket if still open
         if (server.readyState === WebSocket.OPEN) {
           server.close(1011, 'TCP connection error')
         }
-      },
-    })).catch(() => {
-      // TCP read error — close WebSocket if still open
-      if (server.readyState === WebSocket.OPEN) {
-        server.close(1011, 'TCP connection error')
-      }
-    })
+      })
 
     return new Response(null, { status: 101, webSocket: client })
   },
@@ -197,13 +203,13 @@ export default {
 
 // RFC 1918, RFC 6598 (CGNAT), loopback, link-local, broadcast
 const BLOCKED_IPV4_RANGES = [
-  { prefix: '10.', mask: null },         // 10.0.0.0/8
+  { prefix: '10.', mask: null }, // 10.0.0.0/8
   { prefix: '172.', rangeStart: 16, rangeEnd: 31 }, // 172.16.0.0/12
-  { prefix: '192.168.', mask: null },    // 192.168.0.0/16
-  { prefix: '127.', mask: null },        // 127.0.0.0/8
-  { prefix: '169.254.', mask: null },    // 169.254.0.0/16 link-local
-  { prefix: '0.', mask: null },          // 0.0.0.0/8
-  { prefix: '100.64.', mask: null },     // 100.64.0.0/10 (simplified)
+  { prefix: '192.168.', mask: null }, // 192.168.0.0/16
+  { prefix: '127.', mask: null }, // 127.0.0.0/8
+  { prefix: '169.254.', mask: null }, // 169.254.0.0/16 link-local
+  { prefix: '0.', mask: null }, // 0.0.0.0/8
+  { prefix: '100.64.', mask: null }, // 100.64.0.0/10 (simplified)
   { prefix: '100.65.', mask: null },
   // ... remaining 100.64-100.127 ranges
 ]
@@ -231,11 +237,7 @@ export function parseProxyPath(pathname: string): ProxyTarget | null {
   return { host, port }
 }
 
-export function validateTarget(
-  host: string,
-  port: number,
-  allowedPorts: number[]
-): string | null {
+export function validateTarget(host: string, port: number, allowedPorts: number[]): string | null {
   // Port restriction
   if (!allowedPorts.includes(port)) {
     return `Port ${port} not allowed. Allowed: ${allowedPorts.join(', ')}`
@@ -262,14 +264,14 @@ function isPrivateIP(host: string): boolean {
   const octets = ipv4Match.slice(1).map(Number)
   const [a, b] = octets
 
-  if (a === 10) return true                        // 10.0.0.0/8
+  if (a === 10) return true // 10.0.0.0/8
   if (a === 172 && b >= 16 && b <= 31) return true // 172.16.0.0/12
-  if (a === 192 && b === 168) return true          // 192.168.0.0/16
-  if (a === 127) return true                       // 127.0.0.0/8
-  if (a === 169 && b === 254) return true          // 169.254.0.0/16
-  if (a === 0) return true                         // 0.0.0.0/8
+  if (a === 192 && b === 168) return true // 192.168.0.0/16
+  if (a === 127) return true // 127.0.0.0/8
+  if (a === 169 && b === 254) return true // 169.254.0.0/16
+  if (a === 0) return true // 0.0.0.0/8
   if (a === 100 && b >= 64 && b <= 127) return true // 100.64.0.0/10
-  if (a === 255) return true                       // broadcast
+  if (a === 255) return true // broadcast
 
   return false
 }
@@ -277,7 +279,7 @@ function isPrivateIP(host: string): boolean {
 
 **Key design decisions for Phase 1:**
 
-- **Error responses before WebSocket upgrade**: Return HTTP 400/403/502 status codes *before* completing the WebSocket upgrade. This means the browser fires `onerror` (not `onclose`), and the wallet's existing error handling in `peer-connection.ts` will surface these as connection failures.
+- **Error responses before WebSocket upgrade**: Return HTTP 400/403/502 status codes _before_ completing the WebSocket upgrade. This means the browser fires `onerror` (not `onclose`), and the wallet's existing error handling in `peer-connection.ts` will surface these as connection failures.
 - **Message size → close connection**: When a message exceeds 64KB, close the entire connection (code 1009). Dropping a single message would corrupt the BOLT 8 Noise cipher state.
 - **SSRF validation on IP addresses only**: For hostname targets (e.g., `node.example.com`), SSRF validation cannot happen before DNS resolution. Cloudflare's `connect()` API does not expose the resolved IP. Accept this limitation — DNS rebinding attacks against a port-9735-restricted proxy are extremely low risk.
 - **IPv6 out of scope**: The current URL encoding (`dots → underscores`) does not handle IPv6 colons. Defer IPv6 support — the vast majority of Lightning nodes are reachable via IPv4 or hostname.
@@ -361,6 +363,7 @@ export const SIGNET_CONFIG = {
 ```
 
 This allows:
+
 - Development: `VITE_WS_PROXY_URL=wss://ln-ws-proxy-dev.<account>.workers.dev` in `.env.development`
 - Production: `VITE_WS_PROXY_URL=wss://ln-ws-proxy-production.<account>.workers.dev` in `.env.production`
 - Fallback: Public Mutiny proxy if no env var set
@@ -383,6 +386,7 @@ Replace the pinned `wss://p.mutinynet.com` with the self-hosted Worker domain. D
 6. Verify origin validation by testing from an unauthorized origin (should get 403)
 
 **Deployment notes:**
+
 - Workers deploy to all 300+ edge locations automatically
 - The `*.workers.dev` subdomain is available immediately
 - Custom domain can be added later via Cloudflare DNS
@@ -406,16 +410,16 @@ User clicks "Connect" → connectToPeer() → new WebSocket(proxyUrl/v1/host/por
 
 ### Error Propagation
 
-| Error Source | Worker Response | Wallet Behavior |
-|---|---|---|
-| Invalid origin | HTTP 403 (pre-upgrade) | `ws.onerror` → promise rejects → "Connection failed" |
-| Invalid path/port | HTTP 400 (pre-upgrade) | `ws.onerror` → promise rejects → "Connection failed" |
-| Private IP (SSRF) | HTTP 400 (pre-upgrade) | `ws.onerror` → promise rejects → "Connection failed" |
-| TCP connect refused | HTTP 502 (pre-upgrade) | `ws.onerror` → promise rejects → "Connection failed" |
+| Error Source        | Worker Response          | Wallet Behavior                                      |
+| ------------------- | ------------------------ | ---------------------------------------------------- |
+| Invalid origin      | HTTP 403 (pre-upgrade)   | `ws.onerror` → promise rejects → "Connection failed" |
+| Invalid path/port   | HTTP 400 (pre-upgrade)   | `ws.onerror` → promise rejects → "Connection failed" |
+| Private IP (SSRF)   | HTTP 400 (pre-upgrade)   | `ws.onerror` → promise rejects → "Connection failed" |
+| TCP connect refused | HTTP 502 (pre-upgrade)   | `ws.onerror` → promise rejects → "Connection failed" |
 | TCP connect timeout | Cloudflare kills request | `ws.onerror` → promise rejects → "Connection failed" |
-| Message too large | WS close 1009 | `ws.onclose` → `socket_disconnected()` |
-| TCP disconnects | WS close 1000 | `ws.onclose` → `socket_disconnected()` |
-| Worker restart | WS drops | `ws.onclose` → `socket_disconnected()` |
+| Message too large   | WS close 1009            | `ws.onclose` → `socket_disconnected()`               |
+| TCP disconnects     | WS close 1000            | `ws.onclose` → `socket_disconnected()`               |
+| Worker restart      | WS drops                 | `ws.onclose` → `socket_disconnected()`               |
 
 ### State Lifecycle Risks
 
@@ -463,12 +467,12 @@ The proxy exposes a single API surface: `wss://{worker}/v1/{host_underscored}/{p
 
 ### Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Cloudflare runtime restarts drop connections | Certain (~weekly) | Low | Client already handles disconnects; reconnection logic is future work |
-| DNS rebinding SSRF for hostname targets | Very low | Medium | Port 9735 restriction limits blast radius; accept risk for now |
-| Rate limiting bypassed across isolates | Medium | Low | Best-effort is sufficient; upgrade to Durable Objects if abused |
-| `connect()` API behavior changes | Low | High | Pin `compatibility_date` in wrangler.toml |
+| Risk                                         | Likelihood        | Impact | Mitigation                                                            |
+| -------------------------------------------- | ----------------- | ------ | --------------------------------------------------------------------- |
+| Cloudflare runtime restarts drop connections | Certain (~weekly) | Low    | Client already handles disconnects; reconnection logic is future work |
+| DNS rebinding SSRF for hostname targets      | Very low          | Medium | Port 9735 restriction limits blast radius; accept risk for now        |
+| Rate limiting bypassed across isolates       | Medium            | Low    | Best-effort is sufficient; upgrade to Durable Objects if abused       |
+| `connect()` API behavior changes             | Low               | High   | Pin `compatibility_date` in wrangler.toml                             |
 
 ## Scope Boundaries
 

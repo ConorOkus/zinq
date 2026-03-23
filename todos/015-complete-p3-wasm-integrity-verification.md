@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p3
-issue_id: "015"
+issue_id: '015'
 tags: [code-review, security]
 dependencies: []
 ---

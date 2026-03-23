@@ -30,6 +30,7 @@ recipient --> [amount if needed] --> review --> sending --> success
 The current flow is amount → recipient → review. This forces users to manually type an amount on the numpad even when the payment request already specifies one. Most wallets use a recipient-first flow, and the QR scanner branch already implements skip-to-review logic for scanned inputs with amounts. This change makes the manual paste/type flow consistent with the scanner flow.
 
 **Rejected alternatives:**
+
 - **Recipient-first with always-show-amount:** Adds an unnecessary confirmation tap for fixed-amount invoices.
 - **Keep amount-first with paste on numpad:** Awkward UX — paste button on a numpad is unexpected and doesn't fix the ordering issue.
 

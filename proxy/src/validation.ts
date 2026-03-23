@@ -15,19 +15,12 @@ export function parseProxyPath(pathname: string): ProxyTarget | null {
   return { host, port }
 }
 
-export function validateOrigin(
-  origin: string | null,
-  allowedOrigins: string[],
-): boolean {
+export function validateOrigin(origin: string | null, allowedOrigins: string[]): boolean {
   if (!origin) return false
   return allowedOrigins.includes(origin)
 }
 
-export function validateTarget(
-  host: string,
-  port: number,
-  allowedPorts: number[],
-): string | null {
+export function validateTarget(host: string, port: number, allowedPorts: number[]): string | null {
   if (!allowedPorts.includes(port)) {
     return 'Bad request'
   }
@@ -48,12 +41,7 @@ export function validateTarget(
 // Cloudflare Workers connect() resolves DNS server-side, and we cannot
 // inspect the resolved IP before connecting. The port-9735 restriction
 // limits the blast radius. See todos/035 for tracking.
-const BLOCKED_HOSTNAMES = [
-  'localhost',
-  'localhost.localdomain',
-  'ip6-localhost',
-  'ip6-loopback',
-]
+const BLOCKED_HOSTNAMES = ['localhost', 'localhost.localdomain', 'ip6-localhost', 'ip6-loopback']
 
 function isPrivateHost(host: string): boolean {
   const lower = host.toLowerCase()

@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "036"
+issue_id: '036'
 tags: [code-review, reliability]
 dependencies: []
 ---
@@ -25,6 +25,6 @@ dependencies: []
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-12 | Created | From PR #4 code review |

@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "023"
+issue_id: '023'
 tags: [code-review, reliability, fund-safety]
 dependencies: []
 ---
@@ -21,6 +21,7 @@ The sync loop persists ChannelManager only during tick intervals (~30s) and Netw
 ## Proposed Solutions
 
 ### Option A: Add shutdown persistence + beforeunload handler
+
 - Add final ChannelManager/NetworkGraph/Scorer persist in `stop()`
 - Register `beforeunload` handler to trigger final persist
 - **Effort:** Small
@@ -33,6 +34,6 @@ The sync loop persists ChannelManager only during tick intervals (~30s) and Netw
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details                |
+| ---------- | ------- | ---------------------- |
 | 2026-03-11 | Created | From PR #3 code review |

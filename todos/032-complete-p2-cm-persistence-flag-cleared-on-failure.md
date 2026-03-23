@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "032"
+issue_id: '032'
 tags: [code-review, security, reliability]
 dependencies: []
 ---
@@ -21,11 +21,13 @@ In the sync loop, `channelManager.get_and_clear_needs_persistence()` clears the 
 ## Proposed Solutions
 
 ### Option A: Track dirty flag externally
+
 - Set a `needsPersist` boolean before calling `get_and_clear_needs_persistence()`
 - Only clear it after successful `idbPut`
 - **Effort:** Small
 
 ### Option B: Wrap CM persistence in try/catch with re-flag
+
 - If `idbPut` fails, set a local `cmPersistPending = true` flag checked on next tick
 - **Effort:** Small
 
@@ -37,6 +39,6 @@ In the sync loop, `channelManager.get_and_clear_needs_persistence()` clears the 
 
 ## Work Log
 
-| Date | Action | Details |
-|------|--------|---------|
+| Date       | Action  | Details              |
+| ---------- | ------- | -------------------- |
 | 2026-03-11 | Created | From PR #3 re-review |

@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "051"
+issue_id: '051'
 tags: [code-review, architecture, testing]
 dependencies: []
 ---
@@ -23,6 +23,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Move into createEventHandler closure (Recommended)
+
 - Declare `fundingTxCache` inside `createEventHandler`, pass to `handleEvent`
 - Add `fundingTxCache.clear()` to `cleanup()`
 - **Pros**: Proper scoping, deterministic cleanup, test isolation
@@ -46,8 +47,8 @@ Option A — straightforward refactor.
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                              | Learnings                                      |
+| ---------- | ----------------------------------- | ---------------------------------------------- |
 | 2026-03-12 | Identified during PR #8 code review | Module-level mutable state is a testing hazard |
 
 ## Resources

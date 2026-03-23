@@ -39,7 +39,7 @@ describe('resolveLnurlPay', () => {
     // In test/dev mode, requests route through the LNURL CORS proxy
     expect(mockFetch).toHaveBeenCalledWith(
       '/__lnurl_proxy/example.com/.well-known/lnurlp/alice',
-      expect.any(Object),
+      expect.any(Object)
     )
   })
 
@@ -58,9 +58,7 @@ describe('resolveLnurlPay', () => {
   })
 
   it('throws on LNURL error response', async () => {
-    mockFetch.mockResolvedValueOnce(
-      lnurlPayResponse({ status: 'ERROR', reason: 'User not found' }),
-    )
+    mockFetch.mockResolvedValueOnce(lnurlPayResponse({ status: 'ERROR', reason: 'User not found' }))
 
     await expect(resolveLnurlPay('alice', 'example.com')).rejects.toThrow('User not found')
   })
@@ -80,16 +78,14 @@ describe('resolveLnurlPay', () => {
   })
 
   it('throws when callback is not HTTPS', async () => {
-    mockFetch.mockResolvedValueOnce(
-      lnurlPayResponse({ callback: 'http://example.com/callback' }),
-    )
+    mockFetch.mockResolvedValueOnce(lnurlPayResponse({ callback: 'http://example.com/callback' }))
 
     await expect(resolveLnurlPay('alice', 'example.com')).rejects.toThrow('not HTTPS')
   })
 
   it('throws when callback domain does not match original domain', async () => {
     mockFetch.mockResolvedValueOnce(
-      lnurlPayResponse({ callback: 'https://evil.com/lnurlp/callback' }),
+      lnurlPayResponse({ callback: 'https://evil.com/lnurlp/callback' })
     )
 
     await expect(resolveLnurlPay('alice', 'example.com')).rejects.toThrow('domain mismatch')
@@ -97,7 +93,7 @@ describe('resolveLnurlPay', () => {
 
   it('allows callback on subdomain of original domain', async () => {
     mockFetch.mockResolvedValueOnce(
-      lnurlPayResponse({ callback: 'https://api.example.com/lnurlp/callback' }),
+      lnurlPayResponse({ callback: 'https://api.example.com/lnurlp/callback' })
     )
 
     const result = await resolveLnurlPay('alice', 'example.com')
@@ -125,7 +121,7 @@ describe('resolveLnurlPay', () => {
 
   it('uses fallback description when no text/plain in metadata', async () => {
     mockFetch.mockResolvedValueOnce(
-      lnurlPayResponse({ metadata: '[["text/identifier","alice@example.com"]]' }),
+      lnurlPayResponse({ metadata: '[["text/identifier","alice@example.com"]]' })
     )
 
     const result = await resolveLnurlPay('alice', 'example.com')
@@ -141,7 +137,7 @@ describe('resolveLnurlPay', () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ signal: controller.signal }),
+      expect.objectContaining({ signal: controller.signal })
     )
   })
 })
@@ -153,16 +149,13 @@ describe('fetchLnurlInvoice', () => {
       json: () => Promise.resolve({ pr: 'lntbs100n1pj...' }),
     })
 
-    const invoice = await fetchLnurlInvoice(
-      'https://example.com/lnurlp/alice/callback',
-      50000n,
-    )
+    const invoice = await fetchLnurlInvoice('https://example.com/lnurlp/alice/callback', 50000n)
     expect(invoice).toBe('lntbs100n1pj...')
 
     // In test/dev mode, callback routes through the LNURL CORS proxy
     expect(mockFetch).toHaveBeenCalledWith(
       '/__lnurl_proxy/example.com/lnurlp/alice/callback?amount=50000',
-      expect.any(Object),
+      expect.any(Object)
     )
   })
 
@@ -172,14 +165,11 @@ describe('fetchLnurlInvoice', () => {
       json: () => Promise.resolve({ pr: 'lntbs100n1pj...' }),
     })
 
-    await fetchLnurlInvoice(
-      'https://example.com/callback?key=val',
-      50000n,
-    )
+    await fetchLnurlInvoice('https://example.com/callback?key=val', 50000n)
 
     expect(mockFetch).toHaveBeenCalledWith(
       '/__lnurl_proxy/example.com/callback?key=val&amount=50000',
-      expect.any(Object),
+      expect.any(Object)
     )
   })
 
@@ -187,7 +177,7 @@ describe('fetchLnurlInvoice', () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500 })
 
     await expect(fetchLnurlInvoice('https://example.com/cb', 50000n)).rejects.toThrow(
-      'Failed to fetch invoice',
+      'Failed to fetch invoice'
     )
   })
 
@@ -198,7 +188,7 @@ describe('fetchLnurlInvoice', () => {
     })
 
     await expect(fetchLnurlInvoice('https://example.com/cb', 50000n)).rejects.toThrow(
-      'Amount too low',
+      'Amount too low'
     )
   })
 
@@ -209,7 +199,7 @@ describe('fetchLnurlInvoice', () => {
     })
 
     await expect(fetchLnurlInvoice('https://example.com/cb', 50000n)).rejects.toThrow(
-      'No invoice in response',
+      'No invoice in response'
     )
   })
 
@@ -224,7 +214,7 @@ describe('fetchLnurlInvoice', () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ signal: controller.signal }),
+      expect.objectContaining({ signal: controller.signal })
     )
   })
 })

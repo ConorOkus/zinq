@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { deriveLdkSeed, deriveBdkDescriptors, deriveVssEncryptionKey, deriveVssStoreId } from './keys'
+import {
+  deriveLdkSeed,
+  deriveBdkDescriptors,
+  deriveVssEncryptionKey,
+  deriveVssStoreId,
+} from './keys'
 
 // Well-known test mnemonic (BIP39 test vector #0)
 const TEST_MNEMONIC =
@@ -20,8 +25,7 @@ describe('deriveLdkSeed', () => {
 
   it('produces different seeds for different mnemonics', () => {
     const seed1 = deriveLdkSeed(TEST_MNEMONIC)
-    const otherMnemonic =
-      'zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong'
+    const otherMnemonic = 'zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong'
     const seed2 = deriveLdkSeed(otherMnemonic)
     expect(Array.from(seed1)).not.toEqual(Array.from(seed2))
   })
@@ -32,8 +36,8 @@ describe('deriveBdkDescriptors', () => {
     const { external, internal } = deriveBdkDescriptors(TEST_MNEMONIC, 'signet')
     expect(external).toMatch(/^wpkh\(\[/)
     expect(internal).toMatch(/^wpkh\(\[/)
-    expect(external).toContain("/0/*)")
-    expect(internal).toContain("/1/*)")
+    expect(external).toContain('/0/*)')
+    expect(internal).toContain('/1/*)')
   })
 
   it('uses coin type 1 for signet', () => {

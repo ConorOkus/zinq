@@ -21,6 +21,7 @@ The `maybeReconnectPeers` function (~60 lines) is defined inline inside the `use
 ## Proposed Solutions
 
 ### Option A: Extract to standalone module (Recommended)
+
 Create `src/ldk/peers/peer-reconnect.ts` with a factory function that encapsulates the reconnection concern. Both the startup auto-reconnect and periodic reconnect can share the core logic.
 
 - **Pros**: Independently testable, reduces context.tsx size, enables future enhancements (backoff, retry limits)
@@ -29,6 +30,7 @@ Create `src/ldk/peers/peer-reconnect.ts` with a factory function that encapsulat
 - **Risk**: Low
 
 ### Option B: Extract to custom hook
+
 Create `useReconnectPeers` hook that manages its own interval and reconnection state.
 
 - **Pros**: React-idiomatic, encapsulates interval lifecycle
@@ -54,8 +56,8 @@ Option A — extract to `src/ldk/peers/peer-reconnect.ts`
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                     | Learnings                             |
+| ---------- | -------------------------- | ------------------------------------- |
 | 2026-03-16 | Created from PR #29 review | Multiple reviewers flagged extraction |
 
 ## Resources

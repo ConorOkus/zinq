@@ -25,7 +25,9 @@ export function connectToPeer(
     return Promise.reject(new Error('Invalid pubkey: must be 66 lowercase hex characters'))
   }
   if (!/^[a-zA-Z0-9._-]+$/.test(host)) {
-    return Promise.reject(new Error('Invalid host: must contain only alphanumeric, dot, hyphen, or underscore'))
+    return Promise.reject(
+      new Error('Invalid host: must contain only alphanumeric, dot, hyphen, or underscore')
+    )
   }
   if (port < 1 || port > 65535) {
     return Promise.reject(new Error('Invalid port: must be between 1 and 65535'))
@@ -159,7 +161,9 @@ export function parsePeerAddress(address: string): { pubkey: string; host: strin
     throw new Error('Invalid peer address: pubkey must be 66 lowercase hex characters')
   }
   if (!/^[a-zA-Z0-9._-]+$/.test(host)) {
-    throw new Error('Invalid peer address: host must contain only alphanumeric, dot, hyphen, or underscore')
+    throw new Error(
+      'Invalid peer address: host must contain only alphanumeric, dot, hyphen, or underscore'
+    )
   }
   return { pubkey, host, port }
 }

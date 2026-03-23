@@ -1,5 +1,5 @@
 ---
-title: "feat: Automatic Peer Reconnection on Restart"
+title: 'feat: Automatic Peer Reconnection on Restart'
 type: feat
 status: completed
 date: 2026-03-15
@@ -74,21 +74,23 @@ Place reconnection **after** `setState({status: 'ready'})` — the wallet is usa
 
 ```typescript
 // In LdkProvider, after setting state to 'ready':
-getKnownPeers().then(async (peers) => {
-  if (peers.size === 0) return
-  console.log(`[ldk] reconnecting to ${peers.size} known peer(s)`)
-  const results = await Promise.allSettled(
-    Array.from(peers.entries()).map(([pubkey, { host, port }]) =>
-      connectToPeer(node.peerManager, pubkey, host, port)
+getKnownPeers()
+  .then(async (peers) => {
+    if (peers.size === 0) return
+    console.log(`[ldk] reconnecting to ${peers.size} known peer(s)`)
+    const results = await Promise.allSettled(
+      Array.from(peers.entries()).map(([pubkey, { host, port }]) =>
+        connectToPeer(node.peerManager, pubkey, host, port)
+      )
     )
-  )
-  const succeeded = results.filter(r => r.status === 'fulfilled').length
-  const failed = results.filter(r => r.status === 'rejected').length
-  console.log(`[ldk] peer reconnection: ${succeeded} connected, ${failed} failed`)
-}).catch((err) => {
-  // IDB read failure should never prevent wallet from working
-  console.warn('[ldk] failed to read known peers:', err)
-})
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length
+    const failed = results.filter((r) => r.status === 'rejected').length
+    console.log(`[ldk] peer reconnection: ${succeeded} connected, ${failed} failed`)
+  })
+  .catch((err) => {
+    // IDB read failure should never prevent wallet from working
+    console.warn('[ldk] failed to read known peers:', err)
+  })
 ```
 
 ### Save on Connect (context.tsx)
@@ -118,7 +120,7 @@ const forgetPeer = useCallback(async (pubkey: string) => {
 
   // Check for open channels with this peer
   const channels = node.channelManager.list_channels()
-  const hasChannels = channels.some(ch => {
+  const hasChannels = channels.some((ch) => {
     const counterparty = bytesToHex(ch.get_counterparty().get_node_id().write())
     return counterparty === pubkey
   })
@@ -150,7 +152,7 @@ Extend the `'ready'` variant of `LdkContextValue`:
 ```typescript
 // Add to the 'ready' variant:
 forgetPeer: (pubkey: string) => Promise<void>
-knownPeers: Map<string, KnownPeer>  // optional: expose for UI
+knownPeers: Map<string, KnownPeer> // optional: expose for UI
 ```
 
 ## Acceptance Criteria
@@ -177,11 +179,13 @@ knownPeers: Map<string, KnownPeer>  // optional: expose for UI
 ## Dependencies & Risks
 
 **Dependencies:**
+
 - Existing `connectToPeer()` function in `peer-connection.ts` (no changes needed)
 - Existing IndexedDB infrastructure in `idb.ts`
 - Existing peer timer loop in `context.tsx` (ensures `process_events()` runs to complete handshakes)
 
 **Risks:**
+
 - **Proxy overload:** If a user accumulates many known peers over time, startup reconnection opens many simultaneous WebSocket connections. Mitigation: acceptable for now (typical user has 1-3 peers); add batching if needed later.
 - **Stale entries:** Peers saved on connect (not just channel open) may accumulate experimental connections. Mitigation: "Forget" functionality lets users clean up; could add a "last connected" timestamp later for auto-cleanup.
 - **bfcache restoration:** Browser back-forward cache can restore the page with stale WebSocket connections. Mitigation: out of scope for this feature; can be addressed separately with a `pageshow` event listener.

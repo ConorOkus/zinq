@@ -25,7 +25,13 @@ async function fetchFeeRate(esploraUrl: string): Promise<number> {
     if (typeof satPerVb === 'number' && satPerVb > 0) {
       const capped = Math.min(Math.ceil(satPerVb), MAX_FEE_RATE_SAT_VB)
       if (capped < Math.ceil(satPerVb)) {
-        console.warn('[Sweep] Fee rate capped from', Math.ceil(satPerVb), 'to', MAX_FEE_RATE_SAT_VB, 'sat/vB')
+        console.warn(
+          '[Sweep] Fee rate capped from',
+          Math.ceil(satPerVb),
+          'to',
+          MAX_FEE_RATE_SAT_VB,
+          'sat/vB'
+        )
       }
       return capped
     }
@@ -58,82 +64,78 @@ let sweepInProgress = false
 export async function sweepSpendableOutputs(
   keysManager: KeysManager,
   destinationScript: Uint8Array,
-  esploraUrl: string,
+  esploraUrl: string
 ): Promise<SweepResult> {
   if (sweepInProgress) return { swept: 0, skipped: 0, txid: null }
   sweepInProgress = true
   try {
-  const entries = await idbGetAll<Uint8Array[]>('ldk_spendable_outputs')
-  if (entries.size === 0) return { swept: 0, skipped: 0, txid: null }
+    const entries = await idbGetAll<Uint8Array[]>('ldk_spendable_outputs')
+    if (entries.size === 0) return { swept: 0, skipped: 0, txid: null }
 
-  const allDescriptors: SpendableOutputDescriptor[] = []
-  const idbKeys: string[] = []
-  let skipped = 0
+    const allDescriptors: SpendableOutputDescriptor[] = []
+    const idbKeys: string[] = []
+    let skipped = 0
 
-  for (const [key, serializedArray] of entries) {
-    const descriptors: SpendableOutputDescriptor[] = []
-    let valid = true
+    for (const [key, serializedArray] of entries) {
+      const descriptors: SpendableOutputDescriptor[] = []
+      let valid = true
 
-    for (const bytes of serializedArray) {
-      const result = SpendableOutputDescriptor.constructor_read(bytes)
-      if (result instanceof Result_SpendableOutputDescriptorDecodeErrorZ_OK) {
-        descriptors.push(result.res)
+      for (const bytes of serializedArray) {
+        const result = SpendableOutputDescriptor.constructor_read(bytes)
+        if (result instanceof Result_SpendableOutputDescriptorDecodeErrorZ_OK) {
+          descriptors.push(result.res)
+        } else {
+          console.error('[Sweep] Failed to deserialize SpendableOutputDescriptor for key:', key)
+          valid = false
+          break
+        }
+      }
+
+      if (valid && descriptors.length > 0) {
+        allDescriptors.push(...descriptors)
+        idbKeys.push(key)
       } else {
-        console.error('[Sweep] Failed to deserialize SpendableOutputDescriptor for key:', key)
-        valid = false
-        break
+        skipped += serializedArray.length
       }
     }
 
-    if (valid && descriptors.length > 0) {
-      allDescriptors.push(...descriptors)
-      idbKeys.push(key)
-    } else {
-      skipped += serializedArray.length
+    if (allDescriptors.length === 0) {
+      return { swept: 0, skipped, txid: null }
     }
-  }
 
-  if (allDescriptors.length === 0) {
-    return { swept: 0, skipped, txid: null }
-  }
+    // Fetch fee rate and convert from sat/vB to sat/kw (×250)
+    const feeRateSatVb = await fetchFeeRate(esploraUrl)
+    const feeRateSatPer1000Weight = feeRateSatVb * 250
 
-  // Fetch fee rate and convert from sat/vB to sat/kw (×250)
-  const feeRateSatVb = await fetchFeeRate(esploraUrl)
-  const feeRateSatPer1000Weight = feeRateSatVb * 250
-
-  // Build + sign sweep tx via LDK's OutputSpender
-  const outputSpender = keysManager.as_OutputSpender()
-  const result = outputSpender.spend_spendable_outputs(
-    allDescriptors,
-    [], // no additional TxOut
-    destinationScript,
-    feeRateSatPer1000Weight,
-    Option_u32Z.constructor_none(), // no locktime preference
-  )
-
-  if (!(result instanceof Result_TransactionNoneZ_OK)) {
-    // spend_spendable_outputs can fail if outputs are dust or uneconomical
-    console.warn(
-      '[Sweep] spend_spendable_outputs failed — outputs may be dust or timelocked',
-      'descriptors:', allDescriptors.length,
+    // Build + sign sweep tx via LDK's OutputSpender
+    const outputSpender = keysManager.as_OutputSpender()
+    const result = outputSpender.spend_spendable_outputs(
+      allDescriptors,
+      [], // no additional TxOut
+      destinationScript,
+      feeRateSatPer1000Weight,
+      Option_u32Z.constructor_none() // no locktime preference
     )
-    return { swept: 0, skipped: skipped + allDescriptors.length, txid: null }
-  }
 
-  const txHex = bytesToHex(result.res)
-  const txid = await broadcastWithRetry(esploraUrl, txHex)
+    if (!(result instanceof Result_TransactionNoneZ_OK)) {
+      // spend_spendable_outputs can fail if outputs are dust or uneconomical
+      console.warn(
+        '[Sweep] spend_spendable_outputs failed — outputs may be dust or timelocked',
+        'descriptors:',
+        allDescriptors.length
+      )
+      return { swept: 0, skipped: skipped + allDescriptors.length, txid: null }
+    }
 
-  // Clean up IDB entries atomically after successful broadcast
-  await idbDeleteBatch('ldk_spendable_outputs', idbKeys)
+    const txHex = bytesToHex(result.res)
+    const txid = await broadcastWithRetry(esploraUrl, txHex)
 
-  console.log(
-    '[Sweep] Successfully swept',
-    allDescriptors.length,
-    'output(s), txid:',
-    txid,
-  )
+    // Clean up IDB entries atomically after successful broadcast
+    await idbDeleteBatch('ldk_spendable_outputs', idbKeys)
 
-  return { swept: allDescriptors.length, skipped, txid }
+    console.log('[Sweep] Successfully swept', allDescriptors.length, 'output(s), txid:', txid)
+
+    return { swept: allDescriptors.length, skipped, txid }
   } finally {
     sweepInProgress = false
   }

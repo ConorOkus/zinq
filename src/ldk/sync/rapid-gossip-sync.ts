@@ -28,7 +28,7 @@ export interface RgsHandle {
 export async function initRapidGossipSync(
   networkGraph: NetworkGraph,
   logger: Logger,
-  rgsUrl: string,
+  rgsUrl: string
 ): Promise<RgsHandle> {
   const rgs = RapidGossipSync.constructor_new(networkGraph, logger)
 
@@ -42,15 +42,8 @@ export async function initRapidGossipSync(
 /**
  * Fetch a delta snapshot from the RGS server and apply it to the network graph.
  */
-export async function syncRapidGossip(
-  handle: RgsHandle,
-  rgsUrl: string,
-): Promise<void> {
-  handle.lastSyncTimestamp = await applyRgsUpdate(
-    handle.rgs,
-    rgsUrl,
-    handle.lastSyncTimestamp,
-  )
+export async function syncRapidGossip(handle: RgsHandle, rgsUrl: string): Promise<void> {
+  handle.lastSyncTimestamp = await applyRgsUpdate(handle.rgs, rgsUrl, handle.lastSyncTimestamp)
 }
 
 /**
@@ -59,7 +52,7 @@ export async function syncRapidGossip(
 async function applyRgsUpdate(
   rgs: RapidGossipSync,
   rgsUrl: string,
-  lastSyncTimestamp: number,
+  lastSyncTimestamp: number
 ): Promise<number> {
   const url = `${rgsUrl}/${lastSyncTimestamp}`
   console.log(`[RGS] Fetching snapshot from ${url}`)
@@ -88,10 +81,7 @@ async function applyRgsUpdate(
   // Pass None for current_time to skip the 2-week staleness check.
   // The RGS server URL is hardcoded and trusted; gossip messages have
   // their own signature validation inside LDK.
-  const result = rgs.update_network_graph_no_std(
-    updateData,
-    Option_u64Z.constructor_none(),
-  )
+  const result = rgs.update_network_graph_no_std(updateData, Option_u64Z.constructor_none())
 
   if (!(result instanceof Result_u32GraphSyncErrorZ_OK)) {
     let detail = 'unknown error'

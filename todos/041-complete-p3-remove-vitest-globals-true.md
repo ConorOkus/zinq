@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "041"
+issue_id: '041'
 tags: [code-review, quality, proxy]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ dependencies: []
 ## Proposed Solutions
 
 ### Option A: Remove globals: true
+
 - **Effort:** Small — one-line removal
 
 ## Acceptance Criteria

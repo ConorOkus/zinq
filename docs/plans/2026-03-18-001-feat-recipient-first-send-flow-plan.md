@@ -1,5 +1,5 @@
 ---
-title: "feat: Recipient-first send flow with amount auto-detection"
+title: 'feat: Recipient-first send flow with amount auto-detection'
 type: feat
 status: completed
 date: 2026-03-18
@@ -29,14 +29,14 @@ recipient --> [amount if needed] --> oc-review / ln-review --> sending --> succe
 
 **Flow by input type:**
 
-| Input Type | Has Amount? | Numpad? | Next Step |
-|---|---|---|---|
-| Plain on-chain address | No | Yes | `amount → oc-review` |
-| BIP 321 URI + `?amount=` | Yes (sats) | Skip | `oc-review` |
-| BOLT 11 (fixed amount) | Yes (msat) | Skip | `ln-review` |
-| BOLT 11 (zero-amount) | No | Yes | `amount → ln-review` |
-| BOLT 12 (fixed amount) | Yes (msat) | Skip | `ln-review` |
-| BOLT 12 (no amount) | No | Yes | `amount → ln-review` |
+| Input Type               | Has Amount? | Numpad? | Next Step            |
+| ------------------------ | ----------- | ------- | -------------------- |
+| Plain on-chain address   | No          | Yes     | `amount → oc-review` |
+| BIP 321 URI + `?amount=` | Yes (sats)  | Skip    | `oc-review`          |
+| BOLT 11 (fixed amount)   | Yes (msat)  | Skip    | `ln-review`          |
+| BOLT 11 (zero-amount)    | No          | Yes     | `amount → ln-review` |
+| BOLT 12 (fixed amount)   | Yes (msat)  | Skip    | `ln-review`          |
+| BOLT 12 (no amount)      | No          | Yes     | `amount → ln-review` |
 
 ### New `SendStep` Discriminated Union
 
@@ -57,21 +57,22 @@ type SendStep =
 
 ### Back Navigation
 
-| From | Back goes to | Rationale |
-|---|---|---|
-| `recipient` | `/` (home) | First step in the flow |
-| `amount` | `recipient` | Preserves `inputValue` so user doesn't re-enter |
-| `oc-review` (numpad was shown) | `amount` | Preserve the manually entered amount |
-| `oc-review` (numpad skipped) | `recipient` | Amount is fixed by payment request |
-| `ln-review` (numpad was shown) | `amount` | Same as on-chain |
-| `ln-review` (numpad skipped) | `recipient` | Same as on-chain |
-| `error` (canRetry) | review step | Preserve all state, just retry (see brainstorm) |
+| From                           | Back goes to | Rationale                                       |
+| ------------------------------ | ------------ | ----------------------------------------------- |
+| `recipient`                    | `/` (home)   | First step in the flow                          |
+| `amount`                       | `recipient`  | Preserves `inputValue` so user doesn't re-enter |
+| `oc-review` (numpad was shown) | `amount`     | Preserve the manually entered amount            |
+| `oc-review` (numpad skipped)   | `recipient`  | Amount is fixed by payment request              |
+| `ln-review` (numpad was shown) | `amount`     | Same as on-chain                                |
+| `ln-review` (numpad skipped)   | `recipient`  | Same as on-chain                                |
+| `error` (canRetry)             | review step  | Preserve all state, just retry (see brainstorm) |
 
 To determine whether back from review goes to `amount` or `recipient`, track a `numpadWasShown` flag — or simply check whether the current `sendStep` transitioned from `amount` (has `parsedInput`) vs directly from `recipient`.
 
 ### Insufficient Balance Handling
 
 Block on the recipient screen (before review) via `inputError`:
+
 - **On-chain:** `effectiveAmount > onchainBalance` → `"Amount (X sats) exceeds available on-chain balance"`
 - **Lightning:** `effectiveMsat > lnCapacityMsat` → `"Amount (X sats) exceeds available Lightning balance"`
 
@@ -80,6 +81,7 @@ This uses the existing `inputError` state and `processRecipientInput` error path
 ### QR Scanner Integration
 
 When arriving from the QR scanner via `location.state.scannedInput`:
+
 - **Input has amount:** Skip recipient entirely, go straight to review
 - **Input has no amount:** Skip recipient, go straight to numpad (with `parsedInput` and `rawInput` set in the `amount` step)
 
@@ -102,6 +104,7 @@ The function currently closes over `amountSats` and `isSendMax` from component s
 2. **When called from numpad (input has no amount):** `amountSats` will be the user-entered value. The function uses `amountSats * 1000n` for lightning and `amountSats` for on-chain. This works as-is.
 
 **No signature change needed.** The existing closure-based approach works because:
+
 - Recipient-with-amount path: parsed amount overrides `amountSats` (which is 0)
 - Numpad path: `amountSats` is set by the user before `processRecipientInput` is called
 

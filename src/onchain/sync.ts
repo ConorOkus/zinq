@@ -18,7 +18,7 @@ export interface OnchainBalance {
 export function startOnchainSyncLoop(
   wallet: Wallet,
   esploraClient: EsploraClient,
-  onBalanceUpdate: (balance: OnchainBalance) => void,
+  onBalanceUpdate: (balance: OnchainBalance) => void
 ): OnchainSyncHandle {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
   let stopped = false

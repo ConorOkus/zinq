@@ -24,7 +24,8 @@ describe('mnemonic', () => {
   })
 
   it('validates a known valid mnemonic', () => {
-    const valid = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+    const valid =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
     expect(mnemonicModule.validateMnemonic(valid)).toBe(true)
   })
 

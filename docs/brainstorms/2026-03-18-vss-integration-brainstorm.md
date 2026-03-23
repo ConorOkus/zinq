@@ -22,6 +22,7 @@ Integrate VSS as a remote persistence layer alongside IndexedDB. Critical LDK st
 The official `vss-client` crate is Rust-only with no WASM support. Compiling it to WASM is impractical because it uses `reqwest` + `tokio` for HTTP, which don't target `wasm32` without significant patching.
 
 The VSS server API is simple — 4 HTTP endpoints with protobuf serialization:
+
 - `POST /getObject` — fetch a value by key
 - `POST /putObjects` — write one or more items transactionally
 - `POST /deleteObject` — delete a key-value pair

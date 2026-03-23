@@ -32,7 +32,11 @@ export function createFeeEstimator(esploraUrl: string): FeeEstimator {
       .then((estimates) => {
         const rates = new Map<number, number>()
         for (const [blocks, feePerVbyte] of Object.entries(estimates)) {
-          if (typeof feePerVbyte !== 'number' || !Number.isFinite(feePerVbyte) || feePerVbyte <= 0) {
+          if (
+            typeof feePerVbyte !== 'number' ||
+            !Number.isFinite(feePerVbyte) ||
+            feePerVbyte <= 0
+          ) {
             continue
           }
           // Esplora returns sat/vB, LDK wants sat/KW (multiply by 250)
@@ -85,7 +89,7 @@ export function createFeeEstimator(esploraUrl: string): FeeEstimator {
     // Direct lookup, fallback to default
     const feeRate = cache.rates.get(targetBlocks)
     // LDK enforces minimum of 253 sat/KW (1 sat/vB)
-    return Math.max(feeRate ?? (DEFAULT_FEE_RATES[confirmationTarget] ?? 5_000), 253)
+    return Math.max(feeRate ?? DEFAULT_FEE_RATES[confirmationTarget] ?? 5_000, 253)
   }
 
   return FeeEstimator.new_impl({

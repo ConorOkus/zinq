@@ -27,7 +27,9 @@ export function parseMonitorManifest(json: string): string[] {
     throw new Error('Monitor manifest is not a non-empty array')
   }
   if (parsed.length > MAX_MANIFEST_ENTRIES) {
-    throw new Error(`Monitor manifest has ${parsed.length} entries, exceeds max of ${MAX_MANIFEST_ENTRIES}`)
+    throw new Error(
+      `Monitor manifest has ${parsed.length} entries, exceeds max of ${MAX_MANIFEST_ENTRIES}`
+    )
   }
   const seen = new Set<string>()
   for (const entry of parsed) {
@@ -107,13 +109,24 @@ export function createPersister(options: PersisterOptions = {}): {
               try {
                 const serverKeys = parseMonitorManifest(new TextDecoder().decode(serverObj.value))
                 for (const k of serverKeys) monitorKeys.add(k)
-              } catch (e) { console.warn('[LDK Persist] Server manifest parse failed, overwriting with local keys:', e) }
+              } catch (e) {
+                console.warn(
+                  '[LDK Persist] Server manifest parse failed, overwriting with local keys:',
+                  e
+                )
+              }
               const merged = new TextEncoder().encode(JSON.stringify([...monitorKeys]))
-              const newVersion = await client.putObject(MONITOR_MANIFEST_KEY, merged, serverObj.version)
+              const newVersion = await client.putObject(
+                MONITOR_MANIFEST_KEY,
+                merged,
+                serverObj.version
+              )
               versionCache.set(MONITOR_MANIFEST_KEY, newVersion)
               return
             }
-          } catch { /* retry failed, fall through to warning */ }
+          } catch {
+            /* retry failed, fall through to warning */
+          }
         }
         console.warn('[LDK Persist] Failed to write monitor manifest:', err)
       }
@@ -130,14 +143,13 @@ export function createPersister(options: PersisterOptions = {}): {
   async function persistWithRetry(
     store: 'ldk_channel_monitors',
     key: string,
-    data: Uint8Array,
+    data: Uint8Array
   ): Promise<void> {
     let backoff = INITIAL_BACKOFF_MS
     let totalWaitMs = 0
     let degradedNotified = false
     let conflictRetries = 0
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- intentional indefinite retry
     while (true) {
       try {
         // VSS first (durable remote)
@@ -159,7 +171,9 @@ export function createPersister(options: PersisterOptions = {}): {
         // Version conflict: re-fetch server version, compare, retry (capped)
         if (vssClient && isVssConflict(err) && conflictRetries < MAX_CONFLICT_RETRIES) {
           conflictRetries++
-          console.warn(`[LDK Persist] Version conflict for ${key}, resolving (attempt ${conflictRetries}/${MAX_CONFLICT_RETRIES})...`)
+          console.warn(
+            `[LDK Persist] Version conflict for ${key}, resolving (attempt ${conflictRetries}/${MAX_CONFLICT_RETRIES})...`
+          )
           try {
             const serverObj = await vssClient.getObject(key)
             if (serverObj) {
@@ -175,12 +189,14 @@ export function createPersister(options: PersisterOptions = {}): {
               // Different data — log critical but use server version for next write attempt
               console.error(
                 `[LDK Persist] CRITICAL: True version conflict for ${key}. ` +
-                `Server version: ${serverObj.version}. Retrying with corrected version.`
+                  `Server version: ${serverObj.version}. Retrying with corrected version.`
               )
             } else {
               // Key was deleted on the server — reset version to 0
               versionCache.set(key, 0)
-              console.warn(`[LDK Persist] Key ${key} not found on server during conflict resolution, resetting version to 0`)
+              console.warn(
+                `[LDK Persist] Key ${key} not found on server during conflict resolution, resetting version to 0`
+              )
             }
           } catch (resolveErr: unknown) {
             console.error('[LDK Persist] Failed to resolve version conflict:', resolveErr)
@@ -191,7 +207,9 @@ export function createPersister(options: PersisterOptions = {}): {
 
         // Conflict retries exhausted — fall through to exponential backoff
         if (vssClient && isVssConflict(err)) {
-          console.error(`[LDK Persist] Conflict resolution exhausted for ${key} after ${MAX_CONFLICT_RETRIES} attempts, falling back to backoff`)
+          console.error(
+            `[LDK Persist] Conflict resolution exhausted for ${key} after ${MAX_CONFLICT_RETRIES} attempts, falling back to backoff`
+          )
           conflictRetries = 0 // reset for next backoff cycle
         }
 
@@ -208,10 +226,7 @@ export function createPersister(options: PersisterOptions = {}): {
     }
   }
 
-  function handlePersist(
-    channel_funding_outpoint: OutPoint,
-    monitor: ChannelMonitor
-  ): void {
+  function handlePersist(channel_funding_outpoint: OutPoint, monitor: ChannelMonitor): void {
     const key = outpointKey(channel_funding_outpoint)
     const data = monitor.write()
     const updateId = monitor.get_latest_update_id()
@@ -262,8 +277,11 @@ export function createPersister(options: PersisterOptions = {}): {
       // Archive is fire-and-forget (no retry): orphaned VSS keys waste storage
       // but do not affect fund safety since the channel is already closed.
       const deleteVss = vssClient
-        ? vssClient.deleteObject(key, versionCache.get(key) ?? 0)
-            .then(() => { versionCache.delete(key) })
+        ? vssClient
+            .deleteObject(key, versionCache.get(key) ?? 0)
+            .then(() => {
+              versionCache.delete(key)
+            })
             .catch((err: unknown) => {
               console.error(`[LDK Persist] Failed to delete ${key} from VSS:`, err)
             })

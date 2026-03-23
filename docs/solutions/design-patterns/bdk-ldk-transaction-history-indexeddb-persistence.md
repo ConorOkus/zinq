@@ -20,11 +20,13 @@ LDK's `listRecentPayments()` is volatile -- payment data is lost on page refresh
 **IDB schema migration (v6 to v7):** Added a new `ldk_payment_history` object store with a `SerializedPayment` type that converts `bigint` fields to strings for IndexedDB compatibility.
 
 **Persistence layer (`payment-history.ts`):**
+
 - `persistPayment()` -- writes a new payment record to IDB
 - `updatePaymentStatus()` -- updates an existing record's status using `idbGet()` for O(1) lookup
 - `loadAllPayments()` -- reads all records, deserializing string amounts back to bigint
 
 **Event-driven persistence:**
+
 - Outbound payments are persisted by LDK context at send time (`sendBolt11Payment`, `sendBolt12Payment`, `sendBip353Payment`)
 - Inbound payments are persisted when the `PaymentClaimed` event fires in the event handler
 - `PaymentSent` and `PaymentFailed` events update existing outbound records
@@ -59,7 +61,7 @@ LDK's `listRecentPayments()` is volatile -- payment data is lost on page refresh
 
 ### IDB Write Without Context Notification
 
-Never call `idbPut` in isolation. Every persistence operation should atomically write to IDB *and* dispatch the corresponding context/state update. In code review, any `idbPut` call without a paired state setter in the same function body is a red flag.
+Never call `idbPut` in isolation. Every persistence operation should atomically write to IDB _and_ dispatch the corresponding context/state update. In code review, any `idbPut` call without a paired state setter in the same function body is a red flag.
 
 ### Full Table Scan Where O(1) Lookup Exists
 
@@ -67,7 +69,7 @@ Treat `loadAll*()` functions as initialization-only helpers. Any `loadAll*()` in
 
 ### useMemo Over-Subscribing to Context Objects
 
-Destructure only the specific fields you need *before* the `useMemo` call, and list those values in the dependency array. `useMemo` and `useCallback` dependency arrays should never contain an object that is reconstructed on every render.
+Destructure only the specific fields you need _before_ the `useMemo` call, and list those values in the dependency array. `useMemo` and `useCallback` dependency arrays should never contain an object that is reconstructed on every render.
 
 ### Test Mock Factories Missing New Required Fields
 

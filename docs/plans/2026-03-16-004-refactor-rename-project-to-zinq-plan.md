@@ -1,5 +1,5 @@
 ---
-title: "Rename project to Zinq"
+title: 'Rename project to Zinq'
 type: refactor
 status: completed
 date: 2026-03-16
@@ -12,6 +12,7 @@ date: 2026-03-16
 Rename the project from "browser-wallet" / "Browser Wallet" to "Zinq" / "zinq" across the codebase, GitHub repository, and deployment infrastructure.
 
 **Naming convention:**
+
 - Display name: **Zinq** (title case)
 - Package/identifier: **zinq** (lowercase)
 - Derived names: `zinq-ldk` (IndexedDB), `zinq-lock` (Web Lock)
@@ -39,6 +40,7 @@ The Web Lock name changes from `browser-wallet-lock` to `zinq-lock`. Same ration
 The Vercel project rename will change the default domain. The Cloudflare Worker's `ALLOWED_ORIGINS` must be updated in the same deployment window to avoid breaking WebSocket connectivity.
 
 **Deployment order:**
+
 1. Update `proxy/wrangler.toml` `ALLOWED_ORIGINS` to include both old and new Vercel domains
 2. Deploy the Cloudflare Worker
 3. Rename the Vercel project
@@ -69,9 +71,9 @@ The only localStorage key is `balance-visible` in `BalanceDisplay.tsx` — gener
 ### Infrastructure
 
 - [x] `proxy/wrangler.toml:12` — Update `ALLOWED_ORIGINS` to include new Zinq Vercel domain (kept old domain for transition)
-- [ ] Rename Vercel project from `browser-wallet` to `zinq` *(manual step — Vercel dashboard)*
-- [ ] Rename GitHub repo from `ConorOkus/browser-wallet` to `ConorOkus/zinq` *(manual step — GitHub settings)*
-- [ ] Update local git remote: `git remote set-url origin git@github.com:ConorOkus/zinq.git` *(after GitHub rename)*
+- [ ] Rename Vercel project from `browser-wallet` to `zinq` _(manual step — Vercel dashboard)_
+- [ ] Rename GitHub repo from `ConorOkus/browser-wallet` to `ConorOkus/zinq` _(manual step — GitHub settings)_
+- [ ] Update local git remote: `git remote set-url origin git@github.com:ConorOkus/zinq.git` _(after GitHub rename)_
 
 ### NOT in Scope
 
@@ -98,11 +100,11 @@ The only localStorage key is `balance-visible` in `BalanceDisplay.tsx` — gener
 
 ## Dependencies & Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Vercel/proxy domain mismatch breaks WS connectivity | Medium | High | Deploy proxy with both domains first |
-| Forgotten reference causes runtime error | Low | Medium | Global grep for "browser-wallet" after all changes |
-| GitHub redirect stops working | Very Low | Low | GitHub maintains redirects indefinitely for renamed repos |
+| Risk                                                | Likelihood | Impact | Mitigation                                                |
+| --------------------------------------------------- | ---------- | ------ | --------------------------------------------------------- |
+| Vercel/proxy domain mismatch breaks WS connectivity | Medium     | High   | Deploy proxy with both domains first                      |
+| Forgotten reference causes runtime error            | Low        | Medium | Global grep for "browser-wallet" after all changes        |
+| GitHub redirect stops working                       | Very Low   | Low    | GitHub maintains redirects indefinitely for renamed repos |
 
 ## Sources & References
 

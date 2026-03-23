@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p1
-issue_id: "050"
+issue_id: '050'
 tags: [code-review, security, fund-safety]
 dependencies: []
 ---
@@ -23,6 +23,7 @@ In `FundingTxBroadcastSafe`, the cache entry is deleted **before** the broadcast
 ## Proposed Solutions
 
 ### Option A: Move cache delete into success callback
+
 - Move `fundingTxCache.delete()` into the `.then()` callback so the entry survives broadcast failure
 - **Pros**: Simple 1-line move, preserves retry capability
 - **Cons**: Cache entry leaks if broadcast never succeeds (mitigated by tab refresh)
@@ -30,6 +31,7 @@ In `FundingTxBroadcastSafe`, the cache entry is deleted **before** the broadcast
 - **Risk**: Low
 
 ### Option B: Add retry with exponential backoff
+
 - Implement 3 retries with backoff (1s, 3s, 10s) before giving up
 - **Pros**: Handles transient network issues
 - **Cons**: More code in a temporary module
@@ -52,8 +54,8 @@ Option A is the minimum fix — move the delete. Option B is ideal but may be ov
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                              | Learnings                 |
+| ---------- | ----------------------------------- | ------------------------- |
 | 2026-03-12 | Identified during PR #8 code review | Fund-safety critical path |
 
 ## Resources

@@ -35,19 +35,26 @@ export function createBdkSignerProvider(keysManager: KeysManager): {
       const staged = bdkWallet.take_staged()
       if (staged && !staged.is_empty()) {
         void putChangeset(staged.to_json()).catch((err: unknown) =>
-          console.warn('[BdkSignerProvider] Failed to persist address reveal:', err),
+          console.warn('[BdkSignerProvider] Failed to persist address reveal:', err)
         )
       }
 
       return scriptBytes
     } catch (err) {
-      console.warn('[BdkSignerProvider] Failed to get BDK address, falling back to KeysManager:', err)
+      console.warn(
+        '[BdkSignerProvider] Failed to get BDK address, falling back to KeysManager:',
+        err
+      )
       return null
     }
   }
 
   const impl: SignerProviderInterface = {
-    generate_channel_keys_id(_inbound: boolean, _channel_value_satoshis: bigint, _user_channel_id: bigint): Uint8Array {
+    generate_channel_keys_id(
+      _inbound: boolean, // eslint-disable-line @typescript-eslint/no-unused-vars
+      _channel_value_satoshis: bigint, // eslint-disable-line @typescript-eslint/no-unused-vars
+      _user_channel_id: bigint // eslint-disable-line @typescript-eslint/no-unused-vars
+    ): Uint8Array {
       // Generate a random 32-byte channel keys ID directly instead of
       // delegating to defaultProvider.generate_channel_keys_id(), which
       // re-encodes user_channel_id via encodeUint128. The LDK WASM bindings
@@ -87,7 +94,7 @@ export function createBdkSignerProvider(keysManager: KeysManager): {
         console.warn(
           '[BdkSignerProvider] Unexpected script format (length=%d, prefix=0x%s), falling back to KeysManager',
           script.length,
-          script[0]?.toString(16),
+          script[0]?.toString(16)
         )
       }
       return defaultProvider.get_shutdown_scriptpubkey()

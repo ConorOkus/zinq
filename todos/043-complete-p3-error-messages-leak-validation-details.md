@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p3
-issue_id: "043"
+issue_id: '043'
 tags: [code-review, security, proxy]
 dependencies: []
 ---
@@ -20,6 +20,7 @@ Error responses include specific details like `"Port 80 not allowed"`, `"Connect
 ## Proposed Solutions
 
 ### Option A: Generic errors externally, detailed logs internally
+
 Return `"Bad Request"` for all 400 responses. Log the specific reason via `console.log` (goes to Cloudflare Workers logs).
 
 - **Effort:** Small

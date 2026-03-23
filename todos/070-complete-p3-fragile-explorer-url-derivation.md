@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p3
-issue_id: "070"
+issue_id: '070'
 tags: [code-review, quality]
 dependencies: []
 ---
@@ -21,6 +21,7 @@ Flagged by: code-simplicity-reviewer
 ## Proposed Solutions
 
 ### Option A: Add explorerUrl to ONCHAIN_CONFIG
+
 ```typescript
 explorerUrl: 'https://mutinynet.com'
 ```

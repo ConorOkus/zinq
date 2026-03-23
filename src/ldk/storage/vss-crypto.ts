@@ -47,7 +47,7 @@ export function vssDecrypt(key: Uint8Array, cipherBlob: Uint8Array): Uint8Array 
  */
 export async function obfuscateKey(
   encryptionKey: Uint8Array,
-  plaintextKey: string,
+  plaintextKey: string
 ): Promise<string> {
   // Copy to guarantee a fresh ArrayBuffer (avoids TypedArray view aliasing)
   const cryptoKey = await crypto.subtle.importKey(
@@ -55,7 +55,7 @@ export async function obfuscateKey(
     new Uint8Array(encryptionKey).buffer,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['sign'],
+    ['sign']
   )
   const data = new TextEncoder().encode(plaintextKey)
   const signature = await crypto.subtle.sign('HMAC', cryptoKey, data)

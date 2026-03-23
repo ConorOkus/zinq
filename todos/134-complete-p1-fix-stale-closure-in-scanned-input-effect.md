@@ -23,6 +23,7 @@ This works today **by accident** because the embedded-amount code paths in `proc
 ## Proposed Solutions
 
 ### Option A: Simplify — Remove setTimeout and redundant setAmountDigits (Recommended)
+
 For scanned inputs with embedded amounts, call `processRecipientInput(raw)` directly without pre-filling `amountDigits`. The function already extracts amounts from the parsed input.
 
 ```typescript
@@ -54,6 +55,7 @@ useEffect(() => {
 - **Risk**: Low
 
 ### Option B: Two-effect pattern with state flag
+
 Set a `pendingProcess` state flag, then a second effect watches it with proper deps.
 
 - **Pros**: Guaranteed fresh closure values
@@ -76,8 +78,8 @@ Set a `pendingProcess` state flag, then a second effect watches it with proper d
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
+| Date       | Action                          | Learnings                                            |
+| ---------- | ------------------------------- | ---------------------------------------------------- |
 | 2026-03-18 | Created from PR #33 code review | Multiple reviewers flagged the setTimeout as fragile |
 
 ## Resources

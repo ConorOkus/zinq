@@ -23,6 +23,7 @@ Additionally, there is no debounce — rapid tab switching triggers a full disco
 ## Proposed Solutions
 
 ### Option A: Startup guard + timestamp debounce (Recommended)
+
 Add `if (!peersReconnectedRef.current) return` at top of visible handler. Add a `lastReconnectTimestamp` check (5s cooldown).
 
 - **Pros**: Simple, addresses both issues, minimal code
@@ -31,6 +32,7 @@ Add `if (!peersReconnectedRef.current) return` at top of visible handler. Add a 
 - **Risk**: Low
 
 ### Option B: Startup guard + setTimeout debounce
+
 Guard startup. Use `setTimeout(500ms)` for reconnection, cancelled on next `hidden` event.
 
 - **Pros**: More precise — only reconnects after sustained visibility

@@ -1,6 +1,12 @@
 import { createContext } from 'react'
 import type { Wallet } from '@bitcoindevkit/bdk-wallet-web'
-import type { Bolt11Invoice, Offer, RecentPaymentDetails, ChannelDetails, ChannelId } from 'lightningdevkit'
+import type {
+  Bolt11Invoice,
+  Offer,
+  RecentPaymentDetails,
+  ChannelDetails,
+  ChannelId,
+} from 'lightningdevkit'
 import type { LdkNode } from './init'
 import type { SyncNeededCallback } from './traits/event-handler'
 import type { PersistedPayment } from './storage/payment-history'

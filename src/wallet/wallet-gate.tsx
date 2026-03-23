@@ -7,7 +7,11 @@ export function WalletGate({ children }: { children: ReactNode }) {
   const wallet = useWallet()
 
   if (wallet.status === 'loading') {
-    return <div className="flex min-h-screen items-center justify-center text-gray-400">Loading wallet...</div>
+    return (
+      <div className="flex min-h-screen items-center justify-center text-gray-400">
+        Loading wallet...
+      </div>
+    )
   }
 
   if (wallet.status === 'error') {
@@ -16,7 +20,11 @@ export function WalletGate({ children }: { children: ReactNode }) {
 
   // status === 'ready' — render providers with derived keys, then children
   return (
-    <LdkProvider ldkSeed={wallet.ldkSeed} vssEncryptionKey={wallet.vssEncryptionKey} vssStoreId={wallet.vssStoreId}>
+    <LdkProvider
+      ldkSeed={wallet.ldkSeed}
+      vssEncryptionKey={wallet.vssEncryptionKey}
+      vssStoreId={wallet.vssStoreId}
+    >
       <OnchainProvider bdkDescriptors={wallet.bdkDescriptors}>{children}</OnchainProvider>
     </LdkProvider>
   )

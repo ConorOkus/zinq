@@ -1,5 +1,5 @@
 ---
-title: "LDK WASM rejects 128-bit BigInt for u128 parameters"
+title: 'LDK WASM rejects 128-bit BigInt for u128 parameters'
 category: integration-issues
 severity: moderate
 date: 2026-03-15
@@ -11,9 +11,9 @@ tags:
   - channel-creation
 module: src/ldk/context
 symptoms:
-  - "Error: U128s cannot exceed 128 bits"
-  - "create_channel() fails immediately after being called"
-  - "Channel open fails on confirm"
+  - 'Error: U128s cannot exceed 128 bits'
+  - 'create_channel() fails immediately after being called'
+  - 'Channel open fails on confirm'
 ---
 
 # LDK WASM Rejects Full 128-bit BigInt for u128 Parameters
@@ -31,12 +31,9 @@ The LDK WASM binding's BigInt-to-u128 conversion has a boundary check that rejec
 Use fewer random bytes (8 instead of 16) to stay safely within the u128 range. 64 bits of randomness provides more than sufficient collision resistance for channel IDs:
 
 ```typescript
-const bytes = new Uint8Array(8)  // 64 bits — safely within u128
+const bytes = new Uint8Array(8) // 64 bits — safely within u128
 crypto.getRandomValues(bytes)
-const userChannelId = bytes.reduce(
-  (acc, byte) => (acc << 8n) | BigInt(byte),
-  0n,
-)
+const userChannelId = bytes.reduce((acc, byte) => (acc << 8n) | BigInt(byte), 0n)
 ```
 
 ## Prevention Strategies

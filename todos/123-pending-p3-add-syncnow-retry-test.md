@@ -19,6 +19,7 @@ The `syncNow()` retry behavior (3 retries at 3s intervals) has no test coverage.
 ## Proposed Solutions
 
 ### Option A: Create src/onchain/sync.test.ts
+
 - Test `syncNow()` triggers immediate tick
 - Test retry logic (3 ticks at 3s intervals via fake timers)
 - Test timer reset after retries complete
@@ -36,9 +37,9 @@ The `syncNow()` retry behavior (3 retries at 3s intervals) has no test coverage.
 
 ## Work Log
 
-| Date | Action | Learnings |
-|------|--------|-----------|
-| 2026-03-17 | Created from PR #30 code review | |
+| Date       | Action                          | Learnings |
+| ---------- | ------------------------------- | --------- |
+| 2026-03-17 | Created from PR #30 code review |           |
 
 ## Resources
 

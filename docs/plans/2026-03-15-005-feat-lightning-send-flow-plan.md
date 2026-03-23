@@ -1,5 +1,5 @@
 ---
-title: "feat: Lightning Send Flow with BIP 321, BOLT 11/12, and BIP 353 Support"
+title: 'feat: Lightning Send Flow with BIP 321, BOLT 11/12, and BIP 353 Support'
 type: feat
 status: completed
 date: 2026-03-15
@@ -84,6 +84,7 @@ Wire `OnionMessenger` into the LDK node initialization so BOLT 12 and BIP 353 fl
 - [x] Process `onionMessenger.as_EventsProvider().process_pending_events(eventHandler)` in the event processing loop in `src/ldk/context.tsx` (alongside ChannelManager and ChainMonitor events)
 
 **Files:**
+
 - `src/ldk/init.ts` -- OnionMessenger creation, PeerManager wiring
 - `src/ldk/ldk-context.ts` -- Add `onionMessenger` to `LdkNode` interface
 
@@ -185,13 +186,21 @@ sendBolt11Payment: (invoice: Bolt11Invoice, amountMsat?: bigint) => Promise<Uint
 
 ```typescript
 // src/ldk/context.tsx -- inside the ready state provider
-const sendBolt11Payment = async (invoice: Bolt11Invoice, amountMsat?: bigint): Promise<Uint8Array> => {
+const sendBolt11Payment = async (
+  invoice: Bolt11Invoice,
+  amountMsat?: bigint
+): Promise<Uint8Array> => {
   const hasAmount = invoice.amount_milli_satoshis() instanceof Option_u64Z_Some
   const paramsResult = hasAmount
     ? UtilMethods.constructor_payment_parameters_from_invoice(invoice)
     : UtilMethods.constructor_payment_parameters_from_variable_amount_invoice(invoice, amountMsat!)
 
-  if (!(paramsResult instanceof Result_C3Tuple_ThirtyTwoBytesRecipientOnionFieldsRouteParametersZNoneZ_OK)) {
+  if (
+    !(
+      paramsResult instanceof
+      Result_C3Tuple_ThirtyTwoBytesRecipientOnionFieldsRouteParametersZNoneZ_OK
+    )
+  ) {
     throw new Error('Failed to extract payment parameters from invoice')
   }
 
@@ -201,7 +210,10 @@ const sendBolt11Payment = async (invoice: Bolt11Invoice, amountMsat?: bigint): P
   const paymentId = paymentHash // use payment hash as ID (guaranteed unique)
 
   const result = node.channelManager.send_payment(
-    paymentHash, recipientOnion, paymentId, routeParams,
+    paymentHash,
+    recipientOnion,
+    paymentId,
+    routeParams,
     Retry.constructor_attempts(3)
   )
 
@@ -228,7 +240,14 @@ type SendStep =
   | { step: 'input' }
   // On-chain flow (existing)
   | { step: 'amount'; address: string }
-  | { step: 'reviewing'; address: string; amount: bigint; fee: bigint; feeRate: number; isSendMax: boolean }
+  | {
+      step: 'reviewing'
+      address: string
+      amount: bigint
+      fee: bigint
+      feeRate: number
+      isSendMax: boolean
+    }
   | { step: 'broadcasting' }
   | { step: 'success'; txid: string; amount: bigint }
   // Lightning flow
@@ -246,6 +265,7 @@ type SendStep =
 - [x] Add invoice expiry display: reject expired invoices at parse time (countdown timer deferred)
 
 **Files:**
+
 - `src/ldk/payment-input.ts` (new) -- input classifier
 - `src/ldk/payment-input.test.ts` (new) -- classifier tests
 - `src/ldk/ldk-context.ts` -- add payment methods to context type
@@ -267,17 +287,21 @@ sendBolt12Payment: (offer: Offer, amountMsat?: bigint, payerNote?: string) => Pr
 - [x] Implement `sendBolt12Payment` in `src/ldk/context.tsx`
 
 ```typescript
-const sendBolt12Payment = async (offer: Offer, amountMsat?: bigint, payerNote?: string): Promise<Uint8Array> => {
+const sendBolt12Payment = async (
+  offer: Offer,
+  amountMsat?: bigint,
+  payerNote?: string
+): Promise<Uint8Array> => {
   const paymentId = crypto.getRandomValues(new Uint8Array(32))
 
   const result = node.channelManager.pay_for_offer(
     offer,
-    Option_u64Z.constructor_none(),                                    // quantity
+    Option_u64Z.constructor_none(), // quantity
     amountMsat ? Option_u64Z.constructor_some(amountMsat) : Option_u64Z.constructor_none(),
     payerNote ? Option_StrZ.constructor_some(payerNote) : Option_StrZ.constructor_none(),
     paymentId,
     Retry.constructor_attempts(3),
-    Option_u64Z.constructor_none()                                     // max routing fee
+    Option_u64Z.constructor_none() // max routing fee
   )
 
   if (!result.is_ok()) {
@@ -306,6 +330,7 @@ sendBip353Payment: (name: HumanReadableName, amountMsat: bigint) => Promise<Uint
 - [x] Add user-initiated cancel via `channelManager.abandon_payment(paymentId)` for long-running BOLT 12/BIP 353 flows
 
 **Files:**
+
 - `src/ldk/ldk-context.ts` -- add BOLT 12 and BIP 353 payment methods
 - `src/ldk/context.tsx` -- implement BOLT 12 and BIP 353 payment methods
 - `src/ldk/traits/event-handler.ts` -- handle `Event_InvoiceReceived`
@@ -376,13 +401,13 @@ sendBip353Payment: (name: HumanReadableName, amountMsat: bigint) => Promise<Uint
 
 ## Dependencies & Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| OnionMessenger constructor fails with WASM type errors | Medium | High (blocks BOLT 12) | Verify each `as_*` trait cast exists in .d.mts files before implementation |
-| `ChannelManager.as_NodeIdLookUp()` not available in v0.1.8-0 | Medium | Medium | Fallback: implement `NodeIdLookUp.new_impl()` with channel list scan |
-| No bLIP 32 DNS resolver nodes on Mutinynet | High | High (blocks BIP 353) | BIP 353 may need to be deferred or tested against a self-hosted resolver |
-| BOLT 12 offer peers unreachable via onion message | Medium | Medium | Ensure test offers come from peers with direct or graph-routable paths |
-| `list_recent_payments()` doesn't expose BOLT 12 sub-states in WASM bindings | Low | Medium | Fallback: use event handler callbacks instead of polling |
+| Risk                                                                        | Likelihood | Impact                | Mitigation                                                                 |
+| --------------------------------------------------------------------------- | ---------- | --------------------- | -------------------------------------------------------------------------- |
+| OnionMessenger constructor fails with WASM type errors                      | Medium     | High (blocks BOLT 12) | Verify each `as_*` trait cast exists in .d.mts files before implementation |
+| `ChannelManager.as_NodeIdLookUp()` not available in v0.1.8-0                | Medium     | Medium                | Fallback: implement `NodeIdLookUp.new_impl()` with channel list scan       |
+| No bLIP 32 DNS resolver nodes on Mutinynet                                  | High       | High (blocks BIP 353) | BIP 353 may need to be deferred or tested against a self-hosted resolver   |
+| BOLT 12 offer peers unreachable via onion message                           | Medium     | Medium                | Ensure test offers come from peers with direct or graph-routable paths     |
+| `list_recent_payments()` doesn't expose BOLT 12 sub-states in WASM bindings | Low        | Medium                | Fallback: use event handler callbacks instead of polling                   |
 
 ## Sources & References
 

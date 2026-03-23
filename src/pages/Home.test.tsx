@@ -3,10 +3,18 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, it, expect } from 'vitest'
 import { LdkContext, defaultLdkContextValue, type LdkContextValue } from '../ldk/ldk-context'
-import { OnchainContext, defaultOnchainContextValue, type OnchainContextValue } from '../onchain/onchain-context'
+import {
+  OnchainContext,
+  defaultOnchainContextValue,
+  type OnchainContextValue,
+} from '../onchain/onchain-context'
 import { Home } from './Home'
 
-function readyOnchain(overrides: Partial<Extract<OnchainContextValue, { status: 'ready' }>> = {}): OnchainContextValue {
+/* eslint-disable @typescript-eslint/require-await, react/display-name */
+
+function readyOnchain(
+  overrides: Partial<Extract<OnchainContextValue, { status: 'ready' }>> = {}
+): OnchainContextValue {
   return {
     status: 'ready',
     balance: { confirmed: 100000n, trustedPending: 0n, untrustedPending: 0n },
@@ -22,7 +30,9 @@ function readyOnchain(overrides: Partial<Extract<OnchainContextValue, { status: 
   }
 }
 
-function readyLdk(overrides?: Partial<Extract<LdkContextValue, { status: 'ready' }>>): LdkContextValue {
+function readyLdk(
+  overrides?: Partial<Extract<LdkContextValue, { status: 'ready' }>>
+): LdkContextValue {
   return {
     status: 'ready',
     node: {} as never,
@@ -54,10 +64,7 @@ function readyLdk(overrides?: Partial<Extract<LdkContextValue, { status: 'ready'
   }
 }
 
-function renderHome(
-  ldkValue?: LdkContextValue,
-  onchainValue?: OnchainContextValue,
-) {
+function renderHome(ldkValue?: LdkContextValue, onchainValue?: OnchainContextValue) {
   return render(
     <MemoryRouter>
       <LdkContext value={ldkValue ?? readyLdk()}>
@@ -65,7 +72,7 @@ function renderHome(
           <Home />
         </OnchainContext>
       </LdkContext>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
 }
 
@@ -85,16 +92,22 @@ describe('Home', () => {
   })
 
   it('shows unified balance in BIP 177 format', () => {
-    renderHome(readyLdk(), readyOnchain({
-      balance: { confirmed: 100000n, trustedPending: 5000n, untrustedPending: 0n },
-    }))
+    renderHome(
+      readyLdk(),
+      readyOnchain({
+        balance: { confirmed: 100000n, trustedPending: 5000n, untrustedPending: 0n },
+      })
+    )
     expect(screen.getByText('₿105,000')).toBeInTheDocument()
   })
 
   it('shows untrusted pending as secondary indicator', () => {
-    renderHome(readyLdk(), readyOnchain({
-      balance: { confirmed: 100000n, trustedPending: 0n, untrustedPending: 500n },
-    }))
+    renderHome(
+      readyLdk(),
+      readyOnchain({
+        balance: { confirmed: 100000n, trustedPending: 0n, untrustedPending: 500n },
+      })
+    )
     expect(screen.getByText(/\+₿500 pending/)).toBeInTheDocument()
   })
 
@@ -117,16 +130,19 @@ describe('Home', () => {
   })
 
   it('shows zero balance for new wallet', () => {
-    renderHome(readyLdk(), readyOnchain({
-      balance: { confirmed: 0n, trustedPending: 0n, untrustedPending: 0n },
-    }))
+    renderHome(
+      readyLdk(),
+      readyOnchain({
+        balance: { confirmed: 0n, trustedPending: 0n, untrustedPending: 0n },
+      })
+    )
     expect(screen.getByText('₿0')).toBeInTheDocument()
   })
 
   it('shows unified balance including Lightning', () => {
     renderHome(
       readyLdk({ lightningBalanceSats: 50_000n }),
-      readyOnchain({ balance: { confirmed: 100_000n, trustedPending: 0n, untrustedPending: 0n } }),
+      readyOnchain({ balance: { confirmed: 100_000n, trustedPending: 0n, untrustedPending: 0n } })
     )
     expect(screen.getByText('₿150,000')).toBeInTheDocument()
   })
@@ -134,7 +150,7 @@ describe('Home', () => {
   it('does not show onchain/lightning breakdown on home screen', () => {
     renderHome(
       readyLdk({ lightningBalanceSats: 50_000n }),
-      readyOnchain({ balance: { confirmed: 100_000n, trustedPending: 0n, untrustedPending: 0n } }),
+      readyOnchain({ balance: { confirmed: 100_000n, trustedPending: 0n, untrustedPending: 0n } })
     )
     expect(screen.queryByText(/onchain/)).not.toBeInTheDocument()
     expect(screen.queryByText(/lightning/)).not.toBeInTheDocument()

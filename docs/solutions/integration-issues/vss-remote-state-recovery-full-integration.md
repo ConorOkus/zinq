@@ -1,10 +1,29 @@
 ---
-title: "VSS Remote State Recovery — Full Phase 1 Integration"
+title: 'VSS Remote State Recovery — Full Phase 1 Integration'
 category: integration-issues
 date: 2026-03-18
 severity: HIGH
-tags: [vss, persistence, recovery, channel-monitor, channel-manager, dual-write, migration, ldk, indexeddb]
-modules: [src/ldk/traits/persist.ts, src/ldk/storage/persist-cm.ts, src/ldk/init.ts, src/ldk/context.tsx, src/wallet/context.tsx, src/pages/Restore.tsx]
+tags:
+  [
+    vss,
+    persistence,
+    recovery,
+    channel-monitor,
+    channel-manager,
+    dual-write,
+    migration,
+    ldk,
+    indexeddb,
+  ]
+modules:
+  [
+    src/ldk/traits/persist.ts,
+    src/ldk/storage/persist-cm.ts,
+    src/ldk/init.ts,
+    src/ldk/context.tsx,
+    src/wallet/context.tsx,
+    src/pages/Restore.tsx,
+  ]
 ---
 
 ## Problem
@@ -20,10 +39,12 @@ No remote persistence layer existed. The single-write IDB architecture had no re
 Full VSS (Versioned Storage Service) integration across 5 phases:
 
 ### Phase 1A: Foundation
+
 - `VssClient` with protobuf wire format, ChaCha20-Poly1305 encryption, HMAC key obfuscation
 - Key derivation: encryption key at `m/535'/1'`, store_id from SHA-256 of LDK seed
 
 ### Phase 1B: ChannelMonitor Dual-Write
+
 - VSS-first write ordering in `persistWithRetry` (remote durable before local fast)
 - Indefinite exponential backoff (500ms → 60s cap) replacing 3-attempt linear
 - Version conflict resolution with 5-attempt cap, then fallback to backoff
@@ -31,12 +52,14 @@ Full VSS (Versioned Storage Service) integration across 5 phases:
 - `VssStatus` type in React context
 
 ### Phase 1C: ChannelManager Consolidation
+
 - `persistChannelManager()` with VSS+IDB dual-write
 - `persistChannelManagerIdbOnly()` for visibility handler (browser may kill tab)
 - Consolidated 3 separate CM persist paths into one function
 - Version conflict resolution (re-fetch server version, retry once)
 
 ### Phase 1D: Initialization + Migration
+
 - VSS keys derived in `WalletProvider`, passed through context to `LdkProvider`
 - `VssClient` instantiated with degradation callbacks wired to React state
 - Migration: existing IDB state uploaded to VSS on first startup via `putObjects`
@@ -44,6 +67,7 @@ Full VSS (Versioned Storage Service) integration across 5 phases:
 - Version cache otherwise starts empty — conflict resolution handles sync on first write
 
 ### Phase 1E: Recovery Flow
+
 - Restore page at `/settings/restore` with mnemonic input, confirmation, progress
 - Derives keys from mnemonic → checks VSS for backup → clears all IDB → writes restored data → full page reload
 - CM written before monitors per init.ts ordering constraint

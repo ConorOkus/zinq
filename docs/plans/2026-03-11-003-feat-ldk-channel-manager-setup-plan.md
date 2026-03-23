@@ -100,7 +100,10 @@ function initWasm(): Promise<void> {
 Solve the circular dependency (Persist is passed to ChainMonitor constructor, but needs ChainMonitor ref for callback) with a late-binding setter:
 
 ```typescript
-export function createPersister(): { persist: Persist; setChainMonitor: (cm: ChainMonitor) => void } {
+export function createPersister(): {
+  persist: Persist
+  setChainMonitor: (cm: ChainMonitor) => void
+} {
   let chainMonitorRef: ChainMonitor | null = null
 
   const persist = Persist.new_impl({
@@ -130,14 +133,17 @@ export function createPersister(): { persist: Persist; setChainMonitor: (cm: Cha
     },
     archive_persisted_channel(channelFundingOutpoint) {
       const key = outpointKey(channelFundingOutpoint)
-      idbDelete('ldk_channel_monitors', key)
-        .catch((err) => console.error('[LDK Persist] Failed to archive channel:', err))
+      idbDelete('ldk_channel_monitors', key).catch((err) =>
+        console.error('[LDK Persist] Failed to archive channel:', err)
+      )
     },
   })
 
   return {
     persist,
-    setChainMonitor: (cm: ChainMonitor) => { chainMonitorRef = cm },
+    setChainMonitor: (cm: ChainMonitor) => {
+      chainMonitorRef = cm
+    },
   }
 }
 ```
@@ -152,8 +158,8 @@ Capture LDK's `register_tx` and `register_output` calls into a watch set for the
 import { Filter, WatchedOutput } from 'lightningdevkit'
 
 export interface WatchState {
-  watchedTxids: Map<string, Uint8Array>      // hex txid -> script_pubkey
-  watchedOutputs: Map<string, WatchedOutput>  // "txid:vout" -> WatchedOutput
+  watchedTxids: Map<string, Uint8Array> // hex txid -> script_pubkey
+  watchedOutputs: Map<string, WatchedOutput> // "txid:vout" -> WatchedOutput
 }
 
 export function createFilter(): { filter: Filter; watchState: WatchState } {
@@ -216,7 +222,12 @@ const decayParams = ProbabilisticScoringDecayParameters.constructor_default()
 const scorerBytes = await idbGet<Uint8Array>('ldk_scorer', 'primary')
 let scorer: ProbabilisticScorer
 if (scorerBytes) {
-  const result = ProbabilisticScorer.constructor_read(scorerBytes, decayParams, networkGraph, logger)
+  const result = ProbabilisticScorer.constructor_read(
+    scorerBytes,
+    decayParams,
+    networkGraph,
+    logger
+  )
   if (result instanceof Result_ProbabilisticScorerDecodeErrorZ_OK) {
     scorer = result.res
   } else {
@@ -230,12 +241,15 @@ if (scorerBytes) {
 // Wire Router + MessageRouter
 const lockableScore = MultiThreadedLockableScore.constructor_new(scorer.as_Score())
 const router = DefaultRouter.constructor_new(
-  networkGraph, logger, keysManager.as_EntropySource(),
+  networkGraph,
+  logger,
+  keysManager.as_EntropySource(),
   lockableScore.as_LockableScore(),
   ProbabilisticScoringFeeParameters.constructor_default()
 )
 const messageRouter = DefaultMessageRouter.constructor_new(
-  networkGraph, keysManager.as_EntropySource()
+  networkGraph,
+  keysManager.as_EntropySource()
 )
 ```
 
@@ -247,7 +261,9 @@ const monitorEntries = await idbGetAll<Uint8Array>('ldk_channel_monitors')
 const channelMonitors: ChannelMonitor[] = []
 for (const [_key, data] of monitorEntries) {
   const result = UtilMethods.constructor_C2Tuple_ThirtyTwoBytesChannelMonitorZ_read(
-    data, keysManager.as_EntropySource(), keysManager.as_SignerProvider()
+    data,
+    keysManager.as_EntropySource(),
+    keysManager.as_SignerProvider()
   )
   if (result instanceof Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK) {
     channelMonitors.push(result.res.get_b())
@@ -264,10 +280,17 @@ if (cmBytes) {
   // Restore from serialized bytes
   const result = UtilMethods.constructor_C2Tuple_ThirtyTwoBytesChannelManagerZ_read(
     cmBytes,
-    keysManager.as_EntropySource(), keysManager.as_NodeSigner(), keysManager.as_SignerProvider(),
-    feeEstimator, chainMonitor.as_Watch(), broadcaster,
-    router.as_Router(), messageRouter.as_MessageRouter(),
-    logger, UserConfig.constructor_default(), channelMonitors
+    keysManager.as_EntropySource(),
+    keysManager.as_NodeSigner(),
+    keysManager.as_SignerProvider(),
+    feeEstimator,
+    chainMonitor.as_Watch(),
+    broadcaster,
+    router.as_Router(),
+    messageRouter.as_MessageRouter(),
+    logger,
+    UserConfig.constructor_default(),
+    channelMonitors
   )
   if (!(result instanceof Result_C2Tuple_ThirtyTwoBytesChannelManagerZDecodeErrorZ_OK)) {
     throw new Error('[LDK Init] Failed to deserialize ChannelManager')
@@ -289,11 +312,17 @@ if (cmBytes) {
   const chainParams = ChainParameters.constructor_new(Network.LDKNetwork_Signet, bestBlock)
 
   channelManager = ChannelManager.constructor_new(
-    feeEstimator, chainMonitor.as_Watch(), broadcaster,
-    router.as_Router(), messageRouter.as_MessageRouter(),
+    feeEstimator,
+    chainMonitor.as_Watch(),
+    broadcaster,
+    router.as_Router(),
+    messageRouter.as_MessageRouter(),
     logger,
-    keysManager.as_EntropySource(), keysManager.as_NodeSigner(), keysManager.as_SignerProvider(),
-    UserConfig.constructor_default(), chainParams,
+    keysManager.as_EntropySource(),
+    keysManager.as_NodeSigner(),
+    keysManager.as_SignerProvider(),
+    UserConfig.constructor_default(),
+    chainParams,
     Math.floor(Date.now() / 1000)
   )
 }
@@ -311,15 +340,38 @@ Typed wrapper around Esplora REST endpoints:
 export class EsploraClient {
   constructor(private baseUrl: string) {}
 
-  async getTipHash(): Promise<string> { /* GET /blocks/tip/hash */ }
-  async getTipHeight(): Promise<number> { /* GET /blocks/tip/height */ }
-  async getBlockHeader(hash: string): Promise<Uint8Array> { /* GET /block/{hash}/header -> decode hex to 80 bytes */ }
-  async getBlockStatus(hash: string): Promise<{ in_best_chain: boolean; height: number }> { /* GET /block/{hash}/status */ }
-  async getBlockHashAtHeight(height: number): Promise<string> { /* GET /block-height/{height} */ }
-  async getTxStatus(txid: string): Promise<{ confirmed: boolean; block_height?: number; block_hash?: string }> { /* GET /tx/{txid}/status */ }
-  async getTxHex(txid: string): Promise<Uint8Array> { /* GET /tx/{txid}/hex -> decode hex */ }
-  async getTxMerkleProof(txid: string): Promise<{ block_height: number; pos: number }> { /* GET /tx/{txid}/merkle-proof */ }
-  async getOutspend(txid: string, vout: number): Promise<{ spent: boolean; txid?: string; vin?: number }> { /* GET /tx/{txid}/outspend/{vout} */ }
+  async getTipHash(): Promise<string> {
+    /* GET /blocks/tip/hash */
+  }
+  async getTipHeight(): Promise<number> {
+    /* GET /blocks/tip/height */
+  }
+  async getBlockHeader(hash: string): Promise<Uint8Array> {
+    /* GET /block/{hash}/header -> decode hex to 80 bytes */
+  }
+  async getBlockStatus(hash: string): Promise<{ in_best_chain: boolean; height: number }> {
+    /* GET /block/{hash}/status */
+  }
+  async getBlockHashAtHeight(height: number): Promise<string> {
+    /* GET /block-height/{height} */
+  }
+  async getTxStatus(
+    txid: string
+  ): Promise<{ confirmed: boolean; block_height?: number; block_hash?: string }> {
+    /* GET /tx/{txid}/status */
+  }
+  async getTxHex(txid: string): Promise<Uint8Array> {
+    /* GET /tx/{txid}/hex -> decode hex */
+  }
+  async getTxMerkleProof(txid: string): Promise<{ block_height: number; pos: number }> {
+    /* GET /tx/{txid}/merkle-proof */
+  }
+  async getOutspend(
+    txid: string,
+    vout: number
+  ): Promise<{ spent: boolean; txid?: string; vin?: number }> {
+    /* GET /tx/{txid}/outspend/{vout} */
+  }
 }
 ```
 
@@ -340,7 +392,7 @@ export async function syncOnce(
     const relevantTxids = confirmable.get_relevant_txids()
     for (const tuple of relevantTxids) {
       const txid = tuple.get_a()
-      const blockHash = tuple.get_c()  // Option<Uint8Array>
+      const blockHash = tuple.get_c() // Option<Uint8Array>
       if (blockHash) {
         const status = await esplora.getBlockStatus(bytesToHex(blockHash))
         if (!status.in_best_chain) {
@@ -485,7 +537,13 @@ Add `syncStatus` to the `ready` state variant:
 ```typescript
 type LdkContextValue =
   | { status: 'loading'; node: null; nodeId: null; error: null }
-  | { status: 'ready'; node: LdkNode; nodeId: string; error: null; syncStatus: 'syncing' | 'synced' | 'stale' }
+  | {
+      status: 'ready'
+      node: LdkNode
+      nodeId: string
+      error: null
+      syncStatus: 'syncing' | 'synced' | 'stale'
+    }
   | { status: 'error'; node: null; nodeId: null; error: Error }
 ```
 
@@ -496,28 +554,33 @@ useEffect(() => {
   let cancelled = false
   let syncHandle: { stop: () => void } | null = null
 
-  initializeLdk().then((node) => {
-    if (cancelled) return
-    // Start sync loop
-    const esplora = new EsploraClient(SIGNET_CONFIG.esploraUrl)
-    const confirmables = [
-      node.channelManager.as_Confirm(),
-      node.chainMonitor.as_Confirm(),
-    ]
-    syncHandle = startSyncLoop(
-      confirmables, watchState, esplora,
-      node.channelManager, node.chainMonitor,
-      node.networkGraph, node.scorer,
-      SIGNET_CONFIG.chainPollIntervalMs
-    )
-    setState({ status: 'ready', node, nodeId: node.nodeId, error: null, syncStatus: 'syncing' })
-  }).catch((error: unknown) => {
-    if (cancelled) return
-    setState({
-      status: 'error', node: null, nodeId: null,
-      error: error instanceof Error ? error : new Error(String(error)),
+  initializeLdk()
+    .then((node) => {
+      if (cancelled) return
+      // Start sync loop
+      const esplora = new EsploraClient(SIGNET_CONFIG.esploraUrl)
+      const confirmables = [node.channelManager.as_Confirm(), node.chainMonitor.as_Confirm()]
+      syncHandle = startSyncLoop(
+        confirmables,
+        watchState,
+        esplora,
+        node.channelManager,
+        node.chainMonitor,
+        node.networkGraph,
+        node.scorer,
+        SIGNET_CONFIG.chainPollIntervalMs
+      )
+      setState({ status: 'ready', node, nodeId: node.nodeId, error: null, syncStatus: 'syncing' })
     })
-  })
+    .catch((error: unknown) => {
+      if (cancelled) return
+      setState({
+        status: 'error',
+        node: null,
+        nodeId: null,
+        error: error instanceof Error ? error : new Error(String(error)),
+      })
+    })
 
   return () => {
     cancelled = true
@@ -537,7 +600,7 @@ export const SIGNET_CONFIG = {
   genesisBlockHash: '00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6',
   chainPollIntervalMs: 30_000,
   persistCheckIntervalMs: 10_000,
-  networkGraphPersistIntervalTicks: 10,  // ~5 min at 30s polling
+  networkGraphPersistIntervalTicks: 10, // ~5 min at 30s polling
 } as const
 ```
 
@@ -616,25 +679,25 @@ The `LdkNode` interface gains 4 new fields. All consumers (currently just `Home.
 
 ## Dependencies & Prerequisites
 
-| Dependency | Status | Impact |
-|---|---|---|
-| Foundation layer (WASM, KeysManager, traits, IndexedDB) | Complete | Required base |
-| `lightningdevkit@0.1.8-0` API stability | Pre-release | Pin version, wrap APIs |
-| Mutinynet Esplora API availability | External | Sync fails gracefully, retries |
-| Web Locks API browser support | Chrome 69+, Firefox 96+, Safari 15.4+ | Fallback: `console.warn` if unavailable |
-| Todo #011 (WASM reinit guard) | Pending P2 | Resolved by this plan (Phase 1b) |
-| Todo #010 (archive comment fix) | Pending P2 | Addressed by Persist refactor (Phase 1c) |
+| Dependency                                              | Status                                | Impact                                   |
+| ------------------------------------------------------- | ------------------------------------- | ---------------------------------------- |
+| Foundation layer (WASM, KeysManager, traits, IndexedDB) | Complete                              | Required base                            |
+| `lightningdevkit@0.1.8-0` API stability                 | Pre-release                           | Pin version, wrap APIs                   |
+| Mutinynet Esplora API availability                      | External                              | Sync fails gracefully, retries           |
+| Web Locks API browser support                           | Chrome 69+, Firefox 96+, Safari 15.4+ | Fallback: `console.warn` if unavailable  |
+| Todo #011 (WASM reinit guard)                           | Pending P2                            | Resolved by this plan (Phase 1b)         |
+| Todo #010 (archive comment fix)                         | Pending P2                            | Addressed by Persist refactor (Phase 1c) |
 
 ## Risk Analysis & Mitigation
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| LDK WASM API differs from Rust docs | Build failures, wrong behavior | Verify against actual `.d.mts` type definitions in `node_modules/lightningdevkit/structs/` |
-| Esplora rate limiting during catch-up | Sync stalls after long offline | Add request throttling with configurable delay between API calls |
-| IndexedDB quota exceeded | Persist writes fail silently | Monitor quota usage, warn user when approaching limits |
-| `channel_monitor_updated` callback timing | Channel operations paused | Test the late-binding pattern in isolation before full integration |
-| Mutinynet block times (~30s) vs polling interval (~30s) | May miss blocks between polls | Acceptable — `best_block_updated` handles skipped intermediary blocks |
-| Large catch-up sync blocking UI | Poor UX on return after long offline | Sync runs async, UI shows `syncStatus: 'syncing'` state |
+| Risk                                                    | Impact                               | Mitigation                                                                                 |
+| ------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| LDK WASM API differs from Rust docs                     | Build failures, wrong behavior       | Verify against actual `.d.mts` type definitions in `node_modules/lightningdevkit/structs/` |
+| Esplora rate limiting during catch-up                   | Sync stalls after long offline       | Add request throttling with configurable delay between API calls                           |
+| IndexedDB quota exceeded                                | Persist writes fail silently         | Monitor quota usage, warn user when approaching limits                                     |
+| `channel_monitor_updated` callback timing               | Channel operations paused            | Test the late-binding pattern in isolation before full integration                         |
+| Mutinynet block times (~30s) vs polling interval (~30s) | May miss blocks between polls        | Acceptable — `best_block_updated` handles skipped intermediary blocks                      |
+| Large catch-up sync blocking UI                         | Poor UX on return after long offline | Sync runs async, UI shows `syncStatus: 'syncing'` state                                    |
 
 ## Sources & References
 

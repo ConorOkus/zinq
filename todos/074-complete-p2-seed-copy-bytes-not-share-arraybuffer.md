@@ -1,7 +1,7 @@
 ---
 status: complete
 priority: p2
-issue_id: "074"
+issue_id: '074'
 tags: [code-review, security, fund-safety]
 dependencies: []
 ---

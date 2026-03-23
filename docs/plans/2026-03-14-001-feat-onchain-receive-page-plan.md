@@ -1,5 +1,5 @@
 ---
-title: "feat: Add on-chain receive page with QR code and balance display"
+title: 'feat: Add on-chain receive page with QR code and balance display'
 type: feat
 status: completed
 date: 2026-03-14
@@ -50,6 +50,7 @@ Use `navigator.clipboard.writeText()`. Show "Copied!" feedback for 2 seconds on 
 ### Loading/Error States
 
 Follow the existing `Home.tsx` pattern with `useLdk()` — the Receive page will check `onchain.status`:
+
 - `loading` → centered spinner
 - `error` → error message with link back to Home
 - `ready` → full receive UI

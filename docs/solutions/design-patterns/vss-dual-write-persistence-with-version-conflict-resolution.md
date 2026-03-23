@@ -1,5 +1,5 @@
 ---
-title: "VSS Dual-Write Persistence with Version Conflict Resolution"
+title: 'VSS Dual-Write Persistence with Version Conflict Resolution'
 category: design-patterns
 date: 2026-03-18
 severity: HIGH

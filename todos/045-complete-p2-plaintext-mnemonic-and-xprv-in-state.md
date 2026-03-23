@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "045"
+issue_id: '045'
 tags: [code-review, security, cryptography]
 dependencies: []
 ---
@@ -24,14 +24,19 @@ Acceptable for Signet stage per plan: "encryption deferred to mainnet phase." Tr
 ## Proposed Solutions
 
 ### Option A: Encrypt mnemonic with user passphrase
+
 Use `SubtleCrypto.deriveKey()` with PBKDF2 + AES-GCM to wrap the mnemonic. Adds a login/unlock flow.
+
 - **Effort:** Medium | **Risk:** Low
 
 ### Option B: Derive keys at init boundary, not in React state
+
 Move descriptor derivation into `initializeBdkWallet()` directly. Pass only an opaque wallet handle through context, not xprv strings.
+
 - **Effort:** Medium | **Risk:** Low
 
 ## Acceptance Criteria
+
 - [ ] Mnemonic encrypted at rest in IDB (before mainnet)
 - [ ] xprv strings not present in React state/props
 - [ ] Key derivation happens at WASM init boundary

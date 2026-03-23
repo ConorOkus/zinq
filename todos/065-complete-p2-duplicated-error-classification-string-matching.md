@@ -1,7 +1,7 @@
 ---
 status: pending
 priority: p2
-issue_id: "065"
+issue_id: '065'
 tags: [code-review, quality]
 dependencies: []
 ---
@@ -15,6 +15,7 @@ Error messages from BDK are classified in two places: `mapSendError` in context.
 ## Findings
 
 **Locations:**
+
 - `src/onchain/context.tsx`, lines 54-71 (mapSendError)
 - `src/pages/Send.tsx`, lines 84-92 and 129-138 (catch blocks with msg.includes())
 
@@ -23,6 +24,7 @@ Flagged by: kieran-typescript-reviewer, architecture-strategist, agent-native-re
 ## Proposed Solutions
 
 ### Option A: Typed error classes (Recommended)
+
 Throw structured errors with a `code` field from context layer. UI branches on code instead of string matching.
 
 - Pros: Type-safe, no fragile string matching, agents can branch on codes too
@@ -31,6 +33,7 @@ Throw structured errors with a `code` field from context layer. UI branches on c
 - Risk: Low
 
 ### Option B: Extract classifyEstimateError helper
+
 Keep string matching but extract to a single shared function.
 
 - Pros: Quick fix, reduces duplication

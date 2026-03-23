@@ -49,6 +49,7 @@ server.addEventListener('message', () => {
 ### SSRF Protection Checklist
 
 Block these before calling `connect()`:
+
 - RFC 1918 (`10.x`, `172.16-31.x`, `192.168.x`)
 - Loopback (`127.x`)
 - Link-local (`169.254.x`)

@@ -37,6 +37,7 @@ This is a breaking change for any existing seeds, acceptable given the project's
 ### 2. Address Type: P2WPKH / Native SegWit / BIP84
 
 Native SegWit chosen for broad compatibility. Descriptor format:
+
 ```
 wpkh([fingerprint/84'/1'/0']xprv.../0/*)  # external (receive)
 wpkh([fingerprint/84'/1'/0']xprv.../1/*)  # internal (change)
