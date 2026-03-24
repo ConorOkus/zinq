@@ -176,15 +176,20 @@ vi.mock('lightningdevkit', () => ({
     }),
     constructor_C2Tuple_ThirtyTwoBytesChannelManagerZ_read: vi.fn(() => {
       const r = new MockCmResult()
-      Object.assign(r, { is_ok: () => true, res: { get_b: () => ({
-        list_channels: () => [],
-        as_ChannelMessageHandler: () => ({}),
-        as_Confirm: () => ({}),
-        as_NodeIdLookUp: () => ({}),
-        as_OffersMessageHandler: () => ({}),
-        as_AsyncPaymentsMessageHandler: () => ({}),
-        as_DNSResolverMessageHandler: () => ({}),
-      }) } })
+      Object.assign(r, {
+        is_ok: () => true,
+        res: {
+          get_b: () => ({
+            list_channels: () => [],
+            as_ChannelMessageHandler: () => ({}),
+            as_Confirm: () => ({}),
+            as_NodeIdLookUp: () => ({}),
+            as_OffersMessageHandler: () => ({}),
+            as_AsyncPaymentsMessageHandler: () => ({}),
+            as_DNSResolverMessageHandler: () => ({}),
+          }),
+        },
+      })
       return r
     }),
   },
@@ -246,7 +251,6 @@ function makeManifest(keys: string[]): { value: Uint8Array; version: number } {
     version: 3,
   }
 }
-
 
 describe('VSS recovery in initializeLdk', () => {
   beforeEach(async () => {
