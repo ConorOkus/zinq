@@ -63,6 +63,9 @@ export function LdkProvider({
   // Mutable ref holding the teardown function for the running LDK node.
   // Called by the Restore flow to stop all background persistence before clearing IDB.
   const teardownRef = useRef<(() => void) | null>(null)
+  // Mutable ref for the event-drain + UI-refresh function. Called from the
+  // WebSocket onmessage callback so the UI updates immediately on peer messages.
+  const drainEventsRef = useRef<(() => void) | null>(null)
 
   const shutdown = useCallback(() => {
     console.log('[LDK Context] Shutting down LDK node for restore')
@@ -78,7 +81,9 @@ export function LdkProvider({
   const connectToPeer = useCallback(
     async (pubkey: string, host: string, port: number): Promise<void> => {
       if (!nodeRef.current) throw new Error('Node not initialized')
-      const conn = await doConnectToPeer(nodeRef.current.peerManager, pubkey, host, port)
+      const conn = await doConnectToPeer(nodeRef.current.peerManager, pubkey, host, port, () =>
+        drainEventsRef.current?.()
+      )
       activeConnections.current.get(pubkey)?.disconnect()
       activeConnections.current.set(pubkey, conn)
       putKnownPeer(pubkey, host, port).catch((err: unknown) =>
@@ -445,7 +450,8 @@ export function LdkProvider({
             reconnectDisconnectedPeers(
               node.channelManager,
               node.peerManager,
-              activeConnections.current
+              activeConnections.current,
+              () => drainEventsRef.current?.()
             )
               .catch((err: unknown) => {
                 console.warn('[ldk] peer reconnect failed:', err)
@@ -455,18 +461,10 @@ export function LdkProvider({
               })
           }
 
-          // PeerManager timer + LDK event processing every ~10s
-          peerTimerId = setInterval(() => {
-            node.peerManager.timer_tick_occurred()
-            node.peerManager.process_events()
-
-            // Check for disconnected channel peers every ~30s
-            peerTickCount += 1
-            if (peerTickCount % 3 === 0) {
-              maybeReconnectPeers()
-            }
-
-            // Drain LDK events from ChannelManager, ChainMonitor, and OnionMessenger
+          // Drain LDK events and refresh UI state. Called from both the 10s
+          // timer and the per-message WebSocket callback so the UI updates
+          // immediately when channel state changes (e.g., channel_ready).
+          function drainEventsAndRefresh() {
             node.channelManager.as_EventsProvider().process_pending_events(node.eventHandler)
             node.chainMonitor.as_EventsProvider().process_pending_events(node.eventHandler)
             node.onionMessenger.as_EventsProvider().process_pending_events(node.eventHandler)
@@ -510,6 +508,32 @@ export function LdkProvider({
                 }
               )
             }
+          }
+
+          // Coalesce rapid WebSocket messages into a single drain per
+          // microtask to avoid excessive recomputation from chatty peers.
+          let drainScheduled = false
+          drainEventsRef.current = () => {
+            if (drainScheduled) return
+            drainScheduled = true
+            queueMicrotask(() => {
+              drainScheduled = false
+              drainEventsAndRefresh()
+            })
+          }
+
+          // PeerManager timer + LDK event processing every ~10s
+          peerTimerId = setInterval(() => {
+            node.peerManager.timer_tick_occurred()
+            node.peerManager.process_events()
+
+            // Check for disconnected channel peers every ~30s
+            peerTickCount += 1
+            if (peerTickCount % 3 === 0) {
+              maybeReconnectPeers()
+            }
+
+            drainEventsAndRefresh()
           }, SIGNET_CONFIG.peerTimerIntervalMs)
 
           // Compute initial Lightning balance eagerly so Home screen
@@ -625,7 +649,9 @@ export function LdkProvider({
               console.log(`[ldk] reconnecting to ${peers.size} known peer(s)`)
               const results = await Promise.allSettled(
                 Array.from(peers.entries()).map(async ([pubkey, { host, port }]) => {
-                  const conn = await doConnectToPeer(node.peerManager, pubkey, host, port)
+                  const conn = await doConnectToPeer(node.peerManager, pubkey, host, port, () =>
+                    drainEventsRef.current?.()
+                  )
                   activeConnections.current.set(pubkey, conn)
                 })
               )
@@ -702,6 +728,7 @@ export function LdkProvider({
       connections.clear()
       nodeRef.current = null
       teardownRef.current = null
+      drainEventsRef.current = null
     }
     teardownRef.current = teardown
     return teardown

@@ -13,7 +13,8 @@ import { bytesToHex } from '../utils'
 export async function reconnectDisconnectedPeers(
   channelManager: ChannelManager,
   peerManager: PeerManager,
-  activeConnections: Map<string, PeerConnection>
+  activeConnections: Map<string, PeerConnection>,
+  onMessageProcessed?: () => void
 ): Promise<{ succeeded: number; failed: number }> {
   const channels = channelManager.list_channels()
   if (channels.length === 0) return { succeeded: 0, failed: 0 }
@@ -43,7 +44,7 @@ export async function reconnectDisconnectedPeers(
       .map(async (pk) => {
         const { host, port } = known.get(pk)!
         activeConnections.get(pk)?.disconnect()
-        const conn = await connectToPeer(peerManager, pk, host, port)
+        const conn = await connectToPeer(peerManager, pk, host, port, onMessageProcessed)
         activeConnections.set(pk, conn)
       })
   )

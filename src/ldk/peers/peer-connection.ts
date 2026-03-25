@@ -19,7 +19,8 @@ export function connectToPeer(
   peerManager: PeerManager,
   pubkeyHex: string,
   host: string,
-  port: number
+  port: number,
+  onMessageProcessed?: () => void
 ): Promise<PeerConnection> {
   if (!/^[0-9a-f]{66}$/.test(pubkeyHex)) {
     return Promise.reject(new Error('Invalid pubkey: must be 66 lowercase hex characters'))
@@ -103,6 +104,10 @@ export function connectToPeer(
       }
 
       peerManager.process_events()
+
+      // Notify caller so it can drain LDK events immediately rather than
+      // waiting for the next timer tick (reduces UI update latency).
+      if (resolved) onMessageProcessed?.()
 
       // Check if handshake is complete (resolve the promise once)
       if (!resolved) {
