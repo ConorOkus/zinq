@@ -1,41 +1,49 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+export const config = { runtime: 'edge' }
 
 /**
- * Vercel serverless function that proxies VSS requests.
+ * Vercel Edge Function that proxies VSS requests.
+ * Uses Web API Request/Response for correct binary (protobuf) handling.
  * Reads VSS_ORIGIN from server-side env vars (not exposed to browser).
- *
- * Vercel's default body parser delivers application/octet-stream as a
- * raw Buffer in req.body, which is exactly what we need for protobuf.
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(request: Request) {
   const vssOrigin = process.env.VSS_ORIGIN
   if (!vssOrigin) {
-    res.status(500).json({ error: 'VSS_ORIGIN not configured' })
-    return
+    return new Response(JSON.stringify({ error: 'VSS_ORIGIN not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
-  const path = (req.query.path as string[])?.join('/') ?? ''
-  const targetUrl = `${vssOrigin}/vss/${path}`
+  const url = new URL(request.url)
+  const segments = url.pathname.replace(/^\/api\/vss-proxy\/?/, '')
+  const targetUrl = `${vssOrigin}/vss/${segments}`
 
   try {
     const upstream = await fetch(targetUrl, {
-      method: req.method,
+      method: request.method,
       headers: {
-        'Content-Type': req.headers['content-type'] ?? 'application/octet-stream',
+        'Content-Type':
+          request.headers.get('content-type') ?? 'application/octet-stream',
       },
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
+      body:
+        request.method !== 'GET' && request.method !== 'HEAD'
+          ? await request.arrayBuffer()
+          : undefined,
       signal: AbortSignal.timeout(15_000),
     })
 
-    res.status(upstream.status)
-    res.setHeader(
-      'Content-Type',
-      upstream.headers.get('content-type') ?? 'application/octet-stream'
-    )
-    res.setHeader('Cache-Control', 'no-store')
-    const buffer = Buffer.from(await upstream.arrayBuffer())
-    res.send(buffer)
+    return new Response(await upstream.arrayBuffer(), {
+      status: upstream.status,
+      headers: {
+        'Content-Type':
+          upstream.headers.get('content-type') ?? 'application/octet-stream',
+        'Cache-Control': 'no-store',
+      },
+    })
   } catch {
-    res.status(502).json({ error: 'upstream unavailable' })
+    return new Response(JSON.stringify({ error: 'upstream unavailable' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }
