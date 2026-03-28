@@ -1,5 +1,5 @@
 // ============================================
-// Zinq — Design Prototype App
+// Zinqq — Design Prototype App
 // ============================================
 
 // --- BIP 177 ₿-only Format ---

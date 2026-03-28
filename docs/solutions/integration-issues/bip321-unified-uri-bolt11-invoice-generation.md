@@ -26,7 +26,7 @@ LDK's `UtilMethods.constructor_create_invoice_from_channelmanager` was not expos
 
 ```typescript
 // src/ldk/context.tsx:159-178
-const createInvoice = useCallback((description = 'Zinq Wallet'): string => {
+const createInvoice = useCallback((description = 'Zinqq Wallet'): string => {
   const node = nodeRef.current
   if (!node) throw new Error('Node not initialized')
 

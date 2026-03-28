@@ -5,7 +5,7 @@
 
 ## What We're Building
 
-A TypeScript VSS (Versioned Storage Service) client that enables full channel state recovery for the zinq browser wallet. The client communicates directly with a hosted VSS server over HTTP, using client-side encryption to protect state data. Combined with the existing IndexedDB storage, this creates a dual-write architecture where every critical state change is persisted both locally (fast reads) and remotely (durable recovery).
+A TypeScript VSS (Versioned Storage Service) client that enables full channel state recovery for the zinqq browser wallet. The client communicates directly with a hosted VSS server over HTTP, using client-side encryption to protect state data. Combined with the existing IndexedDB storage, this creates a dual-write architecture where every critical state change is persisted both locally (fast reads) and remotely (durable recovery).
 
 ### The Problem
 
@@ -28,7 +28,7 @@ The VSS server API is simple — 4 HTTP endpoints with protobuf serialization:
 - `POST /deleteObject` — delete a key-value pair
 - `POST /listKeyVersions` — list keys with pagination
 
-A TypeScript client for this is ~200-300 lines and fits naturally into zinq's existing toolchain.
+A TypeScript client for this is ~200-300 lines and fits naturally into zinqq's existing toolchain.
 
 ### Dual-Write (IDB + VSS)
 
@@ -63,7 +63,7 @@ When VSS is unreachable, Lightning operations block rather than proceeding with 
 ## Architecture Sketch
 
 ```
-Browser (zinq)
+Browser (zinqq)
 ├── LDK WASM Node
 │   ├── Persist trait impl
 │   │   ├── Write to IndexedDB (local, fast)

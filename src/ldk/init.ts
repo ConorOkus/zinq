@@ -119,7 +119,7 @@ async function acquireWalletLock(): Promise<void> {
   }
 
   return new Promise<void>((resolve, reject) => {
-    void navigator.locks.request('zinq-lock', { ifAvailable: true }, (lock) => {
+    void navigator.locks.request('zinqq-lock', { ifAvailable: true }, (lock) => {
       if (!lock) {
         reject(new Error('Wallet is already open in another tab'))
         return Promise.resolve()

@@ -10,11 +10,11 @@ origin: docs/brainstorms/2026-03-18-vss-integration-brainstorm.md
 
 ## Overview
 
-Integrate VSS (Versioned Storage Service) as a remote persistence layer for zinq's Lightning channel state. A TypeScript VSS client communicates with a hosted VSS server using protobuf over HTTP, with client-side ChaCha20-Poly1305 encryption. Combined with existing IndexedDB storage, this creates a dual-write architecture that enables full channel state recovery from any device using only the wallet mnemonic.
+Integrate VSS (Versioned Storage Service) as a remote persistence layer for zinqq's Lightning channel state. A TypeScript VSS client communicates with a hosted VSS server using protobuf over HTTP, with client-side ChaCha20-Poly1305 encryption. Combined with existing IndexedDB storage, this creates a dual-write architecture that enables full channel state recovery from any device using only the wallet mnemonic.
 
 ## Problem Statement
 
-Today, if a user clears browser data or loses their device, all Lightning channel state is permanently lost. The BIP39 mnemonic only recovers on-chain funds. Open channels, in-flight payments, and channel balances are irrecoverable. This is the single biggest gap in zinq's self-custody story.
+Today, if a user clears browser data or loses their device, all Lightning channel state is permanently lost. The BIP39 mnemonic only recovers on-chain funds. Open channels, in-flight payments, and channel balances are irrecoverable. This is the single biggest gap in zinqq's self-custody story.
 
 ## Proposed Solution
 
@@ -31,7 +31,7 @@ Dual-write all critical LDK state to both IndexedDB (fast local reads) and VSS (
 ### Architecture
 
 ```
-Browser (zinq)
+Browser (zinqq)
 ├── LDK WASM Node
 │   ├── Persist trait impl (src/ldk/traits/persist.ts)
 │   │   ├── Write to VSS first (remote, durable)

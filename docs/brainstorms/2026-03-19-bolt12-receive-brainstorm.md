@@ -4,7 +4,7 @@
 
 ## What We're Building
 
-Add the ability for zinq to create and display BOLT 12 offers so the wallet can receive payments via the modern offer protocol. This is the first step toward full BIP 353 Lightning Address support (`user@zinq.app`).
+Add the ability for zinqq to create and display BOLT 12 offers so the wallet can receive payments via the modern offer protocol. This is the first step toward full BIP 353 Lightning Address support (`user@zinqq.app`).
 
 ### MVP (This Phase)
 
@@ -15,7 +15,7 @@ Add the ability for zinq to create and display BOLT 12 offers so the wallet can 
 
 ### Future Phases (Out of Scope)
 
-- **Managed DNS service:** Auto-publish the offer as a BIP 353 TXT record at `user@zinq.app`
+- **Managed DNS service:** Auto-publish the offer as a BIP 353 TXT record at `user@zinqq.app`
 - **LSP relay:** Partner with an existing LSP to proxy onion messages when the wallet is offline, enabling always-on receive
 - **BIP 321 integration:** Add `lno=` parameter to the Receive page's unified QR code
 - **Receive page offer tab:** Promote offer display from Advanced to the main Receive flow

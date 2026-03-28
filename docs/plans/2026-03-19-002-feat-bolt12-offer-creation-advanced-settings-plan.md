@@ -10,13 +10,13 @@ origin: docs/brainstorms/2026-03-19-bolt12-receive-brainstorm.md
 
 ## Overview
 
-Add the ability for zinq to create a reusable BOLT 12 offer and display it (string + QR + copy) in the Advanced settings page. This is the foundation for future BIP 353 Lightning Address support (`user@zinq.app`). (See brainstorm: `docs/brainstorms/2026-03-19-bolt12-receive-brainstorm.md`)
+Add the ability for zinqq to create a reusable BOLT 12 offer and display it (string + QR + copy) in the Advanced settings page. This is the foundation for future BIP 353 Lightning Address support (`user@zinqq.app`). (See brainstorm: `docs/brainstorms/2026-03-19-bolt12-receive-brainstorm.md`)
 
 The offer only works while the wallet tab is open — the browser-based LDK node must be running to handle the onion message invoice request/response exchange.
 
 ## Problem Statement / Motivation
 
-Zinq already supports **sending** to BOLT 12 offers but cannot **receive** via them. BOLT 12 offers are reusable payment codes (like a static Lightning address) that don't expire and support payer privacy via blinded paths. Adding offer creation is the first step toward a managed `user@zinq.app` Lightning Address service.
+Zinqq already supports **sending** to BOLT 12 offers but cannot **receive** via them. BOLT 12 offers are reusable payment codes (like a static Lightning address) that don't expire and support payer privacy via blinded paths. Adding offer creation is the first step toward a managed `user@zinqq.app` Lightning Address service.
 
 ## Proposed Solution
 
@@ -34,7 +34,7 @@ const builderResult = node.channelManager.create_offer_builder(
 // ... check Result_OfferWithDerivedMetadataBuilderBolt12SemanticErrorZ_OK
 const builder = builderResult.res
 builder.chain(Network.LDKNetwork_Signet)
-builder.description('zinq wallet')
+builder.description('zinqq wallet')
 const offerResult = builder.build()
 // ... check Result_OfferBolt12SemanticErrorZ_OK
 const offerStr = offerResult.res.to_str()
@@ -60,7 +60,7 @@ const offerStr = offerResult.res.to_str()
 - [x] Offer section shows loading state while node initializes
 - [ ] Offer section shows "No channels" message when no inbound liquidity exists
 - [x] Wallet restore (`clearAllStores()`) wipes the offer; next visit regenerates from new seed
-- [x] Builder calls `.chain(Network.LDKNetwork_Signet)` and `.description('zinq wallet')`
+- [x] Builder calls `.chain(Network.LDKNetwork_Signet)` and `.description('zinqq wallet')`
 - [x] Tests cover offer creation, persistence, and Advanced page display
 
 ## MVP
@@ -104,7 +104,7 @@ bolt12Offer: string | null
 - Add effect that runs when `peersReconnected === true`:
   1. Try `getPersistedOffer()` — if found, set state and return
   2. Otherwise call `channelManager.create_offer_builder(Option_u64Z.constructor_none())`
-  3. Configure builder: `.chain(Network.LDKNetwork_Signet)`, `.description('zinq wallet')`
+  3. Configure builder: `.chain(Network.LDKNetwork_Signet)`, `.description('zinqq wallet')`
   4. Call `.build()`, get offer string via `.to_str()`
   5. Call `putPersistedOffer(offerStr)`, set state
 - Expose `bolt12Offer` on the context value

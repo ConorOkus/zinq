@@ -189,7 +189,7 @@ export function LdkProvider({
     map.set(key, value)
   }
 
-  const createInvoice = useCallback((amountMsat?: bigint, description = 'Zinq Wallet'): string => {
+  const createInvoice = useCallback((amountMsat?: bigint, description = 'Zinqq Wallet'): string => {
     const node = nodeRef.current
     if (!node) throw new Error('Node not initialized')
 
@@ -623,7 +623,7 @@ export function LdkProvider({
               }
               const builder = builderResult.res
               builder.chain(SIGNET_CONFIG.network)
-              builder.description('zinq wallet')
+              builder.description('zinqq wallet')
               const offerResult = builder.build()
               if (!(offerResult instanceof Result_OfferBolt12SemanticErrorZ_OK)) {
                 console.error('[ldk] offer build failed:', offerResult)

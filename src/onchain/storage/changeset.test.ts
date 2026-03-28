@@ -32,7 +32,7 @@ beforeEach(async () => {
   const { closeDb } = await import('../../storage/idb')
   closeDb()
   await new Promise<void>((resolve, reject) => {
-    const req = indexedDB.deleteDatabase('zinq-ldk')
+    const req = indexedDB.deleteDatabase('zinqq-ldk')
     req.onsuccess = () => resolve()
     req.onerror = () => reject(new Error(req.error?.message ?? 'Failed to delete DB'))
   })

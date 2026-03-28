@@ -1,4 +1,4 @@
-# Sync Architecture Validation: Zinq vs LDK Node
+# Sync Architecture Validation: Zinqq vs LDK Node
 
 **Date:** 2026-03-17
 **Status:** Research complete
@@ -6,13 +6,13 @@
 
 ## What We're Studying
 
-Compare Zinq's onchain (BDK) and lightning (LDK) sync architecture against LDK Node's reference implementation to validate correctness and identify gaps.
+Compare Zinqq's onchain (BDK) and lightning (LDK) sync architecture against LDK Node's reference implementation to validate correctness and identify gaps.
 
 ## Architecture Comparison
 
 ### Sync Loop Structure
 
-| Aspect                       | Zinq                          | LDK Node                               |
+| Aspect                       | Zinqq                         | LDK Node                               |
 | ---------------------------- | ----------------------------- | -------------------------------------- |
 | Lightning sync interval      | 30s (`setTimeout`)            | 30s (`tokio::interval`)                |
 | Onchain sync interval        | 30s (`setTimeout`)            | 80s (`tokio::interval`)                |
@@ -25,7 +25,7 @@ Compare Zinq's onchain (BDK) and lightning (LDK) sync architecture against LDK N
 
 **LDK Node:** Syncs ChannelManager + ChainMonitor + OutputSweeper in a single `tx_sync.sync(confirmables)` call. The `tx_sync` crate handles all Esplora queries, reorg detection, and confirmation tracking internally.
 
-**Zinq:** Manually implements the `Confirm` protocol in `chain-sync.ts`:
+**Zinqq:** Manually implements the `Confirm` protocol in `chain-sync.ts`:
 
 1. Check tip hash (skip if unchanged)
 2. Reorg detection via `get_relevant_txids()`
@@ -41,32 +41,32 @@ This is more code to maintain but follows the same logical flow as `tx_sync` int
 
 **LDK Node:** BDK `full_scan()` on first sync, then `get_incremental_sync_request()` on subsequent syncs. 80s interval.
 
-**Zinq:** `start_sync_with_revealed_spks()` → Esplora sync → `apply_update()` → persist changeset to IDB. 30s interval. **Correct implementation**, just more frequent than needed.
+**Zinqq:** `start_sync_with_revealed_spks()` → Esplora sync → `apply_update()` → persist changeset to IDB. 30s interval. **Correct implementation**, just more frequent than needed.
 
 ### Event Processing & Persistence
 
 **LDK Node:** Single `process_events_async()` background loop handles events, persistence, peer management, and gossip.
 
-**Zinq:** Split across:
+**Zinqq:** Split across:
 
 - 10s `setInterval` for peer ticks + event drain + balance computation
 - Chain sync loop handles `timer_tick_occurred()`, `rebroadcast_pending_claims()`, persistence checks
 - Periodic graph/scorer persistence every ~5 minutes
 - Visibility-change flush on tab hide
 
-**Both approaches are valid.** Zinq's split gives finer control over timing in a browser environment.
+**Both approaches are valid.** Zinqq's split gives finer control over timing in a browser environment.
 
 ### Error Handling
 
 **LDK Node:** Silent error swallowing (`let _ = ...`), `MissedTickBehavior::Skip`, per-operation timeouts (90s onchain, 30s lightning).
 
-**Zinq:** Exponential backoff with jitter, stale detection after 3 consecutive errors, `Promise.allSettled` for partial failure resilience, 10s per-request timeout. **Better observability than LDK Node.**
+**Zinqq:** Exponential backoff with jitter, stale detection after 3 consecutive errors, `Promise.allSettled` for partial failure resilience, 10s per-request timeout. **Better observability than LDK Node.**
 
 ### Concurrency
 
 **LDK Node:** `WalletSyncStatus` with broadcast channels — concurrent sync requests subscribe to in-progress result.
 
-**Zinq:** BDK loop paused during tx building. `setTimeout` scheduling (next tick after completion) prevents self-overlap. No explicit dedup guard.
+**Zinqq:** BDK loop paused during tx building. `setTimeout` scheduling (next tick after completion) prevents self-overlap. No explicit dedup guard.
 
 ## What's Correct
 

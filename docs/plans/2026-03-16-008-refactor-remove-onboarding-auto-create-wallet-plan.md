@@ -60,7 +60,7 @@ function initializeWallet(): Promise<WalletReadyState> {
 
 Two fresh tabs could both auto-create different mnemonics. The `storeMnemonic()` safety guard has a TOCTOU gap (read in one IDB transaction, write in another).
 
-**Fix:** Make `storeMnemonic()` use a single `readwrite` transaction that checks-and-writes atomically. This is the minimal change — the Web Lock (`zinq-lock`) is acquired later in `doInitializeLdk` and covers subsequent operations.
+**Fix:** Make `storeMnemonic()` use a single `readwrite` transaction that checks-and-writes atomically. This is the minimal change — the Web Lock (`zinqq-lock`) is acquired later in `doInitializeLdk` and covers subsequent operations.
 
 ```typescript
 // src/wallet/mnemonic.ts — storeMnemonic update

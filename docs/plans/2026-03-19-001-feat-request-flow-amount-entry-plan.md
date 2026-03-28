@@ -38,7 +38,7 @@ Add optional `amountMsat` as the first parameter:
 createInvoice: (amountMsat?: bigint, description?: string) => string
 
 // context.tsx
-const createInvoice = (amountMsat?: bigint, description = 'Zinq Wallet'): string => {
+const createInvoice = (amountMsat?: bigint, description = 'Zinqq Wallet'): string => {
   const amountOption =
     amountMsat != null
       ? Option_u64Z.constructor_some(amountMsat)

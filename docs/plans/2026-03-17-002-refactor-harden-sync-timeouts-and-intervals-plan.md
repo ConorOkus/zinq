@@ -10,7 +10,7 @@ origin: docs/brainstorms/2026-03-17-sync-architecture-validation-brainstorm.md
 
 ## Overview
 
-After comparing Zinq's sync architecture against LDK Node's reference implementation (see brainstorm), we validated that our architecture is fundamentally correct. This plan addresses the three hardening improvements identified: adding overall sync timeouts, adding a timeout to the RGS fetch, and relaxing unnecessarily aggressive intervals.
+After comparing Zinqq's sync architecture against LDK Node's reference implementation (see brainstorm), we validated that our architecture is fundamentally correct. This plan addresses the three hardening improvements identified: adding overall sync timeouts, adding a timeout to the RGS fetch, and relaxing unnecessarily aggressive intervals.
 
 ## Problem Statement / Motivation
 
