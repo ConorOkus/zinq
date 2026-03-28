@@ -1,4 +1,4 @@
-const DB_NAME = 'zinqq-ldk'
+export const DB_NAME = 'zinqq-ldk'
 const DB_VERSION = 8
 
 const STORES = [

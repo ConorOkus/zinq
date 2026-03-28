@@ -4,10 +4,10 @@ let mnemonicModule: typeof import('./mnemonic')
 
 beforeEach(async () => {
   // Close any open DB, delete it, then re-import modules for a clean slate
-  const { closeDb } = await import('../storage/idb')
+  const { closeDb, DB_NAME } = await import('../storage/idb')
   closeDb()
   await new Promise<void>((resolve, reject) => {
-    const req = indexedDB.deleteDatabase('zinqq-ldk')
+    const req = indexedDB.deleteDatabase(DB_NAME)
     req.onsuccess = () => resolve()
     req.onerror = () => reject(new Error(req.error?.message ?? 'Failed to delete DB'))
   })

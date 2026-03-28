@@ -29,10 +29,10 @@ vi.mock('@bitcoindevkit/bdk-wallet-web', () => ({
 let changesetModule: typeof import('./changeset')
 
 beforeEach(async () => {
-  const { closeDb } = await import('../../storage/idb')
+  const { closeDb, DB_NAME } = await import('../../storage/idb')
   closeDb()
   await new Promise<void>((resolve, reject) => {
-    const req = indexedDB.deleteDatabase('zinqq-ldk')
+    const req = indexedDB.deleteDatabase(DB_NAME)
     req.onsuccess = () => resolve()
     req.onerror = () => reject(new Error(req.error?.message ?? 'Failed to delete DB'))
   })
