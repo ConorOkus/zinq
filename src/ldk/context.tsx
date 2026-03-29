@@ -259,8 +259,11 @@ export function LdkProvider({
       node.peerManager.process_events()
 
       // Step 4: Register payment with LDK
+      // Pass None for amount: the LSP deducts the opening fee before forwarding,
+      // so the received amount will be less than the invoice amount. If we enforce
+      // the full amount here, LDK rejects the payment with incorrect_payment_details.
       const paymentResult = node.channelManager.create_inbound_payment(
-        Option_u64Z.constructor_some(amountMsat),
+        Option_u64Z_None.constructor_none(),
         3600, // 1 hour expiry
         Option_u16Z_None.constructor_none()
       )
@@ -272,6 +275,14 @@ export function LdkProvider({
 
       // Step 5: Build and sign the BOLT11 invoice with JIT route hint
       const nodeIdBytes = hexToBytes(node.nodeId)
+      console.log('[LSPS2] Building JIT invoice:', {
+        jitChannelScid: buyResponse.jitChannelScid,
+        lspCltvExpiryDelta: buyResponse.lspCltvExpiryDelta,
+        amountMsat: amountMsat.toString(),
+        paymentHash: bytesToHex(paymentHash),
+        paymentSecret: bytesToHex(paymentSecret),
+        nodeId: node.nodeId,
+      })
       const bolt11 = await node.lsps2Client.createJitInvoice({
         buyResponse,
         lspNodeId,
@@ -283,6 +294,8 @@ export function LdkProvider({
         paymentSecret,
         minFinalCltvExpiry: 144,
       })
+
+      console.log('[LSPS2] Generated JIT invoice:', bolt11)
 
       const openingFeeMsat = calculateOpeningFee(amountMsat, selectedParams)
 
@@ -716,6 +729,24 @@ export function LdkProvider({
             } catch (err) {
               console.error('[ldk] Failed to load/create BOLT 12 offer:', err)
             }
+          }
+
+          // Auto-connect to LSP so JIT channels are ready when needed
+          if (SIGNET_CONFIG.lspNodeId && SIGNET_CONFIG.lspHost) {
+            void doConnectToPeer(
+              node.peerManager,
+              SIGNET_CONFIG.lspNodeId,
+              SIGNET_CONFIG.lspHost,
+              SIGNET_CONFIG.lspPort,
+              () => drainEventsRef.current?.()
+            )
+              .then((conn) => {
+                activeConnections.current.set(SIGNET_CONFIG.lspNodeId, conn)
+                console.log('[ldk] Connected to LSP')
+              })
+              .catch((err: unknown) => {
+                console.warn('[ldk] LSP auto-connect failed (will retry on receive):', err)
+              })
           }
 
           // Auto-reconnect to known peers, then mark peersReconnected so

@@ -131,6 +131,9 @@ export function createLspsMessageHandler(): LspsMessageHandlerResult {
             type_id(): number {
               return LSPS_MESSAGE_TYPE
             },
+            debug_str(): string {
+              return `LSPS message (${bytes.length} bytes)`
+            },
             write(): Uint8Array {
               return bytes
             },
@@ -176,6 +179,9 @@ export function createLspsMessageHandler(): LspsMessageHandlerResult {
         const customType = Type.new_impl({
           type_id(): number {
             return LSPS_MESSAGE_TYPE
+          },
+          debug_str(): string {
+            return `LSPS message (${capturedBuffer.length} bytes)`
           },
           write(): Uint8Array {
             return capturedBuffer

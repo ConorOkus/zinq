@@ -12,8 +12,8 @@ export const SIGNET_CONFIG = {
   vssUrl: (import.meta.env.VITE_VSS_URL as string | undefined) ?? '/api/vss-proxy',
   lspNodeId:
     (import.meta.env.VITE_LSP_NODE_ID as string | undefined) ??
-    '', // Set to mutinynet LSP pubkey when available
-  lspHost: (import.meta.env.VITE_LSP_HOST as string | undefined) ?? '',
-  lspPort: Number(import.meta.env.VITE_LSP_PORT ?? '9735'),
+    '03e30fda71887a916ef5548a4d02b06fe04aaa1a8de9e24134ce7f139cf79d7579',
+  lspHost: (import.meta.env.VITE_LSP_HOST as string | undefined) ?? '64.23.192.68',
+  lspPort: Number(import.meta.env.VITE_LSP_PORT ?? '9736'),
   lspToken: import.meta.env.VITE_LSP_TOKEN as string | undefined,
 } as const

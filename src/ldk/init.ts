@@ -106,6 +106,15 @@ export interface InitResult {
 function createUserConfig(): UserConfig {
   const config = UserConfig.constructor_default()
   config.set_manually_accept_inbound_channels(true)
+
+  // LSPS2 JIT channels require option_scid_alias (reference channel before confirmation)
+  const handshakeConfig = config.get_channel_handshake_config()
+  handshakeConfig.set_negotiate_scid_privacy(true)
+
+  // Allow 0-conf inbound channels from trusted peers (the LSP)
+  const handshakeLimits = config.get_channel_handshake_limits()
+  handshakeLimits.set_trust_own_funding_0conf(true)
+
   return config
 }
 
@@ -530,6 +539,7 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
     throw new Error('Failed to derive node ID from KeysManager')
   }
   const nodeId = bytesToHex(nodeIdResult.res)
+  console.log('[LDK Init] Node ID:', nodeId)
 
   // 13b. Verify node secret key derivation matches KeysManager
   const derivedPubkey = bytesToHex(new Uint8Array(secp256k1GetPublicKey(nodeSecretKey, true)))
