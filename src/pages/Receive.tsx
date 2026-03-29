@@ -151,14 +151,16 @@ export function Receive() {
     : ''
 
   const handleCopy = useCallback(async () => {
-    if (!bip321Uri) return
+    // When JIT invoice is active, copy just the BOLT11 (faucets/wallets need the raw invoice)
+    const textToCopy = (jitState.step === 'ready' && invoice) ? invoice : bip321Uri
+    if (!textToCopy) return
     try {
-      await navigator.clipboard.writeText(bip321Uri)
+      await navigator.clipboard.writeText(textToCopy)
       setCopied(true)
     } catch {
       // Address is displayed and selectable as fallback
     }
-  }, [bip321Uri])
+  }, [bip321Uri, jitState, invoice])
 
   useEffect(() => {
     if (!copied) return
@@ -218,8 +220,13 @@ export function Receive() {
   }
 
   // QR uses uppercase for optimal alphanumeric QR encoding
-  const qrValue = bip321Uri.toUpperCase()
-  const truncated = address ? `bitcoin:${address.slice(0, 8)}...${address.slice(-6)}` : ''
+  const isJitInvoice = jitState.step === 'ready' && invoice
+  const qrValue = isJitInvoice ? invoice.toUpperCase() : bip321Uri.toUpperCase()
+  const truncated = isJitInvoice
+    ? `${invoice!.slice(0, 16)}...${invoice!.slice(-6)}`
+    : address
+      ? `bitcoin:${address.slice(0, 8)}...${address.slice(-6)}`
+      : ''
 
   return (
     <div
