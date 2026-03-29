@@ -30,6 +30,10 @@ vi.mock('./config', () => ({
     rgsUrl: 'https://example.com/snapshot',
     rgsSyncIntervalTicks: 60,
     vssUrl: 'https://example.com/vss',
+    lspNodeId: '',
+    lspHost: '',
+    lspPort: 9735,
+    lspToken: undefined,
   },
 }))
 
@@ -53,6 +57,22 @@ vi.mock('./traits/filter', () => ({
     filter: {},
     watchState: { txids: new Map(), outpoints: new Map() },
   })),
+}))
+vi.mock('./lsps2/node-secret', () => ({
+  deriveNodeSecret: vi.fn(() => new Uint8Array(32)),
+}))
+vi.mock('@noble/secp256k1', () => ({
+  getPublicKey: vi.fn(() => new Uint8Array(33)),
+}))
+vi.mock('./lsps2/message-handler', () => ({
+  createLspsMessageHandler: vi.fn(() => ({
+    handler: { as_CustomMessageHandler: () => ({}) },
+    sendRequest: vi.fn(),
+    destroy: vi.fn(),
+  })),
+}))
+vi.mock('./lsps2/client', () => ({
+  LSPS2Client: class { constructor() {} },
 }))
 vi.mock('./traits/event-handler', () => ({
   createEventHandler: vi.fn(() => ({

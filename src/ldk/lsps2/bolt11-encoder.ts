@@ -255,5 +255,9 @@ export function parseLsps2Scid(scid: string): bigint {
   const block = BigInt(parts[0]!.trim())
   const tx = BigInt(parts[1]!.trim())
   const output = BigInt(parts[2]!.trim())
+  // BOLT7: block (24 bits), tx_index (24 bits), output (16 bits)
+  if (block < 0n || block >= (1n << 24n)) throw new Error(`SCID block out of range: ${block}`)
+  if (tx < 0n || tx >= (1n << 24n)) throw new Error(`SCID tx index out of range: ${tx}`)
+  if (output < 0n || output >= (1n << 16n)) throw new Error(`SCID output out of range: ${output}`)
   return (block << 40n) | (tx << 16n) | output
 }

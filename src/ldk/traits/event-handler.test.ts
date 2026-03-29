@@ -541,13 +541,14 @@ describe('createEventHandler', () => {
     expect(logSpy).not.toHaveBeenCalled()
   })
 
-  it('accepts OpenChannelRequest from non-LSP peer with standard confirmations', () => {
+  it('rejects OpenChannelRequest from non-LSP peer', () => {
     handleEvent(new Event_OpenChannelRequest())
     expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('accepted from'),
+      expect.stringContaining('rejected from non-LSP'),
       expect.any(String)
     )
-    expect(mockAcceptInboundChannel).toHaveBeenCalled()
+    expect(mockAcceptInboundChannel).not.toHaveBeenCalled()
+    expect(mockAcceptInbound0conf).not.toHaveBeenCalled()
   })
 
   it('logs DiscardFunding', () => {

@@ -37,12 +37,12 @@ export class LSPS2Client {
       throw new Error(lsps2ErrorMessage(response.error.code))
     }
 
-    const result = response.result as { opening_fee_params_menu: unknown[] }
-    if (!result?.opening_fee_params_menu || !Array.isArray(result.opening_fee_params_menu)) {
+    const result = response.result as Record<string, unknown> | undefined
+    if (!result || !Array.isArray(result.opening_fee_params_menu)) {
       throw new Error('Invalid lsps2.get_info response: missing opening_fee_params_menu')
     }
 
-    return result.opening_fee_params_menu.map((raw) =>
+    return (result.opening_fee_params_menu as unknown[]).map((raw) =>
       deserializeOpeningFeeParams(raw as Parameters<typeof deserializeOpeningFeeParams>[0])
     )
   }
@@ -63,17 +63,21 @@ export class LSPS2Client {
       throw new Error(lsps2ErrorMessage(response.error.code))
     }
 
-    const result = response.result as {
-      jit_channel_scid: string
-      lsp_cltv_expiry_delta: number
-      client_trusts_lsp: boolean
+    const result = response.result as Record<string, unknown> | undefined
+    if (!result) throw new Error('Invalid lsps2.buy response: missing result')
+
+    const scid = result.jit_channel_scid
+    const cltvDelta = result.lsp_cltv_expiry_delta
+    const trustsLsp = result.client_trusts_lsp
+
+    if (typeof scid !== 'string' || !scid) {
+      throw new Error('Invalid lsps2.buy response: missing or invalid jit_channel_scid')
+    }
+    if (typeof cltvDelta !== 'number' || !Number.isFinite(cltvDelta) || cltvDelta < 1) {
+      throw new Error('Invalid lsps2.buy response: invalid lsp_cltv_expiry_delta')
     }
 
-    if (!result?.jit_channel_scid) {
-      throw new Error('Invalid lsps2.buy response: missing jit_channel_scid')
-    }
-
-    if (result.client_trusts_lsp) {
+    if (trustsLsp === true) {
       throw new Error(
         'This LSP requires a trust mode that is not supported. ' +
           'Your funds would not be protected until the channel is confirmed.'
@@ -81,9 +85,9 @@ export class LSPS2Client {
     }
 
     return {
-      jitChannelScid: result.jit_channel_scid,
-      lspCltvExpiryDelta: result.lsp_cltv_expiry_delta,
-      clientTrustsLsp: result.client_trusts_lsp,
+      jitChannelScid: scid,
+      lspCltvExpiryDelta: cltvDelta,
+      clientTrustsLsp: trustsLsp === true,
     }
   }
 

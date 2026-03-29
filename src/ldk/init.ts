@@ -56,6 +56,7 @@ import { SIGNET_CONFIG } from './config'
 import { createLspsMessageHandler } from './lsps2/message-handler'
 import { LSPS2Client } from './lsps2/client'
 import { deriveNodeSecret } from './lsps2/node-secret'
+import { getPublicKey as secp256k1GetPublicKey } from '@noble/secp256k1'
 import { ONCHAIN_CONFIG } from '../onchain/config'
 import { initializeBdkWalletEager } from '../onchain/init'
 import { idbGet, idbGetAll, idbPut, idbDelete, idbDeleteBatch } from '../storage/idb'
@@ -169,6 +170,14 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   // 0. Safety: acquire multi-tab lock and init WASM
   await acquireWalletLock()
   await initWasm()
+
+  // 0.1 Validate LSP config early (fail fast on misconfiguration)
+  if (SIGNET_CONFIG.lspNodeId && !/^[0-9a-f]{66}$/.test(SIGNET_CONFIG.lspNodeId)) {
+    throw new Error('[LDK Init] Invalid LSP node ID: must be 66 lowercase hex characters')
+  }
+  if (!Number.isFinite(SIGNET_CONFIG.lspPort) || SIGNET_CONFIG.lspPort < 1 || SIGNET_CONFIG.lspPort > 65535) {
+    throw new Error('[LDK Init] Invalid LSP port: must be 1-65535')
+  }
 
   // 0.5 Initialize BDK wallet eagerly (no chain scan) so it's available
   // for address derivation during ChannelManager/ChannelMonitor deserialization
@@ -521,6 +530,16 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
     throw new Error('Failed to derive node ID from KeysManager')
   }
   const nodeId = bytesToHex(nodeIdResult.res)
+
+  // 13b. Verify node secret key derivation matches KeysManager
+  const derivedPubkey = bytesToHex(new Uint8Array(secp256k1GetPublicKey(nodeSecretKey, true)))
+  if (derivedPubkey !== nodeId) {
+    nodeSecretKey.fill(0)
+    throw new Error(
+      '[LDK Init] Node secret key derivation mismatch. ' +
+        `Derived pubkey ${derivedPubkey.substring(0, 16)}... does not match node ID ${nodeId.substring(0, 16)}...`
+    )
+  }
 
   // 14. Create EventHandler
   let paymentCallback: PaymentEventCallback | undefined

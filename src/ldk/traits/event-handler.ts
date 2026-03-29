@@ -401,20 +401,21 @@ function handleEvent(
     return
   }
 
-  // Inbound channel requests — accept 0-conf from configured LSP, standard from others
+  // Inbound channel requests — accept 0-conf from configured LSP only.
+  // Reject from unknown peers to prevent channel griefing and UTXO bloat.
   if (event instanceof Event_OpenChannelRequest) {
     // Use bytesToHex() directly, never .write() (see learnings: ldk-wasm-write-vs-direct-uint8array)
     const counterpartyHex = bytesToHex(event.counterparty_node_id)
-    // Generate user_channel_id with 8 random bytes (not 16) to avoid u128 encoding bug
-    // See learnings: ldk-wasm-encode-uint128-asymmetry
-    const randomBytes = new Uint8Array(8)
-    crypto.getRandomValues(randomBytes)
-    const userChannelId = randomBytes.reduce(
-      (acc, byte) => (acc << 8n) | BigInt(byte),
-      0n
-    )
 
     if (counterpartyHex === lspNodeId && lspNodeId !== '') {
+      // Generate user_channel_id with 8 random bytes (not 16) to avoid u128 encoding bug
+      // See learnings: ldk-wasm-encode-uint128-asymmetry
+      const randomBytes = new Uint8Array(8)
+      crypto.getRandomValues(randomBytes)
+      const userChannelId = randomBytes.reduce(
+        (acc, byte) => (acc << 8n) | BigInt(byte),
+        0n
+      )
       const result = channelManager.accept_inbound_channel_from_trusted_peer_0conf(
         event.temporary_channel_id,
         event.counterparty_node_id,
@@ -426,16 +427,8 @@ function handleEvent(
         console.error('[LDK Event] OpenChannelRequest: failed to accept 0-conf from LSP')
       }
     } else {
-      const result = channelManager.accept_inbound_channel(
-        event.temporary_channel_id,
-        event.counterparty_node_id,
-        userChannelId
-      )
-      if (result.is_ok()) {
-        console.log('[LDK Event] OpenChannelRequest: accepted from', counterpartyHex.substring(0, 16) + '...')
-      } else {
-        console.error('[LDK Event] OpenChannelRequest: failed to accept from', counterpartyHex.substring(0, 16) + '...')
-      }
+      console.log('[LDK Event] OpenChannelRequest: rejected from non-LSP peer', counterpartyHex.substring(0, 16) + '...')
+      // Will timeout automatically — no explicit rejection needed
     }
     return
   }
