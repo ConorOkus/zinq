@@ -160,6 +160,7 @@ export function createLspsMessageHandler(): LspsMessageHandlerResult {
         }
       },
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       peer_connected(_theirNodeId: Uint8Array, _msg: Init, _inbound: boolean): Result_NoneNoneZ {
         return Result_NoneNoneZ.constructor_ok()
       },
@@ -170,6 +171,7 @@ export function createLspsMessageHandler(): LspsMessageHandlerResult {
         return features
       },
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       provided_init_features(_theirNodeId: Uint8Array): InitFeatures {
         const features = InitFeatures.constructor_empty()
         features.set_optional_custom_bit(LSPS_FEATURE_BIT)

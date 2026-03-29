@@ -153,7 +153,7 @@ describe('serializeOpeningFeeParams', () => {
 describe('JSON-RPC serialization', () => {
   it('serializes a request', () => {
     const json = serializeJsonRpcRequest('abc', 'lsps2.get_info', { token: 'tok' })
-    const parsed = JSON.parse(json)
+    const parsed = JSON.parse(json) as { jsonrpc: string; id: string; method: string; params: { token: string } }
     expect(parsed.jsonrpc).toBe('2.0')
     expect(parsed.id).toBe('abc')
     expect(parsed.method).toBe('lsps2.get_info')
