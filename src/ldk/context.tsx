@@ -255,8 +255,6 @@ export function LdkProvider({
 
       // Step 3: Buy JIT channel
       const buyResponse = await node.lsps2Client.buyChannel(lspNodeId, selectedParams, amountMsat)
-      // Flush buy request to LSP immediately rather than waiting for 10s timer
-      node.peerManager.process_events()
 
       // Step 4: Register payment with LDK
       // Pass None for amount: the LSP deducts the opening fee before forwarding,

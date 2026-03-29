@@ -515,9 +515,9 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   )
 
   // 12. Create LSPS message handler and PeerManager
-  const { handler: lspsHandler, sendRequest: lspsSendRequest, destroy: lspsHandlerDestroy } =
+  const { handler: lspsHandler, sendRequest: lspsSendRequest, destroy: lspsHandlerDestroy, setFlushCallback } =
     createLspsMessageHandler()
-  const lsps2Client = new LSPS2Client({ handler: lspsHandler, sendRequest: lspsSendRequest, destroy: lspsHandlerDestroy })
+  const lsps2Client = new LSPS2Client({ handler: lspsHandler, sendRequest: lspsSendRequest, destroy: lspsHandlerDestroy, setFlushCallback })
 
   const peerManager = PeerManager.constructor_new(
     channelManager.as_ChannelMessageHandler(),
@@ -529,6 +529,9 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
     logger,
     keysManager.as_NodeSigner()
   )
+
+  // Wire flush callback so LSPS2 messages are sent immediately after queuing
+  setFlushCallback(() => peerManager.process_events())
 
   // 13. Derive node public key
   const nodeIdResult = keysManager.as_NodeSigner().get_node_id(Recipient.LDKRecipient_Node)

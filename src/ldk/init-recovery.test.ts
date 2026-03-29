@@ -69,6 +69,7 @@ vi.mock('./lsps2/message-handler', () => ({
     handler: { as_CustomMessageHandler: () => ({}) },
     sendRequest: vi.fn(),
     destroy: vi.fn(),
+    setFlushCallback: vi.fn(),
   })),
 }))
 vi.mock('./lsps2/client', () => ({

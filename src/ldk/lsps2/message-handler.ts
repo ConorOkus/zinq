@@ -47,11 +47,14 @@ export interface LspsMessageHandlerResult {
   handler: CustomMessageHandler
   sendRequest: (peerPubkey: Uint8Array, payload: string) => Promise<JsonRpcResponse>
   destroy: () => void
+  /** Set a callback to flush outbound messages (call peerManager.process_events()) */
+  setFlushCallback: (cb: () => void) => void
 }
 
 export function createLspsMessageHandler(): LspsMessageHandlerResult {
   const pending = new Map<string, PendingRequest>()
   const outbound: Array<{ pubkey: Uint8Array; payload: string }> = []
+  let flushCallback: (() => void) | null = null
 
   // Timeout reaper: reject promises older than REQUEST_TIMEOUT_MS
   const reaperTimer = setInterval(() => {
@@ -83,6 +86,11 @@ export function createLspsMessageHandler(): LspsMessageHandlerResult {
     return new Promise<JsonRpcResponse>((resolve, reject) => {
       pending.set(requestId, { resolve, reject, createdAt: Date.now(), peerHex })
       outbound.push({ pubkey: peerPubkey, payload })
+      // Flush outbound queue immediately via PeerManager.process_events()
+      // Without this, the request sits in the queue until the next 10s timer tick.
+      // Use queueMicrotask so the Promise is returned before the flush runs,
+      // allowing the caller's await to suspend first.
+      queueMicrotask(() => flushCallback?.())
     })
   }
 
@@ -197,11 +205,16 @@ export function createLspsMessageHandler(): LspsMessageHandlerResult {
 
   function destroy(): void {
     clearInterval(reaperTimer)
+    flushCallback = null
     for (const [id, entry] of pending) {
       entry.reject(new Error('LSPS message handler destroyed'))
       pending.delete(id)
     }
   }
 
-  return { handler, sendRequest, destroy }
+  function setFlushCallback(cb: () => void): void {
+    flushCallback = cb
+  }
+
+  return { handler, sendRequest, destroy, setFlushCallback }
 }
