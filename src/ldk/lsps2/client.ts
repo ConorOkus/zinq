@@ -75,16 +75,10 @@ export class LSPS2Client {
       throw new Error('Invalid lsps2.buy response: invalid lsp_cltv_expiry_delta')
     }
 
-    if (trustsLsp !== false) {
-      throw new Error(
-        'This LSP requires a trust mode that is not supported. ' +
-          'Your funds would not be protected until the channel is confirmed.'
-      )
-    }
-
     return {
       jitChannelScid: scid,
       lspCltvExpiryDelta: cltvDelta,
+      clientTrustsLsp: trustsLsp === true,
     }
   }
 
