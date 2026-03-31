@@ -319,8 +319,14 @@ describe('createPersister', () => {
         const data = new Uint8Array([1, 2, 3])
         const conflictError = new VssError('conflict', ErrorCode.CONFLICT_EXCEPTION, 409)
 
+        let monitorAttempt = 0
         const vssClient = makeVssClient({
-          putObject: vi.fn().mockRejectedValueOnce(conflictError).mockResolvedValueOnce(2), // manifest write (not the conflict retry)
+          putObject: vi.fn().mockImplementation(async (key: string) => {
+            if (key === '_monitor_keys') return 1 // manifest write succeeds
+            monitorAttempt++
+            if (monitorAttempt === 1) throw conflictError
+            return 2
+          }),
           getObject: vi.fn().mockResolvedValue({ value: data, version: 5 }),
         })
 
@@ -333,7 +339,9 @@ describe('createPersister', () => {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(persist as any).persist_new_channel(outpoint, monitor)
-        await vi.advanceTimersByTimeAsync(0)
+
+        // Per-channel write queue adds microtask ticks — flush until settled
+        for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(0)
 
         // Conflict resolved: server had same data, just update version cache
         expect(versionCache.get(monitorKey)).toBe(5)
@@ -409,24 +417,27 @@ describe('createPersister', () => {
           .mock.calls.filter(([k]) => k === monitorKey)
         expect(monitorCalls).toHaveLength(6)
 
-        // Advance through first backoff (500ms) — triggers another batch
-        // (1 attempt + 5 conflict retries = 6 more monitor calls)
+        // Advance through first backoff (500ms) — triggers one more attempt.
+        // conflictRetries is NOT reset (intentional — prevents infinite loops),
+        // so the conflict goes straight to backoff again (no 5 more retries).
         await vi.advanceTimersByTimeAsync(500)
         const monitorCallsAfter = vi
           .mocked(vssClient.putObject)
           .mock.calls.filter(([k]) => k === monitorKey)
-        expect(monitorCallsAfter).toHaveLength(12)
+        expect(monitorCallsAfter).toHaveLength(7)
       })
 
       it('resets version to 0 when getObject returns null during conflict', async () => {
         const conflictError = new VssError('conflict', ErrorCode.CONFLICT_EXCEPTION, 409)
 
+        let monitorAttempt = 0
         const vssClient = makeVssClient({
-          putObject: vi
-            .fn()
-            .mockRejectedValueOnce(conflictError)
-            .mockResolvedValueOnce(1) // succeeds after version reset
-            .mockResolvedValueOnce(1), // manifest write
+          putObject: vi.fn().mockImplementation(async (key: string) => {
+            if (key === '_monitor_keys') return 1 // manifest write succeeds
+            monitorAttempt++
+            if (monitorAttempt === 1) throw conflictError
+            return 1 // succeeds after version reset
+          }),
           getObject: vi.fn().mockResolvedValue(null), // key deleted on server
         })
 
@@ -443,7 +454,9 @@ describe('createPersister', () => {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(persist as any).persist_new_channel(outpoint, monitor)
-        await vi.advanceTimersByTimeAsync(0)
+
+        // Per-channel write queue adds microtask ticks — flush until settled
+        for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(0)
 
         // Filter to monitor-only putObject calls
         const monitorCalls = vi
@@ -589,7 +602,7 @@ describe('parseMonitorManifest', () => {
   })
 
   it('throws when exceeding max entries', () => {
-    const keys = Array.from({ length: 101 }, (_, i) => 'a'.repeat(64) + `:${i}`)
+    const keys = Array.from({ length: 1_001 }, (_, i) => 'a'.repeat(64) + `:${i}`)
     expect(() => parseMonitorManifest(JSON.stringify(keys))).toThrow('exceeds max')
   })
 
