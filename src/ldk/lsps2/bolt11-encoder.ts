@@ -206,10 +206,10 @@ function intToWords(n: number): number[] {
   return words
 }
 
-/** Encode feature bits: payment_secret required (bit 15) + basic_mpp optional (bit 17). */
+/** Encode feature bits: var_onion_optin (bit 9) + payment_secret (bit 15) + basic_mpp (bit 17). */
 function encodeFeatureBits(): number[] {
-  // (1 << 15) | (1 << 17) = 163840 = 0b00101_00000_00000_00000 in 20-bit / 4 words
-  return [5, 0, 0, 0]
+  // (1 << 9) | (1 << 15) | (1 << 17) = 164352 = 0b00101_00000_10000_00000 in 20-bit / 4 words
+  return [5, 0, 16, 0]
 }
 
 /** Encode a route hint (array of hops) as 5-bit words. */
