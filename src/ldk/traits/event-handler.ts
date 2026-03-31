@@ -154,15 +154,13 @@ function handleEvent(
 
     console.log(
       '[LDK Event] PaymentClaimable:',
-      'paymentHash:', paymentHashHex,
+      'paymentHash:', paymentHashHex.substring(0, 16) + '…',
       'amount_msat:', event.amount_msat.toString(),
-      'purpose:', purposeType,
-      'via_channel_id:', bytesToHex(event.via_channel_id.write())
+      'purpose:', purposeType
     )
 
     const preimage = purpose.preimage()
     if (preimage instanceof Option_ThirtyTwoBytesZ_Some) {
-      console.log('[LDK Event] PaymentClaimable: claiming with preimage for', paymentHashHex)
       channelManager.claim_funds(preimage.some)
     } else {
       console.warn(
@@ -239,10 +237,8 @@ function handleEvent(
   // HTLC forwarding — deduplicate by clearing previous timer
   if (event instanceof Event_PendingHTLCsForwardable) {
     const delayMs = Math.min(Number(event.time_forwardable) * 1000, MAX_FORWARD_DELAY_MS)
-    console.log('[LDK Event] PendingHTLCsForwardable: forwarding in', delayMs, 'ms')
     setForwardTimer(
       setTimeout(() => {
-        console.log('[LDK Event] Processing pending HTLC forwards')
         channelManager.process_pending_htlc_forwards()
       }, delayMs)
     )
@@ -253,8 +249,8 @@ function handleEvent(
   if (event instanceof Event_ChannelPending) {
     console.log(
       '[LDK Event] ChannelPending:',
-      'channelId:', bytesToHex(event.channel_id.write()),
-      'counterparty:', bytesToHex(event.counterparty_node_id)
+      'channelId:', bytesToHex(event.channel_id.write()).substring(0, 16) + '…',
+      'counterparty:', bytesToHex(event.counterparty_node_id).substring(0, 16) + '…'
     )
     return
   }
@@ -262,8 +258,8 @@ function handleEvent(
   if (event instanceof Event_ChannelReady) {
     console.log(
       '[LDK Event] ChannelReady:',
-      'channelId:', bytesToHex(event.channel_id.write()),
-      'counterparty:', bytesToHex(event.counterparty_node_id)
+      'channelId:', bytesToHex(event.channel_id.write()).substring(0, 16) + '…',
+      'counterparty:', bytesToHex(event.counterparty_node_id).substring(0, 16) + '…'
     )
     return
   }
@@ -466,7 +462,7 @@ function handleEvent(
       if (result.is_ok()) {
         console.log(
           '[LDK Event] OpenChannelRequest: accepted 0-conf from LSP',
-          'tempChannelId:', bytesToHex(event.temporary_channel_id.write())
+          'tempChannelId:', bytesToHex(event.temporary_channel_id.write()).substring(0, 16) + '…'
         )
       } else {
         console.error('[LDK Event] OpenChannelRequest: failed to accept 0-conf from LSP')

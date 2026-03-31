@@ -344,8 +344,6 @@ describe('createEventHandler', () => {
       expect.stringContaining('amount_msat:'),
       expect.any(String),
       expect.stringContaining('purpose:'),
-      expect.any(String),
-      expect.stringContaining('via_channel_id:'),
       expect.any(String)
     )
   })

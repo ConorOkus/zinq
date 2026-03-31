@@ -273,27 +273,6 @@ export function LdkProvider({
       const paymentHash = paymentResult.res.get_a()
       const paymentSecret = paymentResult.res.get_b()
 
-      console.log(
-        '[LSPS2] JIT invoice created:',
-        'paymentHash:', bytesToHex(paymentHash),
-        'virtualScid:', buyResponse.jitChannelScid,
-        'amountMsat:', amountMsat.toString(),
-        'expectedReceiveMsat:', expectedReceiveMsat.toString(),
-        'openingFeeMsat:', openingFeeMsat.toString()
-      )
-
-      // Log channel state so we can verify usability when debugging payment flow
-      const channels = node.channelManager.list_channels()
-      for (const ch of channels) {
-        console.log(
-          '[LSPS2] Channel state:',
-          'channelId:', bytesToHex(ch.get_channel_id().write()),
-          'ready:', ch.get_is_channel_ready(),
-          'usable:', ch.get_is_usable(),
-          'inboundCapacityMsat:', ch.get_inbound_capacity_msat().toString()
-        )
-      }
-
       // Step 5: Build and sign the BOLT11 invoice with JIT route hint
       const nodeIdBytes = hexToBytes(node.nodeId)
       const bolt11 = await node.lsps2Client.createJitInvoice({
