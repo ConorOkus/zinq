@@ -255,10 +255,17 @@ export function Receive() {
     setEditingAmount(true)
   }, [confirmedAmountDigits])
 
-  if (onchain.status === 'loading' || ldk.status === 'loading') {
+  if (
+    onchain.status === 'loading' ||
+    ldk.status === 'loading' ||
+    (!peersReconnected && listChannels && listChannels().length > 0)
+  ) {
     return (
-      <div className="fixed inset-0 z-200 mx-auto flex max-w-[430px] flex-col items-center justify-center bg-dark">
-        <p className="text-[var(--color-on-dark-muted)]">Loading wallet...</p>
+      <div className="fixed inset-0 z-200 mx-auto flex max-w-[430px] flex-col bg-dark text-on-dark">
+        <ScreenHeader title="Request" backTo="/" />
+        <div className="flex flex-1 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        </div>
       </div>
     )
   }
@@ -271,21 +278,6 @@ export function Receive() {
         <button className="mt-6 text-sm text-accent" onClick={() => void navigate('/')}>
           Close
         </button>
-      </div>
-    )
-  }
-
-  // Waiting for peers to reconnect
-  if (!peersReconnected && listChannels && listChannels().length > 0) {
-    return (
-      <div
-        ref={overlayRef}
-        className="fixed inset-0 z-200 mx-auto flex max-w-[430px] flex-col bg-dark text-on-dark"
-      >
-        <ScreenHeader title="Request" backTo="/" />
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-[var(--color-on-dark-muted)]">Reconnecting...</p>
-        </div>
       </div>
     )
   }

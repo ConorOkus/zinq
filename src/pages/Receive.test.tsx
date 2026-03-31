@@ -93,7 +93,7 @@ function renderReceive(contextValue?: OnchainContextValue, ldkValue?: LdkContext
 describe('Receive', () => {
   it('shows loading state', () => {
     renderReceive(defaultOnchainContextValue)
-    expect(screen.getByText(/loading wallet/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/qr code/i)).not.toBeInTheDocument()
   })
 
   it('shows error state', () => {
@@ -432,7 +432,7 @@ describe('Receive', () => {
   })
 
   describe('peer reconnection', () => {
-    it('shows reconnecting state when peers not yet reconnected but channels exist', () => {
+    it('shows loading spinner when peers not yet reconnected but channels exist', () => {
       renderReceive(
         undefined,
         readyLdkContext({
@@ -440,7 +440,7 @@ describe('Receive', () => {
           listChannels: vi.fn(() => [mockChannel(1_000_000_000n, false)]),
         })
       )
-      expect(screen.getByText(/reconnecting/i)).toBeInTheDocument()
+      expect(screen.queryByLabelText(/qr code/i)).not.toBeInTheDocument()
     })
   })
 })
