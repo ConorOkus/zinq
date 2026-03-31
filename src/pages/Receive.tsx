@@ -4,10 +4,12 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useOnchain } from '../onchain/use-onchain'
 import { useLdk } from '../ldk/use-ldk'
 import { ScreenHeader } from '../components/ScreenHeader'
+import { BottomSheet } from '../components/BottomSheet'
 import { Numpad, type NumpadKey } from '../components/Numpad'
 import { numpadDigitReducer } from '../components/numpad-reducer'
 import { formatBtc } from '../utils/format-btc'
 import { buildBip321Uri } from '../onchain/bip321'
+import { CopyIcon } from '../components/icons'
 
 const MAX_DIGITS = 8
 
@@ -33,6 +35,7 @@ export function Receive() {
     invoicePath: 'none',
   })
   const [copied, setCopied] = useState(false)
+  const [showSheet, setShowSheet] = useState(false)
   const [editingAmount, setEditingAmount] = useState(false)
   const [amountDigits, setAmountDigits] = useState('')
   const [confirmedAmountDigits, setConfirmedAmountDigits] = useState('')
@@ -227,6 +230,15 @@ export function Receive() {
     return () => clearTimeout(id)
   }, [copied])
 
+  const handleShare = useCallback(async () => {
+    if (!bip321Uri || typeof navigator.share !== 'function') return
+    try {
+      await navigator.share({ text: bip321Uri })
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
+    }
+  }, [bip321Uri])
+
   const handleNumpadKey = useCallback((key: NumpadKey) => {
     setAmountDigits((prev) => numpadDigitReducer(prev, key, MAX_DIGITS))
   }, [])
@@ -324,18 +336,29 @@ export function Receive() {
 
   // QR uses uppercase for optimal alphanumeric QR encoding
   const qrValue = bip321Uri.toUpperCase()
-  const truncated = invoice
-    ? `${invoice.slice(0, 16)}...${invoice.slice(-6)}`
-    : address
-      ? `bitcoin:${address.slice(0, 8)}...${address.slice(-6)}`
-      : ''
+
+  const showHeaderCopy = !!address && !editingAmount
 
   return (
     <div
       ref={overlayRef}
       className="fixed inset-0 z-200 mx-auto flex max-w-[430px] flex-col bg-dark text-on-dark"
     >
-      <ScreenHeader title="Request" backTo="/" />
+      <ScreenHeader
+        title="Request"
+        backTo="/"
+        rightAction={
+          showHeaderCopy ? (
+            <button
+              className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+              onClick={() => setShowSheet(true)}
+              aria-label="Copy payment request"
+            >
+              <CopyIcon />
+            </button>
+          ) : undefined
+        }
+      />
 
       {receiveState.step === 'negotiating-jit' ? (
         <div className="flex flex-1 items-center justify-center">
@@ -407,24 +430,12 @@ export function Receive() {
                       Channel open fee: {formatBtc(openingFeeSats)}
                     </p>
                   )}
-
-                <div className="flex max-w-full items-center gap-3 rounded-full bg-dark-elevated px-5 py-3">
-                  <span className="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm text-[var(--color-on-dark-muted)]">
-                    {truncated}
-                  </span>
-                  <button
-                    className="shrink-0 rounded-full bg-accent px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-transform active:scale-95"
-                    onClick={() => void handleCopy()}
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
               </>
             )}
           </div>
 
           {address && (
-            <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
+            <div className="flex flex-col gap-3 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
               <button
                 ref={amountButtonRef}
                 className="flex h-14 w-full items-center justify-center rounded-xl bg-dark-elevated text-sm font-semibold text-accent transition-transform active:scale-[0.98]"
@@ -432,8 +443,29 @@ export function Receive() {
               >
                 {confirmedAmountSats > 0n ? 'Edit amount' : 'Add amount'}
               </button>
+              {typeof navigator.share === 'function' && (
+                <button
+                  className="flex h-14 w-full items-center justify-center rounded-xl bg-dark-elevated text-sm font-semibold text-accent transition-transform active:scale-[0.98]"
+                  onClick={() => void handleShare()}
+                >
+                  Share
+                </button>
+              )}
             </div>
           )}
+
+          <BottomSheet open={showSheet} onClose={() => setShowSheet(false)}>
+            <p className="text-sm font-semibold text-on-dark">Payment request</p>
+            <p className="mt-3 select-text break-all font-mono text-xs text-[var(--color-on-dark-muted)]">
+              {bip321Uri}
+            </p>
+            <button
+              className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-accent text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+              onClick={() => void handleCopy()}
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </BottomSheet>
         </div>
       )}
     </div>

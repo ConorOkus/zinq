@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { ChevronBack, XClose } from './icons'
 
@@ -6,9 +7,10 @@ interface ScreenHeaderProps {
   backTo?: string
   onBack?: () => void
   onClose?: () => void
+  rightAction?: ReactNode
 }
 
-export function ScreenHeader({ title, backTo, onBack, onClose }: ScreenHeaderProps) {
+export function ScreenHeader({ title, backTo, onBack, onClose, rightAction }: ScreenHeaderProps) {
   const navigate = useNavigate()
 
   const handleBack = () => {
@@ -30,14 +32,18 @@ export function ScreenHeader({ title, backTo, onBack, onClose }: ScreenHeaderPro
         </button>
       )}
       <span className="text-lg font-semibold">{title}</span>
-      {onClose && (
-        <button
-          className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          <XClose />
-        </button>
+      {rightAction ? (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">{rightAction}</div>
+      ) : (
+        onClose && (
+          <button
+            className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <XClose />
+          </button>
+        )
       )}
     </header>
   )
