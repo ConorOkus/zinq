@@ -83,6 +83,18 @@
   /* Layout */
   --spacing-tab-bar: 64px;
   --spacing-header: 56px;
+
+  /* Animations */
+  --animate-slide-up: slide-up 200ms ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 /* Muted text colors (rgba not supported in @theme) */

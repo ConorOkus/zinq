@@ -1,5 +1,5 @@
 ---
-title: "LSPS2 JIT Receive: React useEffect Dependency Race Discards In-Flight Invoice"
+title: 'LSPS2 JIT Receive: React useEffect Dependency Race Discards In-Flight Invoice'
 category: integration-issues
 date: 2026-03-31
 severity: HIGH
@@ -18,8 +18,8 @@ tags:
   - bip321
   - async-cancellation
 related_issues:
-  - "PR #72: feat: integrate LSPS2 JIT receive into default request flow"
-  - "PR #71: fix: complete LSPS2 JIT receive flow and improve balance updates"
+  - 'PR #72: feat: integrate LSPS2 JIT receive into default request flow'
+  - 'PR #71: fix: complete LSPS2 JIT receive flow and improve balance updates'
 ---
 
 # LSPS2 JIT Receive: React useEffect Dependency Race Discards In-Flight Invoice
@@ -70,7 +70,7 @@ Channel state changes no longer trigger re-runs. The effect only re-runs when th
 
 ### 2. Replace stale flag with requestCounterRef
 
-The `let stale = false; return () => { stale = true }` pattern is too aggressive — any dep change discards the result. A request counter only discards results when a *newer* request exists:
+The `let stale = false; return () => { stale = true }` pattern is too aggressive — any dep change discards the result. A request counter only discards results when a _newer_ request exists:
 
 ```typescript
 const requestCounterRef = useRef(0)
@@ -78,17 +78,18 @@ const requestCounterRef = useRef(0)
 useEffect(() => {
   const thisRequest = ++requestCounterRef.current
 
-  requestJitInvoice(amountMsat, 'zinqq wallet')
-    .then((result) => {
-      if (requestCounterRef.current !== thisRequest) return // newer request superseded this one
-      setInvoice(result.bolt11)
-      setPaymentHash(result.paymentHash)
-      setOpeningFeeSats((result.openingFeeMsat + 999n) / 1000n)
-      setReceiveState({ step: 'ready', invoicePath: 'jit' })
-    })
+  requestJitInvoice(amountMsat, 'zinqq wallet').then((result) => {
+    if (requestCounterRef.current !== thisRequest) return // newer request superseded this one
+    setInvoice(result.bolt11)
+    setPaymentHash(result.paymentHash)
+    setOpeningFeeSats((result.openingFeeMsat + 999n) / 1000n)
+    setReceiveState({ step: 'ready', invoicePath: 'jit' })
+  })
 
   // Unmount cleanup: increment counter so abandoned .then() is ignored
-  return () => { requestCounterRef.current++ }
+  return () => {
+    requestCounterRef.current++
+  }
 }, [createInvoice, requestJitInvoice, confirmedAmountSats, peersReconnected])
 ```
 

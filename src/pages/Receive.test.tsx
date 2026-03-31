@@ -117,9 +117,9 @@ describe('Receive', () => {
     expect(screen.getByText(/BDK not initialized/)).toBeInTheDocument()
   })
 
-  it('shows truncated invoice when lightning invoice is present', () => {
+  it('shows copy icon in header when QR is visible', () => {
     renderReceive()
-    expect(screen.getByText(/lntbs1fakeinvoic\.\.\.nvoice/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /copy payment request/i })).toBeInTheDocument()
   })
 
   it('opens numpad automatically when no channels exist', () => {
@@ -144,9 +144,13 @@ describe('Receive', () => {
     expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument()
   })
 
-  it('has a copy button', () => {
+  it('opens bottom sheet when copy icon is tapped', async () => {
+    const user = userEvent.setup()
     renderReceive()
-    expect(screen.getByRole('button', { name: /copy/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /copy payment request/i }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText(/payment request/i)).toBeInTheDocument()
   })
 
   describe('standard invoice path (with inbound capacity)', () => {
@@ -283,7 +287,7 @@ describe('Receive', () => {
       await user.click(screen.getByRole('button', { name: /request/i }))
 
       await waitFor(() => {
-        expect(screen.getByText(/channel open fee/i)).toBeInTheDocument()
+        expect(screen.getByText(/setup fee/i)).toBeInTheDocument()
       })
     })
 
