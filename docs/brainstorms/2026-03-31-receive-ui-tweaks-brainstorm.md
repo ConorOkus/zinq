@@ -14,6 +14,7 @@ Two UI improvements to the receive screen (`Receive.tsx`), inspired by Cash App'
 ## Why This Approach
 
 The current inline address pill takes up vertical space between the QR code and the action button, and combines display + copy in a way that crowds the main view. Moving copy to a header icon + bottom sheet:
+
 - Cleans up the main QR display area
 - Gives the user a clearer view of the full URI before copying
 - Follows the established Cash App pattern users may already recognize
@@ -33,12 +34,14 @@ Adding Share is a natural complement -- users receiving bitcoin often need to se
 ## Scope
 
 ### In scope
+
 - Add copy icon to ScreenHeader right side (new `CopyIcon` in icons.tsx)
 - Bottom sheet component showing "Payment request" label + URI + copy button
 - Share button below "Add amount" using Web Share API
 - Remove the inline truncated address pill + copy button
 
 ### Out of scope
+
 - Swipeable QR codes for different payment types (BOLT 12, on-chain only, etc.) -- noted as a future possibility
 - QR code visual restyling (yellow background, Bitcoin logo overlay)
 - Sharing QR code as an image

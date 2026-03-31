@@ -1,5 +1,5 @@
 ---
-title: "feat: Add copy bottom sheet and share button to receive flow"
+title: 'feat: Add copy bottom sheet and share button to receive flow'
 type: feat
 status: completed
 date: 2026-03-31
@@ -38,6 +38,7 @@ A minimal, reusable bottom sheet component.
 **File:** `src/components/BottomSheet.tsx`
 
 **Props:**
+
 ```tsx
 interface BottomSheetProps {
   open: boolean
@@ -47,6 +48,7 @@ interface BottomSheetProps {
 ```
 
 **Behavior:**
+
 - Renders a semi-transparent backdrop (`bg-black/50`) covering the viewport
 - Content panel slides up from bottom with `rounded-t-2xl bg-dark-elevated` (matching Numpad visual language)
 - Safe-area bottom padding: `pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]`
@@ -60,10 +62,12 @@ interface BottomSheetProps {
 **File:** `src/pages/Receive.tsx`
 
 **Remove:**
+
 - The truncated address pill + inline copy button (lines 411-421)
 - The `truncated` variable (lines 327-331)
 
 **Add:**
+
 - `showSheet` boolean state for bottom sheet open/close
 - Copy icon button in the header via `rightAction` prop on `ScreenHeader` -- only rendered when address is loaded and QR is visible (not during loading, error, success, or JIT negotiation states)
 - `<BottomSheet>` with a "Payment request" row: label, full BIP 321 URI (monospace, `break-all`, selectable text), and a copy button with "Copied!" feedback (2s timeout, same existing pattern)
@@ -71,6 +75,7 @@ interface BottomSheetProps {
 - Share handler: `navigator.share({ text: bip321Uri })`, silently catch `AbortError` (user cancel), ignore other errors
 
 **Button layout in bottom action area:**
+
 ```
 ┌──────────────────────────┐
 │       Add amount         │  ← existing, bg-dark-elevated text-accent
@@ -83,15 +88,15 @@ Both buttons use `h-14 w-full rounded-xl bg-dark-elevated text-sm font-semibold 
 
 ### 5. Edge cases resolved
 
-| Scenario | Behavior |
-|---|---|
-| URI is empty (loading, error) | Copy icon hidden, Share button hidden |
-| Success screen | Copy icon hidden, Share button hidden |
-| JIT negotiation spinner | Copy icon hidden (spinner replaces content) |
-| Numpad editing active | Copy icon remains visible (URI reflects last confirmed amount) |
-| `navigator.share` unavailable | Share button not rendered |
-| Share cancelled by user | `AbortError` silently caught, no feedback |
-| Clipboard write fails | URI is visible and selectable in the bottom sheet as fallback |
+| Scenario                             | Behavior                                                                           |
+| ------------------------------------ | ---------------------------------------------------------------------------------- |
+| URI is empty (loading, error)        | Copy icon hidden, Share button hidden                                              |
+| Success screen                       | Copy icon hidden, Share button hidden                                              |
+| JIT negotiation spinner              | Copy icon hidden (spinner replaces content)                                        |
+| Numpad editing active                | Copy icon remains visible (URI reflects last confirmed amount)                     |
+| `navigator.share` unavailable        | Share button not rendered                                                          |
+| Share cancelled by user              | `AbortError` silently caught, no feedback                                          |
+| Clipboard write fails                | URI is visible and selectable in the bottom sheet as fallback                      |
 | Bottom sheet open + payment received | Bottom sheet stays open; success screen renders when sheet is closed or underneath |
 
 ## Acceptance Criteria
@@ -110,13 +115,13 @@ Both buttons use `h-14 w-full rounded-xl bg-dark-elevated text-sm font-semibold 
 
 ## Files to modify
 
-| File | Change |
-|---|---|
-| `src/components/ScreenHeader.tsx` | Add `rightAction?: ReactNode` prop |
-| `src/components/icons.tsx` | Add `CopyIcon` and `ShareIcon` |
-| `src/components/BottomSheet.tsx` | **New file** -- reusable bottom sheet |
-| `src/pages/Receive.tsx` | Wire up copy icon, bottom sheet, share button; remove address pill |
-| `src/pages/Receive.test.tsx` | Update tests for new UI |
+| File                              | Change                                                             |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `src/components/ScreenHeader.tsx` | Add `rightAction?: ReactNode` prop                                 |
+| `src/components/icons.tsx`        | Add `CopyIcon` and `ShareIcon`                                     |
+| `src/components/BottomSheet.tsx`  | **New file** -- reusable bottom sheet                              |
+| `src/pages/Receive.tsx`           | Wire up copy icon, bottom sheet, share button; remove address pill |
+| `src/pages/Receive.test.tsx`      | Update tests for new UI                                            |
 
 ## Sources
 

@@ -203,7 +203,6 @@ export function CopyIcon({ className = 'w-6 h-6' }: IconProps) {
   )
 }
 
-
 /** Hamburger menu icon */
 export function MenuIcon({ className = 'w-6 h-6' }: IconProps) {
   return (
