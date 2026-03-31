@@ -235,12 +235,21 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   const startingTimeNanos = (nowMs % 1000) * 1_000_000
   const nodeSecretKey = deriveNodeSecret(seed)
   const keysManager = KeysManager.constructor_new(seed, startingTimeSecs, startingTimeNanos)
+
+  // Copy seed for deterministic channel_keys_id derivation before zeroing.
+  // The signer provider needs the seed to produce reproducible key IDs
+  // for cross-device recovery.
+  const channelKeySeed = new Uint8Array(seed)
   seed.fill(0) // Zero seed bytes after KeysManager copies them
 
   // Custom SignerProvider that directs close/sweep funds to the BDK wallet.
   // BDK wallet is available eagerly so get_destination_script can derive
   // addresses deterministically during deserialization.
-  const { signerProvider: bdkSignerProvider } = createBdkSignerProvider(keysManager, bdkWallet)
+  const { signerProvider: bdkSignerProvider } = createBdkSignerProvider(
+    keysManager,
+    bdkWallet,
+    channelKeySeed
+  )
 
   // 3. Create trait implementations
   const logger = createLogger()

@@ -87,7 +87,7 @@ vi.mock('./traits/event-handler', () => ({
   })),
 }))
 vi.mock('./traits/bdk-signer-provider', () => ({
-  createBdkSignerProvider: vi.fn(() => ({
+  createBdkSignerProvider: vi.fn((_km: unknown, _w: unknown, _seed: unknown) => ({
     signerProvider: {},
   })),
 }))

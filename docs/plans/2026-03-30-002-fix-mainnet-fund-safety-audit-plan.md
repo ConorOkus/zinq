@@ -538,15 +538,15 @@ If the order is already correct (likely, given the existing `peekAddressAtIndex`
 
 **Acceptance Criteria:**
 
-- [ ] `generate_channel_keys_id` is deterministic (same seed + params = same ID)
-- [ ] All parameters included in derivation (inbound, value, user_channel_id)
-- [ ] HMAC uses domain-separation key, not the seed
-- [ ] `get_destination_script` returns error result on BDK failure (no fallback)
-- [ ] `get_shutdown_scriptpubkey` returns error result on BDK failure (no fallback)
-- [ ] BDK wallet init order verified (before LDK deserialization)
-- [ ] Existing channel monitors with random key IDs still work
-- [ ] All existing tests pass
-- [ ] CI passes
+- [x] `generate_channel_keys_id` is deterministic (same seed + params = same ID)
+- [x] All parameters included in derivation (inbound, value, user_channel_id)
+- [x] HMAC uses domain-separation key, not the seed
+- [x] `get_destination_script` returns error result on BDK failure (no fallback)
+- [x] `get_shutdown_scriptpubkey` returns error result on BDK failure (no fallback)
+- [x] BDK wallet init order verified (before LDK deserialization)
+- [x] Existing channel monitors with random key IDs still work
+- [x] All existing tests pass
+- [x] CI passes
 
 ---
 
