@@ -332,7 +332,11 @@ export function Receive() {
     >
       <ScreenHeader title="Request" backTo="/" />
 
-      {editingAmount ? (
+      {receiveState.step === 'negotiating-jit' ? (
+        <div className="flex flex-1 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        </div>
+      ) : editingAmount ? (
         <div className="flex flex-1 flex-col">
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8">
             {(!needsAmount || confirmedAmountSats > 0n) && (
@@ -388,11 +392,7 @@ export function Receive() {
                   className="flex h-[260px] w-[260px] items-center justify-center rounded-2xl bg-white p-5"
                   aria-label={`QR code for Bitcoin address ${address}${confirmedAmountSats > 0n ? `, amount ${formatBtc(confirmedAmountSats)}` : ''}`}
                 >
-                  {receiveState.step === 'negotiating-jit' ? (
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300/20 border-t-gray-300" />
-                  ) : (
-                    <QRCodeSVG value={qrValue} size={220} />
-                  )}
+                  <QRCodeSVG value={qrValue} size={220} />
                 </div>
 
                 {openingFeeSats !== null &&
