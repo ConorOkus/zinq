@@ -234,8 +234,8 @@ export function Receive() {
     if (!bip321Uri || typeof navigator.share !== 'function') return
     try {
       await navigator.share({ text: bip321Uri })
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return
+    } catch {
+      // User cancelled or share unavailable
     }
   }, [bip321Uri])
 
