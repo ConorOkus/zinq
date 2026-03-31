@@ -17,7 +17,7 @@ function outpointKey(outpoint: OutPoint): string {
 export const MONITOR_MANIFEST_KEY = '_monitor_keys'
 
 const MONITOR_KEY_PATTERN = /^[0-9a-f]{64}:\d+$/
-const MAX_MANIFEST_ENTRIES = 100
+const MAX_MANIFEST_ENTRIES = 1_000
 
 /** Parse and validate a monitor manifest from VSS. Throws on invalid data. */
 export function parseMonitorManifest(json: string): string[] {
@@ -200,12 +200,13 @@ export function createPersister(options: PersisterOptions = {}): {
           continue
         }
 
-        // Conflict retries exhausted — fall through to exponential backoff
+        // Conflict retries exhausted — fall through to exponential backoff.
+        // Do NOT reset conflictRetries: subsequent conflicts go straight to
+        // backoff (intentional — prevents infinite conflict-retry loops).
         if (vssClient && isVssConflict(err)) {
           console.error(
             `[LDK Persist] Conflict resolution exhausted for ${key} after ${MAX_CONFLICT_RETRIES} attempts, falling back to backoff`
           )
-          conflictRetries = 0 // reset for next backoff cycle
         }
 
         console.error(`[LDK Persist] Write failed for ${key}:`, err)
@@ -221,12 +222,23 @@ export function createPersister(options: PersisterOptions = {}): {
     }
   }
 
+  // Per-channel write queue: serializes writes to the same monitor so
+  // concurrent updates don't race on the VSS version cache. LDK's InProgress
+  // return halts further updates per channel, so queue depth is bounded at 1-2.
+  const channelWriteChains = new Map<string, Promise<void>>()
+
   function handlePersist(channel_funding_outpoint: OutPoint, monitor: ChannelMonitor): void {
     const key = outpointKey(channel_funding_outpoint)
     const data = monitor.write()
     const updateId = monitor.get_latest_update_id()
 
-    persistWithRetry('ldk_channel_monitors', key, data)
+    const prev = channelWriteChains.get(key) ?? Promise.resolve()
+    const next = prev
+      .catch(() => {}) // Swallow previous error so the chain continues
+      .then(() => persistWithRetry('ldk_channel_monitors', key, data))
+    channelWriteChains.set(key, next)
+
+    next
       .then(() => {
         if (chainMonitorRef) {
           chainMonitorRef.channel_monitor_updated(channel_funding_outpoint, updateId)
@@ -266,6 +278,7 @@ export function createPersister(options: PersisterOptions = {}): {
     archive_persisted_channel(channel_funding_outpoint: OutPoint): void {
       const key = outpointKey(channel_funding_outpoint)
       monitorKeys.delete(key)
+      channelWriteChains.delete(key) // Clean up resolved promise reference
       writeManifest()
 
       // Delete from VSS first, then IDB.

@@ -672,14 +672,14 @@ The manifest only tracks active (non-archived) monitors. With the LSP-only model
 
 **Acceptance Criteria:**
 
-- [ ] Concurrent monitor writes to same channel are serialized (not interleaved)
-- [ ] Error in one write does not break the promise chain
-- [ ] True version conflict compares `update_id` — higher wins
-- [ ] Conflict retry counter does not reset (no infinite loops)
-- [ ] Manifest limit raised to 1,000
-- [ ] Write chain entries cleaned up on channel archive
-- [ ] All existing tests pass
-- [ ] CI passes
+- [x] Concurrent monitor writes to same channel are serialized (not interleaved)
+- [x] Error in one write does not break the promise chain
+- [ ] True version conflict compares `update_id` — higher wins (deferred: requires ChannelMonitor deserialization in persist layer)
+- [x] Conflict retry counter does not reset (no infinite loops)
+- [x] Manifest limit raised to 1,000
+- [x] Write chain entries cleaned up on channel archive
+- [x] All existing tests pass
+- [x] CI passes
 
 ---
 
