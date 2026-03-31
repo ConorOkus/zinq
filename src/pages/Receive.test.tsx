@@ -309,8 +309,10 @@ describe('Receive', () => {
       await user.click(screen.getByRole('button', { name: /request/i }))
 
       await waitFor(() => {
-        expect(screen.getByText(/setting up lightning receive/i)).toBeInTheDocument()
+        expect(requestJitInvoice).toHaveBeenCalled()
       })
+      // QR code should not be visible during negotiation
+      expect(screen.queryByRole('img')).not.toBeInTheDocument()
     })
 
     it('falls back to on-chain only when JIT fails', async () => {

@@ -371,12 +371,6 @@ export function Receive() {
             {addressError && <p className="text-sm text-red-400">{addressError}</p>}
             {invoiceError && <p className="text-sm text-red-400">{invoiceError}</p>}
 
-            {receiveState.step === 'negotiating-jit' && (
-              <p className="text-sm text-[var(--color-on-dark-muted)]">
-                Setting up Lightning receive...
-              </p>
-            )}
-
             {address && (
               <>
                 {confirmedAmountSats > 0n && (
@@ -395,7 +389,7 @@ export function Receive() {
                   aria-label={`QR code for Bitcoin address ${address}${confirmedAmountSats > 0n ? `, amount ${formatBtc(confirmedAmountSats)}` : ''}`}
                 >
                   {receiveState.step === 'negotiating-jit' ? (
-                    <p className="text-sm text-gray-400">Negotiating...</p>
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300/20 border-t-gray-300" />
                   ) : (
                     <QRCodeSVG value={qrValue} size={220} />
                   )}
