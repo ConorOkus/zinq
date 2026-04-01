@@ -23,20 +23,24 @@ export function satsToBtcString(sats: bigint): string {
 }
 
 export interface BuildBip321Options {
-  address: string
+  address?: string
   amountSats?: bigint
   invoice?: string | null
+  lno?: string | null
 }
 
-/** Build a BIP 321 URI from an address and optional query parameters. */
-export function buildBip321Uri({ address, amountSats, invoice }: BuildBip321Options): string {
-  const base = `bitcoin:${address.toUpperCase()}`
+/** Build a BIP 21 URI from an optional address and query parameters. */
+export function buildBip321Uri({ address, amountSats, invoice, lno }: BuildBip321Options): string {
+  const base = address ? `bitcoin:${address.toUpperCase()}` : 'bitcoin:'
   const params: string[] = []
   if (amountSats !== undefined && amountSats > 0n) {
     params.push(`amount=${satsToBtcString(amountSats)}`)
   }
   if (invoice) {
     params.push(`lightning=${invoice}`)
+  }
+  if (lno) {
+    params.push(`lno=${lno}`)
   }
   return params.length > 0 ? `${base}?${params.join('&')}` : base
 }

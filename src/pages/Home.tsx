@@ -3,7 +3,7 @@ import { useOnchain } from '../onchain/use-onchain'
 import { useLdk } from '../ldk/use-ldk'
 import { useUnifiedBalance } from '../hooks/use-unified-balance'
 import { BalanceDisplay } from '../components/BalanceDisplay'
-import { ArrowUpRight, ArrowDownLeft } from '../components/icons'
+import { ArrowUpRight, ArrowDownLeft, RefreshIcon } from '../components/icons'
 
 export function Home() {
   const navigate = useNavigate()
@@ -30,6 +30,15 @@ export function Home() {
 
   return (
     <div className="flex min-h-dvh flex-col justify-between bg-accent px-6 pt-4 text-on-accent">
+      <div className="-mr-4 flex justify-end pt-[env(safe-area-inset-top,0px)]">
+        <button
+          className="flex h-11 w-11 items-center justify-center rounded-full text-on-accent transition-colors active:bg-black/10"
+          onClick={() => window.location.reload()}
+          aria-label="Refresh"
+        >
+          <RefreshIcon className="h-5 w-5" />
+        </button>
+      </div>
       <BalanceDisplay balance={total} pending={pending} loading={isLoading} />
 
       <div className="flex gap-3 pb-[calc(var(--spacing-tab-bar)+0.75rem+env(safe-area-inset-bottom,0px))]">

@@ -2,6 +2,24 @@ interface IconProps {
   className?: string
 }
 
+/** Circular refresh arrow */
+export function RefreshIcon({ className = 'w-6 h-6' }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <polyline points="21 2 21 8 15 8" />
+    </svg>
+  )
+}
+
 /** Send arrow (top-right diagonal) */
 export function ArrowUpRight({ className = 'w-6 h-6' }: IconProps) {
   return (

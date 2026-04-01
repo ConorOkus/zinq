@@ -39,6 +39,33 @@ describe('buildBip321Uri', () => {
     expect(uri).toBe('bitcoin:TB1QLOWERCASE')
   })
 
+  it('builds URI with lno only (no address)', () => {
+    expect(buildBip321Uri({ lno: 'lno1qgsyxjtl6luzd9t3pr62xr7eemp6awljhxc2u5' })).toBe(
+      'bitcoin:?lno=lno1qgsyxjtl6luzd9t3pr62xr7eemp6awljhxc2u5'
+    )
+  })
+
+  it('builds URI with address and lno', () => {
+    expect(buildBip321Uri({ address: 'tb1qtest', lno: 'lno1abc' })).toBe(
+      'bitcoin:TB1QTEST?lno=lno1abc'
+    )
+  })
+
+  it('builds URI with address, amount, invoice, and lno', () => {
+    expect(
+      buildBip321Uri({
+        address: 'tb1qtest',
+        amountSats: 50000n,
+        invoice: 'lntbs1...',
+        lno: 'lno1abc',
+      })
+    ).toBe('bitcoin:TB1QTEST?amount=0.00050000&lightning=lntbs1...&lno=lno1abc')
+  })
+
+  it('omits lno when null', () => {
+    expect(buildBip321Uri({ address: 'tb1qtest', lno: null })).toBe('bitcoin:TB1QTEST')
+  })
+
   it('round-trips with parseBip321 for address and amount', () => {
     const uri = buildBip321Uri({
       address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
