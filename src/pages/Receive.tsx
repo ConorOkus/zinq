@@ -214,12 +214,16 @@ export function Receive() {
     return () => el.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Build BIP 321 URI
+  // Build BIP 321 URIs
+  const showBolt12 = bolt12Offer && !needsAmount
   const bip321Uri = address
-    ? buildBip321Uri({ address, amountSats: confirmedAmountSats, invoice })
+    ? buildBip321Uri({ address, amountSats: confirmedAmountSats, invoice, b12: showBolt12 ? bolt12Offer : null })
+    : ''
+  const bolt12Uri = address && bolt12Offer
+    ? buildBip321Uri({ address, b12: bolt12Offer })
     : ''
 
-  const copyValue = activeQrPage === 'bolt12' && bolt12Offer ? bolt12Offer : bip321Uri
+  const copyValue = activeQrPage === 'bolt12' && bolt12Uri ? bolt12Uri : bip321Uri
 
   const handleCopy = useCallback(async () => {
     if (!copyValue) return
@@ -447,20 +451,20 @@ export function Receive() {
                     </div>
 
                     {/* Page 2: BOLT 12 Offer QR */}
-                    {bolt12Offer && !needsAmount && (
+                    {showBolt12 && bolt12Uri && (
                       <div className="flex w-full shrink-0 snap-center justify-center">
                         <div
                           className="flex h-[260px] w-[260px] items-center justify-center rounded-2xl bg-white p-5"
                           aria-label="QR code for BOLT 12 offer"
                         >
-                          <QRCodeSVG value={bolt12Offer.toUpperCase()} size={220} />
+                          <QRCodeSVG value={bolt12Uri.toUpperCase()} size={220} />
                         </div>
                       </div>
                     )}
                   </div>
 
                   {/* Dot indicators */}
-                  {bolt12Offer && !needsAmount && (
+                  {showBolt12 && bolt12Uri && (
                     <div className="mt-4 flex justify-center gap-2">
                       <button
                         className={`h-2 w-2 rounded-full transition-colors ${activeQrPage === 'unified' ? 'bg-white' : 'bg-white/30'}`}
