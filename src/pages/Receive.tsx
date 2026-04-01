@@ -447,7 +447,7 @@ export function Receive() {
                     </div>
 
                     {/* Page 2: BOLT 12 Offer QR */}
-                    {bolt12Offer && (
+                    {bolt12Offer && !needsAmount && (
                       <div className="flex w-full shrink-0 snap-center justify-center">
                         <div
                           className="flex h-[260px] w-[260px] items-center justify-center rounded-2xl bg-white p-5"
@@ -460,7 +460,7 @@ export function Receive() {
                   </div>
 
                   {/* Dot indicators */}
-                  {bolt12Offer && (
+                  {bolt12Offer && !needsAmount && (
                     <div className="mt-4 flex justify-center gap-2">
                       <button
                         className={`h-2 w-2 rounded-full transition-colors ${activeQrPage === 'unified' ? 'bg-white' : 'bg-white/30'}`}
