@@ -26,11 +26,11 @@ export interface BuildBip321Options {
   address?: string
   amountSats?: bigint
   invoice?: string | null
-  b12?: string | null
+  lno?: string | null
 }
 
 /** Build a BIP 21 URI from an optional address and query parameters. */
-export function buildBip321Uri({ address, amountSats, invoice, b12 }: BuildBip321Options): string {
+export function buildBip321Uri({ address, amountSats, invoice, lno }: BuildBip321Options): string {
   const base = address ? `bitcoin:${address.toUpperCase()}` : 'bitcoin:'
   const params: string[] = []
   if (amountSats !== undefined && amountSats > 0n) {
@@ -39,8 +39,8 @@ export function buildBip321Uri({ address, amountSats, invoice, b12 }: BuildBip32
   if (invoice) {
     params.push(`lightning=${invoice}`)
   }
-  if (b12) {
-    params.push(`b12=${b12}`)
+  if (lno) {
+    params.push(`lno=${lno}`)
   }
   return params.length > 0 ? `${base}?${params.join('&')}` : base
 }

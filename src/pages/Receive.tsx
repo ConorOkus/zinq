@@ -217,10 +217,10 @@ export function Receive() {
   // Build BIP 321 URIs
   const showBolt12 = bolt12Offer && !needsAmount
   const bip321Uri = address
-    ? buildBip321Uri({ address, amountSats: confirmedAmountSats, invoice, b12: showBolt12 ? bolt12Offer : null })
+    ? buildBip321Uri({ address, amountSats: confirmedAmountSats, invoice, lno: showBolt12 ? bolt12Offer : null })
     : ''
   const bolt12Uri = bolt12Offer
-    ? buildBip321Uri({ b12: bolt12Offer })
+    ? buildBip321Uri({ lno: bolt12Offer })
     : ''
 
   const copyValue = activeQrPage === 'bolt12' && bolt12Uri ? bolt12Uri : bip321Uri
