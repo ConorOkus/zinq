@@ -5,6 +5,7 @@ import {
   deriveLdkSeed,
   deriveBdkDescriptors,
   deriveVssEncryptionKey,
+  deriveVssSigningKey,
   deriveVssStoreId,
 } from './keys'
 import { ACTIVE_NETWORK } from '../ldk/config'
@@ -24,8 +25,9 @@ async function doInitializeWallet() {
     ACTIVE_NETWORK === 'mainnet' ? 'bitcoin' : 'signet'
   )
   const vssEncryptionKey = deriveVssEncryptionKey(mnemonic)
+  const vssSigningKey = deriveVssSigningKey(mnemonic)
   const vssStoreId = await deriveVssStoreId(ldkSeed)
-  return { ldkSeed, bdkDescriptors, vssEncryptionKey, vssStoreId }
+  return { ldkSeed, bdkDescriptors, vssEncryptionKey, vssSigningKey, vssStoreId }
 }
 
 function initializeWallet() {
@@ -43,9 +45,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     initializeWallet()
-      .then(({ ldkSeed, bdkDescriptors, vssEncryptionKey, vssStoreId }) => {
+      .then(({ ldkSeed, bdkDescriptors, vssEncryptionKey, vssSigningKey, vssStoreId }) => {
         walletInitPromise = null // Allow GC of mnemonic closure
-        setState({ status: 'ready', ldkSeed, bdkDescriptors, vssEncryptionKey, vssStoreId })
+        setState({
+          status: 'ready',
+          ldkSeed,
+          bdkDescriptors,
+          vssEncryptionKey,
+          vssSigningKey,
+          vssStoreId,
+        })
       })
       .catch((err: unknown) => {
         setState({

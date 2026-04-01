@@ -38,28 +38,35 @@ export class FixedHeaderProvider implements VssHeaderProvider {
   }
 }
 
+// 64-byte domain separator required by the Nodana VSS Signature Authorizer protocol.
+// The trailing dots pad to exactly 64 bytes — do not modify.
 const VSS_SIGNING_CONSTANT = new TextEncoder().encode(
   'VSS Signature Authorizer Signing Salt Constant..................'
 )
 
 export class SignatureHeaderProvider implements VssHeaderProvider {
   #secretKey: Uint8Array
+  #pubkeyBytes: Uint8Array
 
   constructor(secretKey: Uint8Array) {
     this.#secretKey = new Uint8Array(secretKey)
+    this.#pubkeyBytes = secp256k1.getPublicKey(this.#secretKey, true)
+  }
+
+  destroy(): void {
+    this.#secretKey.fill(0)
   }
 
   async getHeaders(): Promise<Record<string, string>> {
-    const pubkeyBytes = secp256k1.getPublicKey(this.#secretKey, true)
     const timestamp = Math.floor(Date.now() / 1000).toString()
     const timestampBytes = new TextEncoder().encode(timestamp)
 
     const preimage = new Uint8Array(
-      VSS_SIGNING_CONSTANT.length + pubkeyBytes.length + timestampBytes.length
+      VSS_SIGNING_CONSTANT.length + this.#pubkeyBytes.length + timestampBytes.length
     )
     preimage.set(VSS_SIGNING_CONSTANT, 0)
-    preimage.set(pubkeyBytes, VSS_SIGNING_CONSTANT.length)
-    preimage.set(timestampBytes, VSS_SIGNING_CONSTANT.length + pubkeyBytes.length)
+    preimage.set(this.#pubkeyBytes, VSS_SIGNING_CONSTANT.length)
+    preimage.set(timestampBytes, VSS_SIGNING_CONSTANT.length + this.#pubkeyBytes.length)
 
     const hash = sha256(preimage)
     const sigBytes = await secp256k1.signAsync(hash, this.#secretKey, {
@@ -68,7 +75,7 @@ export class SignatureHeaderProvider implements VssHeaderProvider {
     })
 
     return {
-      authorization: bytesToHex(pubkeyBytes) + bytesToHex(sigBytes) + timestamp,
+      authorization: bytesToHex(this.#pubkeyBytes) + bytesToHex(sigBytes) + timestamp,
     }
   }
 }

@@ -3,6 +3,7 @@ import { HDKey } from '@scure/bip32'
 
 const LDK_DERIVATION_PATH = "m/535'/0'"
 const VSS_ENCRYPTION_KEY_PATH = "m/535'/1'"
+const VSS_SIGNING_KEY_PATH = "m/535'/2'"
 
 const TESTNET_VERSIONS = { private: 0x04358394, public: 0x043587cf }
 
@@ -31,6 +32,21 @@ export function deriveVssEncryptionKey(mnemonic: string): Uint8Array {
   const child = master.derive(VSS_ENCRYPTION_KEY_PATH)
   if (!child.privateKey) {
     throw new Error('Failed to derive VSS encryption key at ' + VSS_ENCRYPTION_KEY_PATH)
+  }
+  return child.privateKey
+}
+
+/**
+ * Derive a 32-byte signing key for VSS authentication headers.
+ * Uses a dedicated path m/535'/2' separate from LDK seed (m/535'/0')
+ * and VSS encryption key (m/535'/1').
+ */
+export function deriveVssSigningKey(mnemonic: string): Uint8Array {
+  const seed = mnemonicToSeedSync(mnemonic)
+  const master = HDKey.fromMasterSeed(seed)
+  const child = master.derive(VSS_SIGNING_KEY_PATH)
+  if (!child.privateKey) {
+    throw new Error('Failed to derive VSS signing key at ' + VSS_SIGNING_KEY_PATH)
   }
   return child.privateKey
 }

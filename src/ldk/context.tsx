@@ -50,12 +50,14 @@ export function LdkProvider({
   ldkSeed,
   bdkDescriptors,
   vssEncryptionKey,
+  vssSigningKey,
   vssStoreId,
 }: {
   children: ReactNode
   ldkSeed: Uint8Array
   bdkDescriptors: { external: string; internal: string }
   vssEncryptionKey: Uint8Array
+  vssSigningKey: Uint8Array
   vssStoreId: string
 }) {
   const [state, setState] = useState<LdkContextValue>(defaultLdkContextValue)
@@ -439,14 +441,10 @@ export function LdkProvider({
     let offerRetryTimer: ReturnType<typeof setTimeout> | null = null
 
     const vssDisabled = import.meta.env.VITE_DISABLE_VSS === 'true'
+    const vssAuth = vssDisabled ? null : new SignatureHeaderProvider(vssSigningKey)
     const vssClient = vssDisabled
       ? null
-      : new VssClient(
-          LDK_CONFIG.vssUrl,
-          vssStoreId,
-          vssEncryptionKey,
-          new SignatureHeaderProvider(ldkSeed)
-        )
+      : new VssClient(LDK_CONFIG.vssUrl, vssStoreId, vssEncryptionKey, vssAuth!)
 
     initializeLdk({
       ldkSeed,
@@ -485,8 +483,11 @@ export function LdkProvider({
             ;(window as unknown as Record<string, unknown>).__ldkNode = safeNode
           }
 
-          // Zero the node secret key on page unload to limit memory exposure
-          const zeroSecretOnUnload = () => node.nodeSecretKey.fill(0)
+          // Zero secret keys on page unload to limit memory exposure
+          const zeroSecretOnUnload = () => {
+            node.nodeSecretKey.fill(0)
+            vssAuth?.destroy()
+          }
           window.addEventListener('beforeunload', zeroSecretOnUnload)
 
           // Wire payment event callback to update the result store and refresh history

@@ -24,6 +24,7 @@ export function WalletGate({ children }: { children: ReactNode }) {
       ldkSeed={wallet.ldkSeed}
       bdkDescriptors={wallet.bdkDescriptors}
       vssEncryptionKey={wallet.vssEncryptionKey}
+      vssSigningKey={wallet.vssSigningKey}
       vssStoreId={wallet.vssStoreId}
     >
       <OnchainProvider>{children}</OnchainProvider>

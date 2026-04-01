@@ -10,6 +10,9 @@ import {
   ListKeyVersionsResponseSchema,
 } from './proto/vss_pb'
 import { vssEncrypt, obfuscateKey } from './vss-crypto'
+import { getPublicKey, verify } from '@noble/secp256k1'
+import { sha256 } from '@noble/hashes/sha2.js'
+import { hexToBytes } from '../utils'
 
 /* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-base-to-string */
 
@@ -203,9 +206,6 @@ describe('SignatureHeaderProvider', () => {
   })
 
   it('produces a verifiable ECDSA signature', async () => {
-    const { getPublicKey, verify } = await import('@noble/secp256k1')
-    const { sha256 } = await import('@noble/hashes/sha2.js')
-
     const provider = new SignatureHeaderProvider(secretKey)
     const headers = await provider.getHeaders()
     const auth = headers.authorization
@@ -227,9 +227,7 @@ describe('SignatureHeaderProvider', () => {
     preimage.set(timestampBytes, signingConstant.length + pubkeyBytes.length)
     const hash = sha256(preimage)
 
-    const sigBytes = Uint8Array.from(
-      sigHex.match(/.{2}/g)!.map((b) => parseInt(b, 16))
-    )
+    const sigBytes = hexToBytes(sigHex)
 
     expect(verify(sigBytes, hash, pubkeyBytes, { prehash: false })).toBe(true)
     // Pubkey in header matches derived pubkey

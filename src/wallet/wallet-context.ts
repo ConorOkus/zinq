@@ -7,6 +7,7 @@ export type WalletContextValue =
       ldkSeed: Uint8Array
       bdkDescriptors: { external: string; internal: string }
       vssEncryptionKey: Uint8Array
+      vssSigningKey: Uint8Array
       vssStoreId: string
     }
   | { status: 'error'; error: Error }

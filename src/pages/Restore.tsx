@@ -2,7 +2,12 @@ import { useState } from 'react'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { useLdk } from '../ldk/use-ldk'
 import { validateMnemonic } from '../wallet/mnemonic'
-import { deriveLdkSeed, deriveVssEncryptionKey, deriveVssStoreId } from '../wallet/keys'
+import {
+  deriveLdkSeed,
+  deriveVssEncryptionKey,
+  deriveVssSigningKey,
+  deriveVssStoreId,
+} from '../wallet/keys'
 import { VssClient, SignatureHeaderProvider } from '../ldk/storage/vss-client'
 import { LDK_CONFIG } from '../ldk/config'
 import { clearAllStores, idbPut } from '../storage/idb'
@@ -51,6 +56,7 @@ export function Restore() {
 
       const ldkSeed = deriveLdkSeed(mnemonic)
       const vssEncryptionKey = deriveVssEncryptionKey(mnemonic)
+      const vssSigningKey = deriveVssSigningKey(mnemonic)
       const vssStoreId = await deriveVssStoreId(ldkSeed)
 
       setState({ status: 'restoring', message: 'Checking backup server...' })
@@ -59,7 +65,7 @@ export function Restore() {
         LDK_CONFIG.vssUrl,
         vssStoreId,
         vssEncryptionKey,
-        new SignatureHeaderProvider(ldkSeed)
+        new SignatureHeaderProvider(vssSigningKey)
       )
 
       // Check if VSS has data for this wallet
