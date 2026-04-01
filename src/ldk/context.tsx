@@ -17,7 +17,7 @@ import {
   type Offer,
 } from 'lightningdevkit'
 import { initializeLdk, type LdkNode } from './init'
-import { VssClient, FixedHeaderProvider } from './storage/vss-client'
+import { VssClient, SignatureHeaderProvider } from './storage/vss-client'
 import {
   LdkContext,
   defaultLdkContextValue,
@@ -441,7 +441,12 @@ export function LdkProvider({
     const vssDisabled = import.meta.env.VITE_DISABLE_VSS === 'true'
     const vssClient = vssDisabled
       ? null
-      : new VssClient(LDK_CONFIG.vssUrl, vssStoreId, vssEncryptionKey, new FixedHeaderProvider({}))
+      : new VssClient(
+          LDK_CONFIG.vssUrl,
+          vssStoreId,
+          vssEncryptionKey,
+          new SignatureHeaderProvider(ldkSeed)
+        )
 
     initializeLdk({
       ldkSeed,

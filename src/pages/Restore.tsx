@@ -3,7 +3,7 @@ import { ScreenHeader } from '../components/ScreenHeader'
 import { useLdk } from '../ldk/use-ldk'
 import { validateMnemonic } from '../wallet/mnemonic'
 import { deriveLdkSeed, deriveVssEncryptionKey, deriveVssStoreId } from '../wallet/keys'
-import { VssClient, FixedHeaderProvider } from '../ldk/storage/vss-client'
+import { VssClient, SignatureHeaderProvider } from '../ldk/storage/vss-client'
 import { LDK_CONFIG } from '../ldk/config'
 import { clearAllStores, idbPut } from '../storage/idb'
 import { MONITOR_MANIFEST_KEY, parseMonitorManifest } from '../ldk/traits/persist'
@@ -59,7 +59,7 @@ export function Restore() {
         LDK_CONFIG.vssUrl,
         vssStoreId,
         vssEncryptionKey,
-        new FixedHeaderProvider({})
+        new SignatureHeaderProvider(ldkSeed)
       )
 
       // Check if VSS has data for this wallet
