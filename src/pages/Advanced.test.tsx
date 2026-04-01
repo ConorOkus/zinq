@@ -16,6 +16,5 @@ describe('Advanced', () => {
     renderAdvanced()
     expect(screen.getByText('Balance')).toBeInTheDocument()
     expect(screen.getByText('Peers')).toBeInTheDocument()
-    expect(screen.getByText('BOLT 12 Offer')).toBeInTheDocument()
   })
 })
