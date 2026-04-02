@@ -46,7 +46,7 @@ Execute with real mainnet funds (small amounts). All tests should pass before pu
 
 ## Result
 
-Date tested: ****\_\_\_****
-Tested by: ****\_\_\_****
+Date tested: \_\_\_\_\_\_\_\_\_\_\_
+Tested by: \_\_\_\_\_\_\_\_\_\_\_
 All passing: [ ] Yes / [ ] No
-Notes: ****\_\_\_****
+Notes: \_\_\_\_\_\_\_\_\_\_\_
