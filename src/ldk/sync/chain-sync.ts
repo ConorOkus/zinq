@@ -71,9 +71,14 @@ export async function syncOnce(
       )
       const failedTxChecks = txResults.filter((r) => r.status === 'rejected')
       if (failedTxChecks.length > 0) {
-        captureError('warning', 'LDK Sync', `${failedTxChecks.length}/${txidEntries.length} txid checks failed`)
+        captureError(
+          'warning',
+          'LDK Sync',
+          `${failedTxChecks.length}/${txidEntries.length} txid checks failed`
+        )
         for (const r of failedTxChecks) {
-          if (r.status === 'rejected') captureError('error', 'LDK Sync', 'Tx check error', String(r.reason))
+          if (r.status === 'rejected')
+            captureError('error', 'LDK Sync', 'Tx check error', String(r.reason))
         }
       }
     }
@@ -111,9 +116,14 @@ export async function syncOnce(
       )
       const failedOutputChecks = outputResults.filter((r) => r.status === 'rejected')
       if (failedOutputChecks.length > 0) {
-        captureError('warning', 'LDK Sync', `${failedOutputChecks.length}/${outputEntries.length} output checks failed`)
+        captureError(
+          'warning',
+          'LDK Sync',
+          `${failedOutputChecks.length}/${outputEntries.length} output checks failed`
+        )
         for (const r of failedOutputChecks) {
-          if (r.status === 'rejected') captureError('error', 'LDK Sync', 'Output check error', String(r.reason))
+          if (r.status === 'rejected')
+            captureError('error', 'LDK Sync', 'Output check error', String(r.reason))
         }
       }
     }

@@ -47,7 +47,12 @@ export function createFeeEstimator(esploraUrl: string): FeeEstimator {
         cache = { rates, fetchedAt: Date.now() }
       })
       .catch((err: unknown) => {
-        captureError('warning', 'LDK FeeEstimator', 'Failed to fetch fee estimates, using defaults', String(err))
+        captureError(
+          'warning',
+          'LDK FeeEstimator',
+          'Failed to fetch fee estimates, using defaults',
+          String(err)
+        )
       })
   }
 

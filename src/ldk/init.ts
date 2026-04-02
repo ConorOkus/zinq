@@ -368,13 +368,22 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
       } catch (err: unknown) {
         // Roll back partial IDB writes so the app can start fresh
         if (writtenMonitorKeys.length > 0 || wroteChannelManager) {
-          captureError('warning', 'LDK Init', 'VSS recovery failed, rolling back partial IDB writes')
+          captureError(
+            'warning',
+            'LDK Init',
+            'VSS recovery failed, rolling back partial IDB writes'
+          )
           await idbDeleteBatch('ldk_channel_monitors', writtenMonitorKeys).catch(() => {})
           if (wroteChannelManager) await idbDelete('ldk_channel_manager', 'primary').catch(() => {})
         }
         recoveredVersions.clear()
         initialCmVersion = 0
-        captureError('warning', 'LDK Init', 'VSS recovery failed, continuing with fresh state', String(err))
+        captureError(
+          'warning',
+          'LDK Init',
+          'VSS recovery failed, continuing with fresh state',
+          String(err)
+        )
       }
     } else {
       initialMonitorKeys = [...idbMonitors.keys()]
@@ -415,7 +424,12 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   )
   setChainMonitor(chainMonitor)
   onPersistFailure(({ key, error }) => {
-    captureError('critical', 'LDK Init', `Persist failure for ${key}, channel operations halted`, error.message)
+    captureError(
+      'critical',
+      'LDK Init',
+      `Persist failure for ${key}, channel operations halted`,
+      error.message
+    )
   })
 
   // 5. Restore or create NetworkGraph
@@ -497,7 +511,11 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
       // Defense-in-depth: if deserialization fails (e.g., stale CM from a
       // previous wallet that survived an IDB clear race), discard and create
       // fresh rather than crashing. Only safe when there are no monitors.
-      captureError('warning', 'LDK Init', 'ChannelManager deserialization failed with no monitors — discarding stale CM and creating fresh. This can happen after a wallet restore.')
+      captureError(
+        'warning',
+        'LDK Init',
+        'ChannelManager deserialization failed with no monitors — discarding stale CM and creating fresh. This can happen after a wallet restore.'
+      )
       await idbDelete('ldk_channel_manager', 'primary')
     } else {
       throw new Error('[LDK Init] Failed to deserialize ChannelManager')
@@ -710,7 +728,12 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
       }
     } catch (err: unknown) {
       // Migration failure is non-fatal — VSS writes will begin on next persist
-      captureError('warning', 'LDK Init', 'VSS migration failed (will retry on next startup)', String(err))
+      captureError(
+        'warning',
+        'LDK Init',
+        'VSS migration failed (will retry on next startup)',
+        String(err)
+      )
     }
   }
 

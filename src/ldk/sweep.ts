@@ -31,7 +31,11 @@ async function fetchFeeRate(esploraUrl: string): Promise<number> {
         MIN_FEE_RATE_SAT_VB
       )
       if (capped < Math.ceil(satPerVb)) {
-        captureError('warning', 'Sweep', `Fee rate capped from ${Math.ceil(satPerVb)} to ${MAX_FEE_RATE_SAT_VB} sat/vB`)
+        captureError(
+          'warning',
+          'Sweep',
+          `Fee rate capped from ${Math.ceil(satPerVb)} to ${MAX_FEE_RATE_SAT_VB} sat/vB`
+        )
       }
       return capped
     }
@@ -86,7 +90,11 @@ export async function sweepSpendableOutputs(
         if (result instanceof Result_SpendableOutputDescriptorDecodeErrorZ_OK) {
           descriptors.push(result.res)
         } else {
-          captureError('error', 'Sweep', `Failed to deserialize SpendableOutputDescriptor for key: ${key}`)
+          captureError(
+            'error',
+            'Sweep',
+            `Failed to deserialize SpendableOutputDescriptor for key: ${key}`
+          )
           valid = false
           break
         }
@@ -120,7 +128,11 @@ export async function sweepSpendableOutputs(
 
     if (!(result instanceof Result_TransactionNoneZ_OK)) {
       // spend_spendable_outputs can fail if outputs are dust or uneconomical
-      captureError('warning', 'Sweep', `spend_spendable_outputs failed — outputs may be dust or timelocked, descriptors: ${allDescriptors.length}`)
+      captureError(
+        'warning',
+        'Sweep',
+        `spend_spendable_outputs failed — outputs may be dust or timelocked, descriptors: ${allDescriptors.length}`
+      )
       return { swept: 0, skipped: skipped + allDescriptors.length, txid: null }
     }
 

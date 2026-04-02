@@ -513,7 +513,12 @@ export function LdkProvider({
           // so auto-reconnect doesn't trigger stale "wrong node" warnings.
           setChannelClosedCallback((counterpartyPubkeyHex) => {
             deleteKnownPeer(counterpartyPubkeyHex).catch((err: unknown) => {
-              captureError('warning', 'LDK', 'Failed to remove known peer after channel close', String(err))
+              captureError(
+                'warning',
+                'LDK',
+                'Failed to remove known peer after channel close',
+                String(err)
+              )
             })
           })
 
@@ -528,7 +533,12 @@ export function LdkProvider({
                 activeConnections.current.set(nodeIdHex, conn)
               })
               .catch((err: unknown) => {
-                captureError('warning', 'LDK', `ConnectionNeeded reconnect failed: ${nodeIdHex.substring(0, 16)}…`, String(err))
+                captureError(
+                  'warning',
+                  'LDK',
+                  `ConnectionNeeded reconnect failed: ${nodeIdHex.substring(0, 16)}…`,
+                  String(err)
+                )
               })
           })
 
@@ -620,7 +630,12 @@ export function LdkProvider({
             if (node.channelManager.get_and_clear_needs_persistence()) {
               void persistChannelManager(node.channelManager, cmPersistCtx).catch(
                 (err: unknown) => {
-                  captureError('critical', 'LDK Context', 'Failed to persist ChannelManager after events', String(err))
+                  captureError(
+                    'critical',
+                    'LDK Context',
+                    'Failed to persist ChannelManager after events',
+                    String(err)
+                  )
                 }
               )
             }
@@ -725,7 +740,11 @@ export function LdkProvider({
               ) {
                 if (attempt < MAX_OFFER_RETRIES) {
                   const delayMs = 3000 * 2 ** attempt // 3s, 6s, 12s, 24s, 48s
-                  captureError('warning', 'LDK', `create_offer_builder failed (attempt ${attempt + 1}/${MAX_OFFER_RETRIES + 1}), retrying in ${delayMs / 1000}s`)
+                  captureError(
+                    'warning',
+                    'LDK',
+                    `create_offer_builder failed (attempt ${attempt + 1}/${MAX_OFFER_RETRIES + 1}), retrying in ${delayMs / 1000}s`
+                  )
                   offerRetryTimer = setTimeout(() => void loadOrCreateOffer(attempt + 1), delayMs)
                   return
                 }
@@ -765,7 +784,12 @@ export function LdkProvider({
                 console.log('[ldk] Connected to LSP')
               })
               .catch((err: unknown) => {
-                captureError('warning', 'LDK', 'LSP auto-connect failed (will retry on receive)', String(err))
+                captureError(
+                  'warning',
+                  'LDK',
+                  'LSP auto-connect failed (will retry on receive)',
+                  String(err)
+                )
               })
           }
 
@@ -843,7 +867,9 @@ export function LdkProvider({
           persistChannelManagerIdbOnly(channelManager),
           idbPut('ldk_network_graph', 'primary', networkGraph.write()),
           idbPut('ldk_scorer', 'primary', scorer.write()),
-        ]).catch((err: unknown) => captureError('error', 'LDK', 'Visibility-change persist failed', String(err)))
+        ]).catch((err: unknown) =>
+          captureError('error', 'LDK', 'Visibility-change persist failed', String(err))
+        )
       } else if (document.visibilityState === 'visible' && nodeRef.current) {
         // Drain events immediately on tab foreground to process any channel
         // opens or payments that arrived while backgrounded

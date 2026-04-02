@@ -212,7 +212,9 @@ function handleEvent(
       feePaidMsat: null,
       createdAt: Date.now(),
       failureReason: null,
-    }).catch((err: unknown) => captureError('critical', 'LDK Event', 'Failed to persist inbound payment', String(err)))
+    }).catch((err: unknown) =>
+      captureError('critical', 'LDK Event', 'Failed to persist inbound payment', String(err))
+    )
     onPaymentEvent?.({ type: 'claimed', paymentHash, amountMsat: event.amount_msat })
     return
   }
@@ -417,7 +419,12 @@ function handleEvent(
         try {
           await idbPut('ldk_funding_txs', tempChannelIdHex, txHex)
         } catch (err: unknown) {
-          captureError('critical', 'LDK Event', 'Failed to persist funding tx — aborting channel', String(err))
+          captureError(
+            'critical',
+            'LDK Event',
+            'Failed to persist funding tx — aborting channel',
+            String(err)
+          )
           return
         }
 
@@ -428,7 +435,11 @@ function handleEvent(
           rawTxBytes
         )
         if (!result.is_ok()) {
-          captureError('critical', 'LDK Event', 'FundingGenerationReady: funding_transaction_generated failed')
+          captureError(
+            'critical',
+            'LDK Event',
+            'FundingGenerationReady: funding_transaction_generated failed'
+          )
           return
         }
 
@@ -446,11 +457,21 @@ function handleEvent(
         const changeset = bdkWallet.take_staged()
         if (changeset && !changeset.is_empty()) {
           await putChangeset(changeset.to_json()).catch((err: unknown) =>
-            captureError('critical', 'BDK', 'Failed to persist changeset after funding tx', String(err))
+            captureError(
+              'critical',
+              'BDK',
+              'Failed to persist changeset after funding tx',
+              String(err)
+            )
           )
         }
       } catch (err: unknown) {
-        captureError('critical', 'LDK Event', 'FundingGenerationReady: failed to build funding tx', String(err))
+        captureError(
+          'critical',
+          'LDK Event',
+          'FundingGenerationReady: failed to build funding tx',
+          String(err)
+        )
       }
     })()
     return
@@ -548,7 +569,11 @@ function handleEvent(
   }
 
   if (event instanceof Event_HTLCHandlingFailed) {
-    captureError('error', 'LDK Event', `HTLCHandlingFailed: channelId: ${bytesToHex(event.prev_channel_id.write())} failedNextDestination: ${event.failed_next_destination.constructor.name}`)
+    captureError(
+      'error',
+      'LDK Event',
+      `HTLCHandlingFailed: channelId: ${bytesToHex(event.prev_channel_id.write())} failedNextDestination: ${event.failed_next_destination.constructor.name}`
+    )
     return
   }
 

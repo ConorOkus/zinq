@@ -25,7 +25,12 @@ async function createOrRestoreWallet(
       console.log('[BDK Init] Restored wallet from persisted ChangeSet')
       return wallet
     } catch (err) {
-      captureError('warning', 'BDK Init', 'Failed to restore from ChangeSet, creating fresh wallet', String(err))
+      captureError(
+        'warning',
+        'BDK Init',
+        'Failed to restore from ChangeSet, creating fresh wallet',
+        String(err)
+      )
     }
   }
 

@@ -99,7 +99,11 @@ export function Restore() {
           if (obj) {
             monitors.push({ key, value: obj.value })
           } else {
-            captureError('warning', 'Restore', `Monitor "${key}" listed in manifest but missing from VSS`)
+            captureError(
+              'warning',
+              'Restore',
+              `Monitor "${key}" listed in manifest but missing from VSS`
+            )
           }
         }
       }

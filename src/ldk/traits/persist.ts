@@ -106,7 +106,12 @@ export function createPersister(options: PersisterOptions = {}): {
                 const serverKeys = parseMonitorManifest(new TextDecoder().decode(serverObj.value))
                 for (const k of serverKeys) monitorKeys.add(k)
               } catch (e) {
-                captureError('warning', 'LDK Persist', 'Server manifest parse failed, overwriting with local keys', String(e))
+                captureError(
+                  'warning',
+                  'LDK Persist',
+                  'Server manifest parse failed, overwriting with local keys',
+                  String(e)
+                )
               }
               const merged = new TextEncoder().encode(JSON.stringify([...monitorKeys]))
               const newVersion = await client.putObject(
@@ -164,7 +169,11 @@ export function createPersister(options: PersisterOptions = {}): {
         // Version conflict: re-fetch server version, compare, retry (capped)
         if (vssClient && isVssConflict(err) && conflictRetries < MAX_CONFLICT_RETRIES) {
           conflictRetries++
-          captureError('warning', 'LDK Persist', `Version conflict for ${key}, resolving (attempt ${conflictRetries}/${MAX_CONFLICT_RETRIES})...`)
+          captureError(
+            'warning',
+            'LDK Persist',
+            `Version conflict for ${key}, resolving (attempt ${conflictRetries}/${MAX_CONFLICT_RETRIES})...`
+          )
           try {
             const serverObj = await vssClient.getObject(key)
             if (serverObj) {
@@ -178,14 +187,27 @@ export function createPersister(options: PersisterOptions = {}): {
                 return
               }
               // Different data — log critical but use server version for next write attempt
-              captureError('critical', 'LDK Persist', `True version conflict for ${key}. Server version: ${serverObj.version}. Retrying with corrected version.`)
+              captureError(
+                'critical',
+                'LDK Persist',
+                `True version conflict for ${key}. Server version: ${serverObj.version}. Retrying with corrected version.`
+              )
             } else {
               // Key was deleted on the server — reset version to 0
               versionCache.set(key, 0)
-              captureError('warning', 'LDK Persist', `Key ${key} not found on server during conflict resolution, resetting version to 0`)
+              captureError(
+                'warning',
+                'LDK Persist',
+                `Key ${key} not found on server during conflict resolution, resetting version to 0`
+              )
             }
           } catch (resolveErr: unknown) {
-            captureError('error', 'LDK Persist', 'Failed to resolve version conflict', String(resolveErr))
+            captureError(
+              'error',
+              'LDK Persist',
+              'Failed to resolve version conflict',
+              String(resolveErr)
+            )
           }
           // Retry immediately with corrected version
           continue
@@ -195,7 +217,11 @@ export function createPersister(options: PersisterOptions = {}): {
         // Do NOT reset conflictRetries: subsequent conflicts go straight to
         // backoff (intentional — prevents infinite conflict-retry loops).
         if (vssClient && isVssConflict(err)) {
-          captureError('critical', 'LDK Persist', `Conflict resolution exhausted for ${key} after ${MAX_CONFLICT_RETRIES} attempts, falling back to backoff`)
+          captureError(
+            'critical',
+            'LDK Persist',
+            `Conflict resolution exhausted for ${key} after ${MAX_CONFLICT_RETRIES} attempts, falling back to backoff`
+          )
         }
 
         captureError('critical', 'LDK Persist', `Persist write failed for ${key}`, String(err))
@@ -287,7 +313,12 @@ export function createPersister(options: PersisterOptions = {}): {
       deleteVss
         .then(() => idbDelete('ldk_channel_monitors', key))
         .catch((err: unknown) => {
-          captureError('error', 'LDK Persist', 'Failed to delete archived channel monitor', String(err))
+          captureError(
+            'error',
+            'LDK Persist',
+            'Failed to delete archived channel monitor',
+            String(err)
+          )
         })
     },
   })
