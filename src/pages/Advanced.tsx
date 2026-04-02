@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ScreenHeader } from '../components/ScreenHeader'
+import { useLdk } from '../ldk/use-ldk'
 
 const ADVANCED_ITEMS = [
   {
@@ -46,11 +48,37 @@ const ADVANCED_ITEMS = [
 
 export function Advanced() {
   const navigate = useNavigate()
+  const ldk = useLdk()
+  const [copied, setCopied] = useState(false)
+
+  const nodeId = ldk.status === 'ready' ? ldk.nodeId : null
+
+  const copyNodeId = () => {
+    if (!nodeId) return
+    void navigator.clipboard.writeText(nodeId).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   return (
     <div className="flex min-h-dvh flex-col bg-dark text-on-dark">
       <ScreenHeader title="Advanced" backTo="/settings" />
       <div className="p-4">
+        {nodeId && (
+          <button
+            onClick={copyNodeId}
+            className="mb-4 w-full rounded-xl bg-dark-elevated p-4 text-left transition-colors active:bg-dark-elevated/70"
+          >
+            <div className="mb-1 text-xs font-medium text-[var(--color-on-dark-muted)]">
+              Node ID
+            </div>
+            <div className="break-all font-mono text-xs leading-relaxed">{nodeId}</div>
+            <div className="mt-2 text-xs text-[var(--color-on-dark-muted)]">
+              {copied ? 'Copied!' : 'Tap to copy'}
+            </div>
+          </button>
+        )}
         {ADVANCED_ITEMS.map((item) => (
           <button
             key={item.label}
