@@ -113,7 +113,7 @@ export function createEventHandler(
           bumpTxHandler
         )
       } catch (err: unknown) {
-        console.error('[LDK Event] Unhandled error in event handler:', err)
+        captureError('critical', 'LDK Event', 'Unhandled error in event handler', String(err))
       }
       return Result_NoneReplayEventZ.constructor_ok()
     },
@@ -213,7 +213,7 @@ function handleEvent(
       feePaidMsat: null,
       createdAt: Date.now(),
       failureReason: null,
-    }).catch((err: unknown) => console.error('[LDK Event] Failed to persist inbound payment:', err))
+    }).catch((err: unknown) => captureError('critical', 'LDK Event', 'Failed to persist inbound payment', String(err)))
     onPaymentEvent?.({ type: 'claimed', paymentHash, amountMsat: event.amount_msat })
     return
   }
@@ -228,7 +228,7 @@ function handleEvent(
     const feePaidMsat = feePaid instanceof Option_u64Z_Some ? feePaid.some : null
     console.log('[LDK Event] PaymentSent:', paymentHash)
     void updatePaymentStatus(paymentIdHex, 'succeeded', feePaidMsat).catch((err: unknown) =>
-      console.error('[LDK Event] Failed to update outbound payment status:', err)
+      captureError('critical', 'LDK Event', 'Failed to update outbound payment status', String(err))
     )
     onPaymentEvent?.({
       type: 'sent',
@@ -252,7 +252,7 @@ function handleEvent(
     }
     console.warn('[LDK Event] PaymentFailed:', paymentHash, reason)
     void updatePaymentStatus(paymentIdHex, 'failed', null, reason).catch((err: unknown) =>
-      console.error('[LDK Event] Failed to update failed payment status:', err)
+      captureError('error', 'LDK Event', 'Failed to update failed payment status', String(err))
     )
     onPaymentEvent?.({ type: 'failed', paymentHash: paymentIdHex, reason })
     return
@@ -418,10 +418,7 @@ function handleEvent(
         try {
           await idbPut('ldk_funding_txs', tempChannelIdHex, txHex)
         } catch (err: unknown) {
-          console.error(
-            '[LDK Event] CRITICAL: Failed to persist funding tx — aborting channel:',
-            err
-          )
+          captureError('critical', 'LDK Event', 'CRITICAL: Failed to persist funding tx — aborting channel', String(err))
           return
         }
 
@@ -433,10 +430,7 @@ function handleEvent(
         )
         if (!result.is_ok()) {
           const apiErr = result instanceof Result_NoneAPIErrorZ_Err ? result.err : null
-          console.error(
-            '[LDK Event] FundingGenerationReady: funding_transaction_generated failed:',
-            apiErr ?? 'unknown error'
-          )
+          captureError('critical', 'LDK Event', 'FundingGenerationReady: funding_transaction_generated failed', String(apiErr ?? 'unknown error'))
           return
         }
 
@@ -454,11 +448,11 @@ function handleEvent(
         const changeset = bdkWallet.take_staged()
         if (changeset && !changeset.is_empty()) {
           await putChangeset(changeset.to_json()).catch((err: unknown) =>
-            console.error('[BDK] CRITICAL: failed to persist changeset after funding tx:', err)
+            captureError('critical', 'BDK', 'CRITICAL: failed to persist changeset after funding tx', String(err))
           )
         }
       } catch (err: unknown) {
-        console.error('[LDK Event] FundingGenerationReady: failed to build funding tx:', err)
+        captureError('critical', 'LDK Event', 'FundingGenerationReady: failed to build funding tx', String(err))
       }
     })()
     return
@@ -467,7 +461,7 @@ function handleEvent(
   if (event instanceof Event_FundingTxBroadcastSafe) {
     const tempChannelIdHex = bytesToHex(event.former_temporary_channel_id.write())
     void broadcastPersistedFundingTx(tempChannelIdHex).catch((err: unknown) => {
-      console.error('[LDK Event] FundingTxBroadcastSafe: broadcast failed:', err)
+      captureError('critical', 'LDK Event', 'FundingTxBroadcastSafe: broadcast failed', String(err))
     })
     return
   }
@@ -543,7 +537,7 @@ function handleEvent(
           bytesToHex(event.temporary_channel_id.write()).substring(0, 16) + '…'
         )
       } else {
-        console.error('[LDK Event] OpenChannelRequest: failed to accept 0-conf from LSP')
+        captureError('error', 'LDK Event', 'OpenChannelRequest: failed to accept 0-conf from LSP')
       }
     } else {
       console.log(
@@ -556,13 +550,7 @@ function handleEvent(
   }
 
   if (event instanceof Event_HTLCHandlingFailed) {
-    console.error(
-      '[LDK Event] HTLCHandlingFailed:',
-      'channelId:',
-      bytesToHex(event.prev_channel_id.write()),
-      'failedNextDestination:',
-      event.failed_next_destination.constructor.name
-    )
+    captureError('error', 'LDK Event', `HTLCHandlingFailed: channelId: ${bytesToHex(event.prev_channel_id.write())} failedNextDestination: ${event.failed_next_destination.constructor.name}`)
     return
   }
 

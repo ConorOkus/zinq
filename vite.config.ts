@@ -50,11 +50,18 @@ function lnurlCorsProxy(): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const isMainnetProd =
+    env.VITE_NETWORK === 'mainnet' && mode === 'production'
   return {
     plugins: [react(), tailwindcss(), wasm(), topLevelAwait(), lnurlCorsProxy()],
+    esbuild: {
+      drop: isMainnetProd ? ['console'] : [],
+    },
     worker: {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       plugins: (): PluginOption[] => [wasm(), topLevelAwait()],
+      // Note: if worker files are added, they will need their own esbuild.drop
+      // config to strip console on mainnet — the top-level setting does not apply.
     },
     server: {
       headers: {
