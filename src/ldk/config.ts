@@ -36,8 +36,8 @@ const NETWORK_CONFIGS: Record<NetworkId, LdkConfig> = {
   },
   mainnet: {
     network: Network.LDKNetwork_Bitcoin,
-    esploraUrl: 'https://mempool.space/api',
-    esploraFallbackUrl: 'https://blockstream.info/api',
+    esploraUrl: 'https://blockstream.info/api',
+    esploraFallbackUrl: 'https://mempool.space/api',
     chainPollIntervalMs: 30_000,
     wsProxyUrl: 'wss://proxy.zinqq.app',
     peerTimerIntervalMs: 10_000,
