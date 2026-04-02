@@ -1,15 +1,22 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useOnchain } from '../onchain/use-onchain'
 import { useLdk } from '../ldk/use-ldk'
 import { useUnifiedBalance } from '../hooks/use-unified-balance'
+import { usePwaInstall } from '../hooks/use-pwa-install'
 import { BalanceDisplay } from '../components/BalanceDisplay'
-import { ArrowUpRight, ArrowDownLeft, RefreshIcon } from '../components/icons'
+import { ArrowUpRight, ArrowDownLeft, RefreshIcon, HomeIcon } from '../components/icons'
+import { UpdateBanner } from '../components/UpdateBanner'
 
 export function Home() {
   const navigate = useNavigate()
   const onchain = useOnchain()
   const ldk = useLdk()
   const { total, pending, isLoading } = useUnifiedBalance()
+  const { canInstall, isIos, isStandalone, promptInstall } = usePwaInstall()
+  const [showIosHint, setShowIosHint] = useState(false)
+
+  const showInstallButton = !isStandalone && (canInstall || isIos)
 
   const hasError = onchain.status === 'error' || ldk.status === 'error'
 
@@ -30,7 +37,18 @@ export function Home() {
 
   return (
     <div className="flex min-h-dvh flex-col justify-between bg-accent px-6 pt-4 text-on-accent">
-      <div className="-mr-4 flex justify-end pt-[env(safe-area-inset-top,0px)]">
+      <div className="-mx-4 flex justify-between pt-[env(safe-area-inset-top,0px)]">
+        {showInstallButton ? (
+          <button
+            className="flex h-11 w-11 items-center justify-center rounded-full text-on-accent transition-colors active:bg-black/10"
+            onClick={() => (isIos ? setShowIosHint(true) : promptInstall())}
+            aria-label="Install app"
+          >
+            <HomeIcon className="h-5 w-5" />
+          </button>
+        ) : (
+          <div className="h-11 w-11" />
+        )}
         <button
           className="flex h-11 w-11 items-center justify-center rounded-full text-on-accent transition-colors active:bg-black/10"
           onClick={() => window.location.reload()}
@@ -39,6 +57,23 @@ export function Home() {
           <RefreshIcon className="h-5 w-5" />
         </button>
       </div>
+
+      {showIosHint && (
+        <div className="mx-auto max-w-xs rounded-xl bg-black/20 p-4 text-center text-sm text-on-accent backdrop-blur-sm">
+          <p className="font-semibold">Add to Home Screen</p>
+          <p className="mt-1 text-[var(--color-on-accent-muted)]">
+            Tap the share button in Safari, then select &ldquo;Add to Home
+            Screen&rdquo;
+          </p>
+          <button
+            className="mt-3 text-xs underline"
+            onClick={() => setShowIosHint(false)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      <UpdateBanner />
       <BalanceDisplay balance={total} pending={pending} loading={isLoading} />
 
       <div className="flex gap-3 pb-[calc(var(--spacing-tab-bar)+0.75rem+env(safe-area-inset-bottom,0px))]">

@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import wasm from 'vite-plugin-wasm'
 import topLevelAwait from 'vite-plugin-top-level-await'
+import { VitePWA } from 'vite-plugin-pwa'
 
 /**
  * Vite plugin that proxies LNURL requests to bypass CORS issues.
@@ -51,7 +52,56 @@ function lnurlCorsProxy(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
-    plugins: [react(), tailwindcss(), wasm(), topLevelAwait(), lnurlCorsProxy()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      wasm(),
+      topLevelAwait(),
+      lnurlCorsProxy(),
+      VitePWA({
+        registerType: 'prompt',
+        injectRegister: null,
+        manifest: {
+          name: 'Zinq',
+          short_name: 'Zinq',
+          description: 'Lightning wallet powered by LDK',
+          theme_color: '#7c3aed',
+          background_color: '#0a0a0a',
+          display: 'standalone',
+          scope: '/',
+          start_url: '/',
+          icons: [
+            { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+            { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+            {
+              src: 'pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          globIgnores: ['**/*.wasm'],
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          cleanupOutdatedCaches: true,
+          navigateFallback: 'index.html',
+          navigateFallbackDenylist: [/^\/api\//],
+          runtimeCaching: [
+            {
+              urlPattern: /\.wasm$/,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'wasm-cache',
+                expiration: { maxEntries: 1 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
+        },
+      }),
+    ],
     worker: {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       plugins: (): PluginOption[] => [wasm(), topLevelAwait()],
