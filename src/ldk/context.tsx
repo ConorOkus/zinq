@@ -117,7 +117,7 @@ export function LdkProvider({
         null // override_config — use defaults
       )
       if (!result.is_ok()) {
-        captureError('error', 'LDK', 'create_channel failed', String(result))
+        captureError('error', 'LDK', 'create_channel failed')
         return false
       }
       console.log('[ldk] create_channel succeeded for', channelValueSats.toString(), 'sats')
@@ -131,7 +131,7 @@ export function LdkProvider({
       if (!nodeRef.current) throw new Error('Node not initialized')
       const result = nodeRef.current.channelManager.close_channel(channelId, counterpartyNodeId)
       if (!result.is_ok()) {
-        captureError('error', 'LDK', 'close_channel failed', String(result))
+        captureError('error', 'LDK', 'close_channel failed')
         return false
       }
       console.log('[ldk] close_channel initiated')
@@ -149,7 +149,7 @@ export function LdkProvider({
         'User-initiated force close'
       )
       if (!result.is_ok()) {
-        captureError('critical', 'LDK', 'force_close failed', String(result))
+        captureError('critical', 'LDK', 'force_close failed')
         return false
       }
       console.log('[ldk] force_close initiated')
@@ -729,7 +729,7 @@ export function LdkProvider({
                   offerRetryTimer = setTimeout(() => void loadOrCreateOffer(attempt + 1), delayMs)
                   return
                 }
-                captureError('error', 'LDK', 'create_offer_builder failed after retries', String(builderResult))
+                captureError('error', 'LDK', 'create_offer_builder failed after retries')
                 return
               }
               const builder = builderResult.res
@@ -737,7 +737,7 @@ export function LdkProvider({
               builder.description('zinqq wallet')
               const offerResult = builder.build()
               if (!(offerResult instanceof Result_OfferBolt12SemanticErrorZ_OK)) {
-                captureError('error', 'LDK', 'offer build failed', String(offerResult))
+                captureError('error', 'LDK', 'offer build failed')
                 return
               }
               const offerStr = offerResult.res.to_str()

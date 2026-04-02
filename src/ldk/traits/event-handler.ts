@@ -25,7 +25,6 @@ import {
   Option_PaymentFailureReasonZ_Some,
   PaymentFailureReason,
   Result_NoneReplayEventZ,
-  Result_NoneAPIErrorZ_Err,
   SocketAddress_TcpIpV4,
   SocketAddress_TcpIpV6,
   SocketAddress_Hostname,
@@ -429,8 +428,7 @@ function handleEvent(
           rawTxBytes
         )
         if (!result.is_ok()) {
-          const apiErr = result instanceof Result_NoneAPIErrorZ_Err ? result.err : null
-          captureError('critical', 'LDK Event', 'FundingGenerationReady: funding_transaction_generated failed', String(apiErr ?? 'unknown error'))
+          captureError('critical', 'LDK Event', 'FundingGenerationReady: funding_transaction_generated failed')
           return
         }
 
