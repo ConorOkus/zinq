@@ -42,6 +42,7 @@ vi.mock('lightningdevkit', () => {
   }
   class Event_ChannelPending extends MockEvent {
     channel_id = { write: () => new Uint8Array([7, 8]) }
+    former_temporary_channel_id = { write: () => new Uint8Array([0xaa, 0xbb]) }
     counterparty_node_id = new Uint8Array([0xaa, 0xbb, 0xcc])
   }
   class Event_ChannelReady extends MockEvent {

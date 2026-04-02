@@ -173,9 +173,9 @@ Execute manually with real (small amount) mainnet funds:
 - [ ] Test peer reconnection after disconnect
 
 **Phase 3 exit criteria:**
-- [ ] No orphaned IDB entries on failed channel opens
+- [x] No orphaned IDB entries on failed channel opens
 - [ ] Error monitoring captures critical failures
-- [ ] Rollback procedure documented and reviewed
+- [x] Rollback procedure documented and reviewed
 - [ ] All smoke test scenarios pass with real funds
 
 ---

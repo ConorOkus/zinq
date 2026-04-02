@@ -1,7 +1,7 @@
 import { ACTIVE_NETWORK } from '../ldk/config'
 
 export const DB_NAME = `zinqq-ldk-${ACTIVE_NETWORK}`
-const DB_VERSION = 9
+const DB_VERSION = 10
 
 const STORES = [
   'ldk_seed',
@@ -18,6 +18,7 @@ const STORES = [
   'bdk_changeset',
   'ldk_bolt12_offer',
   'ldk_pending_broadcasts',
+  'ldk_channel_id_map',
 ] as const
 
 export type StoreName = (typeof STORES)[number]

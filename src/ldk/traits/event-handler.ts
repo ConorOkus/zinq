@@ -263,12 +263,19 @@ function handleEvent(
 
   // Channel lifecycle
   if (event instanceof Event_ChannelPending) {
+    const channelIdHex = bytesToHex(event.channel_id.write())
+    const tempIdHex = bytesToHex(event.former_temporary_channel_id.write())
     console.log(
       '[LDK Event] ChannelPending:',
       'channelId:',
-      bytesToHex(event.channel_id.write()).substring(0, 16) + '…',
+      channelIdHex.substring(0, 16) + '…',
       'counterparty:',
       bytesToHex(event.counterparty_node_id).substring(0, 16) + '…'
+    )
+    // Store final→temp channel ID mapping so DiscardFunding can clean up
+    // orphaned funding tx entries keyed by temporary channel ID.
+    void idbPut('ldk_channel_id_map', channelIdHex, tempIdHex).catch((err: unknown) =>
+      console.warn('[LDK Event] Failed to persist channel ID mapping:', err)
     )
     return
   }
@@ -302,6 +309,9 @@ function handleEvent(
     // the closing transaction output (cooperative close pays directly
     // to BDK's shutdown script address).
     onSyncNeeded?.()
+
+    // Clean up channel ID mapping (best-effort)
+    void idbDelete('ldk_channel_id_map', channelIdHex).catch(() => {})
     return
   }
 
@@ -462,15 +472,25 @@ function handleEvent(
   }
 
   if (event instanceof Event_DiscardFunding) {
-    // DiscardFunding provides channel_id (final, not temporary), so we cannot
-    // directly look up the persisted funding tx by temporary_channel_id.
-    // Orphaned entries in ldk_funding_txs are small (a few hundred bytes each)
-    // and will accumulate slowly. This is acceptable for now.
-    // TODO: Store a temp→final channel ID mapping in ChannelPending to enable cleanup.
-    console.log(
-      '[LDK Event] DiscardFunding:',
-      bytesToHex(event.channel_id.write()).substring(0, 16) + '...'
-    )
+    const channelIdHex = bytesToHex(event.channel_id.write())
+    console.log('[LDK Event] DiscardFunding:', channelIdHex.substring(0, 16) + '...')
+    // Look up the temporary channel ID from the mapping stored in ChannelPending,
+    // then delete the orphaned funding tx and the mapping itself.
+    void (async () => {
+      try {
+        const tempIdHex = await idbGet<string>('ldk_channel_id_map', channelIdHex)
+        if (tempIdHex) {
+          await idbDelete('ldk_funding_txs', tempIdHex)
+          await idbDelete('ldk_channel_id_map', channelIdHex)
+          console.log(
+            '[LDK Event] DiscardFunding: cleaned up funding tx for',
+            tempIdHex.substring(0, 16) + '...'
+          )
+        }
+      } catch (err: unknown) {
+        console.warn('[LDK Event] DiscardFunding: cleanup failed:', err)
+      }
+    })()
     return
   }
 
