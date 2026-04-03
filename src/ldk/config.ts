@@ -15,7 +15,7 @@ interface LdkConfig {
   lspNodeId: string
   lspHost: string
   lspPort: number
-  lspToken?: string
+
   genesisBlockHash: string
 }
 
@@ -65,7 +65,6 @@ export const LDK_CONFIG: LdkConfig = {
   lspNodeId: (import.meta.env.VITE_LSP_NODE_ID as string | undefined) ?? base.lspNodeId,
   lspHost: (import.meta.env.VITE_LSP_HOST as string | undefined) ?? base.lspHost,
   lspPort: Number(import.meta.env.VITE_LSP_PORT ?? base.lspPort),
-  lspToken: import.meta.env.VITE_LSP_TOKEN as string | undefined,
 }
 
 if (!LDK_CONFIG.wsProxyUrl) {

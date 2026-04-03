@@ -33,7 +33,6 @@ vi.mock('./config', () => ({
     lspNodeId: '',
     lspHost: '',
     lspPort: 9735,
-    lspToken: undefined,
     genesisBlockHash: '00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6',
   },
   ACTIVE_NETWORK: 'signet',

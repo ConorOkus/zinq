@@ -253,7 +253,7 @@ export function LdkProvider({
       }
 
       // Step 1: Get opening fee params from LSP
-      const feeMenu = await node.lsps2Client.getOpeningFeeParams(lspNodeId, LDK_CONFIG.lspToken)
+      const feeMenu = await node.lsps2Client.getOpeningFeeParams(lspNodeId)
 
       // Step 2: Select cheapest valid params
       const selectedParams = selectCheapestParams(feeMenu, amountMsat)

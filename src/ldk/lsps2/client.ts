@@ -27,8 +27,8 @@ export class LSPS2Client {
     this.sendRequest = sendRequest
   }
 
-  async getOpeningFeeParams(lspNodeId: string, token?: string): Promise<OpeningFeeParams[]> {
-    const params: Record<string, unknown> = { token: token ?? null }
+  async getOpeningFeeParams(lspNodeId: string): Promise<OpeningFeeParams[]> {
+    const params: Record<string, unknown> = { token: null }
 
     const response = await this.sendLsps2Request(lspNodeId, 'lsps2.get_info', params)
 
