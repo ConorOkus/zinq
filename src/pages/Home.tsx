@@ -27,7 +27,7 @@ export function Home() {
           ? ldk.error.message
           : 'Unknown error'
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-accent px-6 pb-(--spacing-tab-bar)">
+      <div className="flex flex-1 flex-col items-center justify-center bg-accent px-6 pb-(--spacing-tab-bar)">
         <p className="text-lg font-semibold text-on-accent">Something went wrong</p>
         <p className="mt-2 text-sm text-[var(--color-on-accent-muted)]">{errorMsg}</p>
       </div>
@@ -35,7 +35,7 @@ export function Home() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col justify-between bg-accent px-6 pt-4 text-on-accent">
+    <div className="flex flex-1 flex-col justify-between bg-accent px-6 pt-4 text-on-accent">
       <div className="-mx-4 flex justify-between pt-[env(safe-area-inset-top,0px)]">
         {showInstallButton ? (
           <button
