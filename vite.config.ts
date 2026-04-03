@@ -104,7 +104,8 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     esbuild: {
-      drop: isMainnetProd ? ['console'] : [],
+      drop: isMainnetProd ? ['debugger'] : [],
+      pure: isMainnetProd ? ['console.debug'] : [],
     },
     worker: {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
