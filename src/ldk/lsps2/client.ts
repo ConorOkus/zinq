@@ -42,9 +42,15 @@ export class LSPS2Client {
       throw new Error('Invalid lsps2.get_info response: missing opening_fee_params_menu')
     }
 
-    return (result.opening_fee_params_menu as unknown[]).map((raw) =>
+    const feeParamsMenu = (result.opening_fee_params_menu as unknown[]).map((raw) =>
       deserializeOpeningFeeParams(raw as Parameters<typeof deserializeOpeningFeeParams>[0])
     )
+
+    for (const fp of feeParamsMenu) {
+      console.log('[LSPS2] min_payment_size_msat:', fp.minPaymentSizeMsat.toString())
+    }
+
+    return feeParamsMenu
   }
 
   async buyChannel(
