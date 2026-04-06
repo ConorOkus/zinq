@@ -3,9 +3,10 @@ import { captureError } from '../storage/error-log'
 
 const CACHE_TTL_MS = 60_000
 
+const SIGNET_DEFAULTS: Record<number, number> = { 1: 1, 6: 1, 12: 1, 144: 1 }
 const DEFAULT_RATES: Record<string, Record<number, number>> = {
   mainnet: { 1: 25, 6: 10, 12: 5, 144: 2 },
-  signet: { 1: 1, 6: 1, 12: 1, 144: 1 },
+  signet: SIGNET_DEFAULTS,
 }
 
 interface FeeCache {
@@ -74,7 +75,7 @@ function isCacheStale(): boolean {
 }
 
 function defaultRate(target: number): number {
-  const defaults = DEFAULT_RATES[ACTIVE_NETWORK] ?? DEFAULT_RATES.signet
+  const defaults = DEFAULT_RATES[ACTIVE_NETWORK] ?? SIGNET_DEFAULTS
   return defaults[target] ?? defaults[6] ?? 1
 }
 
