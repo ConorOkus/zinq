@@ -10,40 +10,11 @@ import { bytesToHex } from './utils'
 import { broadcastWithRetry } from './traits/broadcaster'
 import { ACTIVE_NETWORK } from './config'
 import { captureError } from '../storage/error-log'
+import { getFeeRate } from '../shared/fee-cache'
 
 const FEE_TARGET_BLOCKS = 6
-const DEFAULT_FEE_RATE_SAT_VB = ACTIVE_NETWORK === 'mainnet' ? 4 : 1
 const MIN_FEE_RATE_SAT_VB = ACTIVE_NETWORK === 'mainnet' ? 2 : 1
 const MAX_FEE_RATE_SAT_VB = 500
-
-/**
- * Fetch the fee rate (sat/vB) from Esplora's fee-estimates endpoint.
- * Falls back to 1 sat/vB on failure.
- */
-async function fetchFeeRate(esploraUrl: string): Promise<number> {
-  try {
-    const res = await fetch(`${esploraUrl}/fee-estimates`)
-    const estimates = (await res.json()) as Record<string, number>
-    const satPerVb = estimates[String(FEE_TARGET_BLOCKS)]
-    if (typeof satPerVb === 'number' && satPerVb > 0) {
-      const capped = Math.max(
-        Math.min(Math.ceil(satPerVb), MAX_FEE_RATE_SAT_VB),
-        MIN_FEE_RATE_SAT_VB
-      )
-      if (capped < Math.ceil(satPerVb)) {
-        captureError(
-          'warning',
-          'Sweep',
-          `Fee rate capped from ${Math.ceil(satPerVb)} to ${MAX_FEE_RATE_SAT_VB} sat/vB`
-        )
-      }
-      return capped
-    }
-  } catch (err: unknown) {
-    captureError('warning', 'Sweep', 'Fee estimation failed, using default', String(err))
-  }
-  return DEFAULT_FEE_RATE_SAT_VB
-}
 
 export interface SweepResult {
   swept: number
@@ -113,7 +84,8 @@ export async function sweepSpendableOutputs(
     }
 
     // Fetch fee rate and convert from sat/vB to sat/kw (×250)
-    const feeRateSatVb = await fetchFeeRate(esploraUrl)
+    const rawRate = await getFeeRate(FEE_TARGET_BLOCKS)
+    const feeRateSatVb = Math.max(Math.min(Math.ceil(rawRate), MAX_FEE_RATE_SAT_VB), MIN_FEE_RATE_SAT_VB)
     const feeRateSatPer1000Weight = feeRateSatVb * 250
 
     // Build + sign sweep tx via LDK's OutputSpender

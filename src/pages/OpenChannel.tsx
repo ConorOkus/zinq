@@ -4,7 +4,7 @@ import { useLdk } from '../ldk/use-ldk'
 import { useOnchain } from '../onchain/use-onchain'
 import { hexToBytes, bytesToHex } from '../ldk/utils'
 import { formatBtc } from '../utils/format-btc'
-import { LDK_CONFIG } from '../ldk/config'
+import { getFeeRate } from '../shared/fee-cache'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { Numpad, type NumpadKey } from '../components/Numpad'
 import { numpadDigitReducer } from '../components/numpad-reducer'
@@ -64,19 +64,9 @@ export function OpenChannel() {
   const balance =
     onchain.status === 'ready' ? onchain.balance.confirmed + onchain.balance.trustedPending : 0n
 
-  // Fetch fee rate from Esplora
+  // Fetch fee rate from shared cache
   useEffect(() => {
-    fetch(`${LDK_CONFIG.esploraUrl}/fee-estimates`)
-      .then((res) => res.json() as Promise<Record<string, number>>)
-      .then((estimates) => {
-        const satPerVb = estimates['6']
-        if (typeof satPerVb === 'number' && satPerVb > 0) {
-          setFeeRate(BigInt(Math.ceil(satPerVb)))
-        } else {
-          setFeeRate(1n)
-        }
-      })
-      .catch(() => setFeeRate(1n))
+    void getFeeRate(6).then((satPerVb) => setFeeRate(BigInt(Math.ceil(satPerVb))))
   }, [])
 
   // --- Numpad handler ---

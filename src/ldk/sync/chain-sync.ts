@@ -232,7 +232,7 @@ export function startSyncLoop(config: SyncLoopConfig): SyncLoopHandle {
         }
       }
 
-      // Persist NetworkGraph + Scorer every ~10 ticks (~5 min at 30s interval)
+      // Persist NetworkGraph + Scorer every ~10 ticks (~10 min at 60s interval)
       if ((tickCount + 1) % 10 === 0) {
         await idbPut('ldk_network_graph', 'primary', config.networkGraph.write())
         await idbPut('ldk_scorer', 'primary', config.scorer.write())

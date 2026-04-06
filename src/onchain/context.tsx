@@ -25,9 +25,9 @@ import { putChangeset } from './storage/changeset'
 import { captureError } from '../storage/error-log'
 import { useLdk } from '../ldk/use-ldk'
 import type { SyncNeededCallback } from '../ldk/traits/event-handler'
+import { getFeeRate as getSharedFeeRate } from '../shared/fee-cache'
 
 const FEE_TARGET_BLOCKS = 6
-const DEFAULT_FEE_RATE_SAT_VB = ACTIVE_NETWORK === 'mainnet' ? 4n : 1n
 const MIN_FEE_RATE_SAT_VB = ACTIVE_NETWORK === 'mainnet' ? 2n : 1n
 const MAX_FEE_SATS = 50_000n
 
@@ -37,17 +37,10 @@ const MAX_FEE_SATS = 50_000n
 // 10,000 sats covers a ~150 vB CPFP at ~50 sat/vB.
 const ANCHOR_RESERVE_SATS = 10_000n
 
-async function getFeeRate(esploraClient: EsploraClient): Promise<bigint> {
-  try {
-    const estimates = await esploraClient.get_fee_estimates()
-    const satPerVb = estimates.get(FEE_TARGET_BLOCKS)
-    if (satPerVb !== undefined && satPerVb > 0) {
-      return BigInt(Math.ceil(satPerVb))
-    }
-  } catch (err: unknown) {
-    captureError('warning', 'Onchain', 'Fee estimation failed, using default', String(err))
-  }
-  return DEFAULT_FEE_RATE_SAT_VB
+async function getFeeRate(): Promise<bigint> {
+  const satPerVb = await getSharedFeeRate(FEE_TARGET_BLOCKS)
+  const rate = BigInt(Math.ceil(satPerVb))
+  return rate >= MIN_FEE_RATE_SAT_VB ? rate : MIN_FEE_RATE_SAT_VB
 }
 
 function persistChangeset(wallet: Wallet): void {
@@ -163,7 +156,7 @@ export function OnchainProvider({ children }: { children: ReactNode }) {
       const esplora = esploraRef.current
       if (!wallet || !esplora) throw new Error('Wallet not ready')
 
-      const feeRateSatVb = await getFeeRate(esplora)
+      const feeRateSatVb = await getFeeRate()
       const psbt = buildPsbt(new FeeRate(feeRateSatVb))
       const fee = psbt.fee().to_sat()
 
@@ -188,7 +181,7 @@ export function OnchainProvider({ children }: { children: ReactNode }) {
 
       syncHandleRef.current?.pause()
       try {
-        const resolvedFeeRate = feeRateSatVb ?? (await getFeeRate(esplora))
+        const resolvedFeeRate = feeRateSatVb ?? (await getFeeRate())
         if (resolvedFeeRate < MIN_FEE_RATE_SAT_VB) {
           throw new Error(
             `Fee rate ${resolvedFeeRate.toString()} sat/vB is below minimum for ${ACTIVE_NETWORK}`

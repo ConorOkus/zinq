@@ -50,6 +50,9 @@ vi.mock('./traits/logger', () => ({
 vi.mock('./traits/fee-estimator', () => ({
   createFeeEstimator: vi.fn(() => ({})),
 }))
+vi.mock('../shared/fee-cache', () => ({
+  initFeeCache: vi.fn(),
+}))
 vi.mock('./traits/broadcaster', () => ({
   createBroadcaster: vi.fn(() => ({})),
   drainPendingBroadcasts: vi.fn(() => Promise.resolve()),

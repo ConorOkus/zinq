@@ -37,6 +37,7 @@ import {
 import { getSeed, storeDerivedSeed } from './storage/seed'
 import { createLogger } from './traits/logger'
 import { createFeeEstimator } from './traits/fee-estimator'
+import { initFeeCache } from '../shared/fee-cache'
 import { createBroadcaster } from './traits/broadcaster'
 import {
   createPersister,
@@ -273,7 +274,8 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
 
   // 3. Create trait implementations
   const logger = createLogger()
-  const feeEstimator = createFeeEstimator(LDK_CONFIG.esploraUrl)
+  initFeeCache(LDK_CONFIG.esploraUrl)
+  const feeEstimator = createFeeEstimator()
   const broadcaster = createBroadcaster(LDK_CONFIG.esploraUrl, LDK_CONFIG.esploraFallbackUrl)
 
   // 3.5 VSS Recovery: if IDB is empty but VSS has data, download state.

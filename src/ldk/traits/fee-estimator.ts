@@ -1,5 +1,5 @@
 import { FeeEstimator, ConfirmationTarget } from 'lightningdevkit'
-import { captureError } from '../../storage/error-log'
+import { getCachedFeeRate } from '../../shared/fee-cache'
 
 // Default fee rates in sat/KW (1 sat/vB = 250 sat/KW)
 const DEFAULT_FEE_RATES: Record<ConfirmationTarget, number> = {
@@ -13,94 +13,35 @@ const DEFAULT_FEE_RATES: Record<ConfirmationTarget, number> = {
   [ConfirmationTarget.LDKConfirmationTarget_OutputSpendingFee]: 5_000,
 }
 
-interface FeeCache {
-  rates: Map<number, number>
-  fetchedAt: number
-}
-
-const CACHE_TTL_MS = 60_000 // 1 minute
 const MAX_FEE_SAT_KW = 500_000 // ~2,000 sat/vB — beyond this, something is wrong
 
-export function createFeeEstimator(esploraUrl: string): FeeEstimator {
-  let cache: FeeCache | null = null
-
-  function refreshCache(): void {
-    fetch(`${esploraUrl}/fee-estimates`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Fee API responded with ${res.status.toString()}`)
-        return res.json() as Promise<Record<string, number>>
-      })
-      .then((estimates) => {
-        const rates = new Map<number, number>()
-        for (const [blocks, feePerVbyte] of Object.entries(estimates)) {
-          if (
-            typeof feePerVbyte !== 'number' ||
-            !Number.isFinite(feePerVbyte) ||
-            feePerVbyte <= 0
-          ) {
-            continue
-          }
-          // Esplora returns sat/vB, LDK wants sat/KW (multiply by 250)
-          const satKw = Math.round(feePerVbyte * 250)
-          rates.set(Number(blocks), Math.min(satKw, MAX_FEE_SAT_KW))
-        }
-        cache = { rates, fetchedAt: Date.now() }
-      })
-      .catch((err: unknown) => {
-        captureError(
-          'warning',
-          'LDK FeeEstimator',
-          'Failed to fetch fee estimates, using defaults',
-          String(err)
-        )
-      })
+function targetToBlocks(confirmationTarget: ConfirmationTarget): number {
+  switch (confirmationTarget) {
+    case ConfirmationTarget.LDKConfirmationTarget_MaximumFeeEstimate:
+    case ConfirmationTarget.LDKConfirmationTarget_UrgentOnChainSweep:
+      return 1
+    case ConfirmationTarget.LDKConfirmationTarget_AnchorChannelFee:
+    case ConfirmationTarget.LDKConfirmationTarget_NonAnchorChannelFee:
+      return 6
+    case ConfirmationTarget.LDKConfirmationTarget_ChannelCloseMinimum:
+    case ConfirmationTarget.LDKConfirmationTarget_OutputSpendingFee:
+      return 12
+    case ConfirmationTarget.LDKConfirmationTarget_MinAllowedAnchorChannelRemoteFee:
+    case ConfirmationTarget.LDKConfirmationTarget_MinAllowedNonAnchorChannelRemoteFee:
+      return 144
+    default:
+      return 6
   }
+}
 
-  // Fetch immediately on creation
-  refreshCache()
-
-  function getCachedFeeRate(confirmationTarget: ConfirmationTarget): number {
-    // Refresh if stale
-    if (!cache || Date.now() - cache.fetchedAt > CACHE_TTL_MS) {
-      refreshCache()
-    }
-
-    if (!cache || cache.rates.size === 0) {
-      return DEFAULT_FEE_RATES[confirmationTarget] ?? 5_000
-    }
-
-    // Map confirmation targets to block confirmation counts
-    let targetBlocks: number
-    switch (confirmationTarget) {
-      case ConfirmationTarget.LDKConfirmationTarget_MaximumFeeEstimate:
-      case ConfirmationTarget.LDKConfirmationTarget_UrgentOnChainSweep:
-        targetBlocks = 1
-        break
-      case ConfirmationTarget.LDKConfirmationTarget_AnchorChannelFee:
-      case ConfirmationTarget.LDKConfirmationTarget_NonAnchorChannelFee:
-        targetBlocks = 6
-        break
-      case ConfirmationTarget.LDKConfirmationTarget_ChannelCloseMinimum:
-      case ConfirmationTarget.LDKConfirmationTarget_OutputSpendingFee:
-        targetBlocks = 12
-        break
-      case ConfirmationTarget.LDKConfirmationTarget_MinAllowedAnchorChannelRemoteFee:
-      case ConfirmationTarget.LDKConfirmationTarget_MinAllowedNonAnchorChannelRemoteFee:
-        targetBlocks = 144
-        break
-      default:
-        targetBlocks = 6
-    }
-
-    // Direct lookup, fallback to default
-    const feeRate = cache.rates.get(targetBlocks)
-    // LDK enforces minimum of 253 sat/KW (1 sat/vB)
-    return Math.max(feeRate ?? DEFAULT_FEE_RATES[confirmationTarget] ?? 5_000, 253)
-  }
-
+export function createFeeEstimator(): FeeEstimator {
   return FeeEstimator.new_impl({
     get_est_sat_per_1000_weight(confirmation_target: ConfirmationTarget): number {
-      return getCachedFeeRate(confirmation_target)
+      const targetBlocks = targetToBlocks(confirmation_target)
+      const satPerVb = getCachedFeeRate(targetBlocks)
+      // Convert sat/vB → sat/KW (×250), cap, and enforce LDK minimum of 253
+      const satKw = Math.min(Math.round(satPerVb * 250), MAX_FEE_SAT_KW)
+      return Math.max(satKw, DEFAULT_FEE_RATES[confirmation_target] ?? 253, 253)
     },
   })
 }
