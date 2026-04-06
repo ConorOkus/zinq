@@ -85,7 +85,15 @@ export async function sweepSpendableOutputs(
 
     // Fetch fee rate and convert from sat/vB to sat/kw (×250)
     const rawRate = await getFeeRate(FEE_TARGET_BLOCKS)
-    const feeRateSatVb = Math.max(Math.min(Math.ceil(rawRate), MAX_FEE_RATE_SAT_VB), MIN_FEE_RATE_SAT_VB)
+    const ceiledRate = Math.ceil(rawRate)
+    const feeRateSatVb = Math.max(Math.min(ceiledRate, MAX_FEE_RATE_SAT_VB), MIN_FEE_RATE_SAT_VB)
+    if (feeRateSatVb < ceiledRate) {
+      captureError(
+        'warning',
+        'Sweep',
+        `Fee rate capped from ${ceiledRate} to ${MAX_FEE_RATE_SAT_VB} sat/vB`
+      )
+    }
     const feeRateSatPer1000Weight = feeRateSatVb * 250
 
     // Build + sign sweep tx via LDK's OutputSpender

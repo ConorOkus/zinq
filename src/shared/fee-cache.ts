@@ -13,9 +13,12 @@ interface FeeCache {
   fetchedAt: number
 }
 
+const FAILURE_BACKOFF_MS = 15_000
+
 let cache: FeeCache | null = null
 let pendingFetch: Promise<void> | null = null
 let esploraBaseUrl: string | null = null
+let lastFailedAt = 0
 
 /**
  * Initialise the fee cache with the esplora URL. Must be called once at
@@ -30,8 +33,9 @@ export function initFeeCache(esploraUrl: string): void {
  * Fire-and-forget cache refresh. Deduplicates concurrent calls — only one
  * fetch can be in-flight at a time.
  */
-export function refreshFeeCache(): void {
+function refreshFeeCache(): void {
   if (pendingFetch || !esploraBaseUrl) return
+  if (Date.now() - lastFailedAt < FAILURE_BACKOFF_MS) return
 
   pendingFetch = fetch(`${esploraBaseUrl}/fee-estimates`)
     .then((res) => {
@@ -52,6 +56,7 @@ export function refreshFeeCache(): void {
       cache = { rates, fetchedAt: Date.now() }
     })
     .catch((err: unknown) => {
+      lastFailedAt = Date.now()
       captureError(
         'warning',
         'FeeCache',

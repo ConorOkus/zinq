@@ -66,7 +66,9 @@ export function OpenChannel() {
 
   // Fetch fee rate from shared cache
   useEffect(() => {
-    void getFeeRate(6).then((satPerVb) => setFeeRate(BigInt(Math.ceil(satPerVb))))
+    void getFeeRate(6)
+      .then((satPerVb) => setFeeRate(BigInt(Math.ceil(satPerVb))))
+      .catch(() => setFeeRate(1n))
   }, [])
 
   // --- Numpad handler ---
