@@ -142,7 +142,8 @@ export class LSPS2Client {
   ): Promise<JsonRpcResponse> {
     const id = crypto.randomUUID()
     const payload = serializeJsonRpcRequest(id, method, params)
-    console.log('[LSPS2] Sending:', method, JSON.stringify(params))
+    const logParams = { ...params, token: params.token ? '[REDACTED]' : null }
+    console.log('[LSPS2] Sending:', method, JSON.stringify(logParams))
     const pubkeyBytes = hexToBytes(lspNodeId)
     return this.sendRequest(pubkeyBytes, payload)
   }

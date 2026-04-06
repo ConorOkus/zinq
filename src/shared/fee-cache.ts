@@ -34,9 +34,10 @@ export function initFeeCache(esploraUrl: string): void {
  * Fire-and-forget cache refresh. Deduplicates concurrent calls — only one
  * fetch can be in-flight at a time.
  */
-function refreshFeeCache(): void {
-  if (pendingFetch || !esploraBaseUrl) return
-  if (Date.now() - lastFailedAt < FAILURE_BACKOFF_MS) return
+function refreshFeeCache(): Promise<void> | null {
+  if (pendingFetch) return pendingFetch
+  if (!esploraBaseUrl) return null
+  if (Date.now() - lastFailedAt < FAILURE_BACKOFF_MS) return null
 
   pendingFetch = fetch(`${esploraBaseUrl}/fee-estimates`)
     .then((res) => {
@@ -64,6 +65,8 @@ function refreshFeeCache(): void {
     .finally(() => {
       pendingFetch = null
     })
+
+  return pendingFetch
 }
 
 function isCacheStale(): boolean {
@@ -97,11 +100,8 @@ export function getCachedFeeRate(target: number): number {
  */
 export async function getFeeRate(target: number): Promise<number> {
   if (isCacheStale()) {
-    refreshFeeCache()
+    const pending = refreshFeeCache()
+    if (pending) await pending
   }
-  if (pendingFetch) {
-    await pendingFetch
-  }
-  if (!cache) return defaultRate(target)
-  return cache.rates[String(target)] ?? defaultRate(target)
+  return cache?.rates[String(target)] ?? defaultRate(target)
 }
