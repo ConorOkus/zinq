@@ -15,6 +15,7 @@ interface LdkConfig {
   lspNodeId: string
   lspHost: string
   lspPort: number
+  lspToken?: string
 
   genesisBlockHash: string
 }
@@ -29,9 +30,9 @@ const NETWORK_CONFIGS: Record<NetworkId, LdkConfig> = {
     rgsUrl: 'https://rgs.mutinynet.com/snapshot',
     rgsSyncIntervalTicks: 30,
     vssUrl: '/api/vss-proxy',
-    lspNodeId: '035196ae4d3bed6abbce8ba592a59618d3aa78bf71a61a95bd69334de74e6c173c',
-    lspHost: 'lima-delta-kilo.tnull.org',
-    lspPort: 9737,
+    lspNodeId: '0275eb44504d53b2a083852e3bffcc4e178195b9546c162590d8c282f3ed3243fc',
+    lspHost: '192.243.215.98',
+    lspPort: 25000,
     genesisBlockHash: '00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6',
   },
   mainnet: {
@@ -65,6 +66,7 @@ export const LDK_CONFIG: LdkConfig = {
   lspNodeId: (import.meta.env.VITE_LSP_NODE_ID as string | undefined) ?? base.lspNodeId,
   lspHost: (import.meta.env.VITE_LSP_HOST as string | undefined) ?? base.lspHost,
   lspPort: Number(import.meta.env.VITE_LSP_PORT ?? base.lspPort),
+  lspToken: (import.meta.env.VITE_LSP_TOKEN as string | undefined) ?? base.lspToken,
 }
 
 if (!LDK_CONFIG.wsProxyUrl) {
