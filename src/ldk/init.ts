@@ -119,10 +119,11 @@ function createUserConfig(): UserConfig {
   const handshakeConfig = config.get_channel_handshake_config()
   handshakeConfig.set_negotiate_scid_privacy(true)
 
-  // Anchor channels temporarily disabled while testing LSP compatibility.
-  // BumpTransactionEventHandler (step 14) is wired up and ready — re-enable
-  // once the LSP confirms anchor support.
-  handshakeConfig.set_negotiate_anchors_zero_fee_htlc_tx(false)
+  // Enable anchor channels (zero-fee HTLC anchors). The LSP opens anchor
+  // channels; BumpTransactionEventHandler (step 14) handles CPFP fee bumping.
+  // No on-chain reserve gate is needed — raw LDK does not enforce one, and
+  // the LSP is already trusted via accept_inbound_channel_from_trusted_peer_0conf.
+  handshakeConfig.set_negotiate_anchors_zero_fee_htlc_tx(true)
 
   // LSPS2: allow the full channel capacity for inbound HTLCs. The default (10%)
   // is too restrictive for JIT channels where the entire payment arrives in a
