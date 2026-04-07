@@ -24,8 +24,8 @@ const ONCHAIN_CONFIGS: Record<NetworkId, OnchainConfig> = {
   },
   mainnet: {
     network: 'bitcoin',
-    esploraUrl: 'https://blockstream.info/api',
-    explorerUrl: 'https://blockstream.info',
+    esploraUrl: 'https://mempool.space/api',
+    explorerUrl: 'https://mempool.space',
     syncIntervalMs: 180_000,
     fullScanGapLimit: 20,
     syncParallelRequests: 5,
@@ -33,4 +33,9 @@ const ONCHAIN_CONFIGS: Record<NetworkId, OnchainConfig> = {
   },
 }
 
-export const ONCHAIN_CONFIG: OnchainConfig = ONCHAIN_CONFIGS[ACTIVE_NETWORK]
+const onchainBase = ONCHAIN_CONFIGS[ACTIVE_NETWORK]
+
+export const ONCHAIN_CONFIG: OnchainConfig = {
+  ...onchainBase,
+  esploraUrl: (import.meta.env.VITE_ESPLORA_URL as string | undefined) ?? onchainBase.esploraUrl,
+}

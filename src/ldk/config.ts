@@ -37,8 +37,8 @@ const NETWORK_CONFIGS: Record<NetworkId, LdkConfig> = {
   },
   mainnet: {
     network: Network.LDKNetwork_Bitcoin,
-    esploraUrl: 'https://blockstream.info/api',
-    esploraFallbackUrl: 'https://mempool.space/api',
+    esploraUrl: 'https://mempool.space/api',
+    esploraFallbackUrl: 'https://blockstream.info/api',
     chainPollIntervalMs: 60_000,
     wsProxyUrl: 'wss://proxy.zinqq.app',
     peerTimerIntervalMs: 10_000,
@@ -61,6 +61,7 @@ const base = NETWORK_CONFIGS[networkId as NetworkId]
 
 export const LDK_CONFIG: LdkConfig = {
   ...base,
+  esploraUrl: (import.meta.env.VITE_ESPLORA_URL as string | undefined) ?? base.esploraUrl,
   wsProxyUrl: (import.meta.env.VITE_WS_PROXY_URL as string | undefined) ?? base.wsProxyUrl,
   vssUrl: (import.meta.env.VITE_VSS_URL as string | undefined) ?? base.vssUrl,
   lspNodeId: (import.meta.env.VITE_LSP_NODE_ID as string | undefined) ?? base.lspNodeId,
