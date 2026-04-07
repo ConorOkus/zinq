@@ -68,7 +68,6 @@ class LruCache<V> {
     }
     this.map.set(key, value)
   }
-
 }
 
 export class EsploraClient {

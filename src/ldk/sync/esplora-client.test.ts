@@ -229,8 +229,8 @@ describe('EsploraClient', () => {
 
     it('caches merkle proofs by txid:blockHash compound key', async () => {
       const proof = { block_height: 100, merkle: [], pos: 3 }
-      vi.spyOn(globalThis, 'fetch').mockImplementation(
-        () => Promise.resolve(new Response(JSON.stringify(proof), { status: 200 }))
+      vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify(proof), { status: 200 }))
       )
 
       const blockHashA = 'cc'.repeat(32)

@@ -1,5 +1,5 @@
 ---
-title: "feat: Add esplora request batching and caching"
+title: 'feat: Add esplora request batching and caching'
 type: feat
 status: completed
 date: 2026-04-07
@@ -58,11 +58,16 @@ class Semaphore {
   private count: number
   private queue: (() => void)[] = []
 
-  constructor(max: number) { this.count = max }
+  constructor(max: number) {
+    this.count = max
+  }
 
   async acquire(): Promise<void> {
-    if (this.count > 0) { this.count--; return }
-    return new Promise(resolve => this.queue.push(resolve))
+    if (this.count > 0) {
+      this.count--
+      return
+    }
+    return new Promise((resolve) => this.queue.push(resolve))
   }
 
   release(): void {
@@ -104,17 +109,18 @@ private async dedupFetch(url: string, signal: AbortSignal): Promise<Response> {
 
 A simple `Map` with eviction (delete oldest on insert when at capacity). Three separate caches:
 
-| Cache | Key | Value | Max Entries |
-|-------|-----|-------|-------------|
-| Block headers | `blockHash` (64-char hex) | `Uint8Array` (80 bytes) | 256 |
-| Tx hex | `txid` (64-char hex) | `Uint8Array` (variable) | 256 |
-| Merkle proofs | `txid:blockHash` (compound key) | `MerkleProof` object | 256 |
+| Cache         | Key                             | Value                   | Max Entries |
+| ------------- | ------------------------------- | ----------------------- | ----------- |
+| Block headers | `blockHash` (64-char hex)       | `Uint8Array` (80 bytes) | 256         |
+| Tx hex        | `txid` (64-char hex)            | `Uint8Array` (variable) | 256         |
+| Merkle proofs | `txid:blockHash` (compound key) | `MerkleProof` object    | 256         |
 
 **Critical: Merkle proofs use compound key `txid:blockHash`**, not just `txid`. During a reorg, a transaction can re-confirm in a different block at a different position. A txid-only key would serve a stale proof with the wrong `pos` value, causing LDK to construct an invalid merkle path. The compound key ensures a cache miss when the block hash changes post-reorg.
 
 (Identified via SpecFlow analysis of `chain-sync.ts` reorg detection at lines 32-45)
 
 **What is NOT cached:**
+
 - `getTxStatus` — mutable (tx can go from unconfirmed to confirmed)
 - `getOutspend` — mutable (output can go from unspent to spent)
 - `getBlockStatus` — mutable (block can leave best chain during reorg)
@@ -135,12 +141,12 @@ The `sync()` call in `src/onchain/sync.ts:54` uses the config value and should u
 
 **Request volume reduction by scenario:**
 
-| Scenario | Before | After | Savings |
-|----------|--------|-------|---------|
-| Steady state, no new block | 1 req (tip check, early return) | 1 req | None needed |
-| New block, 5 watched txids, 0 confirmed | 1 + 1 + 1 + 5 = 8 reqs | Same 8 reqs, but max 2 concurrent | Burst reduced from 5 to 2 |
-| New block, 5 watched txids, 3 confirmed in same block | 8 + 3*(header+hex+proof) = 17 reqs | 8 + deduped: 1 header + 3 hex + 3 proof = 15 reqs, max 2 concurrent | 2 fewer reqs + burst throttled |
-| New block, 10 outputs, 2 spent and confirmed | 1+1+1+10+2*(status+header+hex+proof) = 21 reqs | Same count, max 2 concurrent, header deduped if same block | Burst reduced from ~12 to 2 |
+| Scenario                                              | Before                                          | After                                                               | Savings                        |
+| ----------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------- | ------------------------------ |
+| Steady state, no new block                            | 1 req (tip check, early return)                 | 1 req                                                               | None needed                    |
+| New block, 5 watched txids, 0 confirmed               | 1 + 1 + 1 + 5 = 8 reqs                          | Same 8 reqs, but max 2 concurrent                                   | Burst reduced from 5 to 2      |
+| New block, 5 watched txids, 3 confirmed in same block | 8 + 3\*(header+hex+proof) = 17 reqs             | 8 + deduped: 1 header + 3 hex + 3 proof = 15 reqs, max 2 concurrent | 2 fewer reqs + burst throttled |
+| New block, 10 outputs, 2 spent and confirmed          | 1+1+1+10+2\*(status+header+hex+proof) = 21 reqs | Same count, max 2 concurrent, header deduped if same block          | Burst reduced from ~12 to 2    |
 
 The **concurrency limiter is the primary win** — it converts bursts into a steady trickle. Caching and dedup provide secondary savings when multiple items share a block.
 
