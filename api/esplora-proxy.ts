@@ -18,6 +18,8 @@ const UPSTREAM_TIMEOUT_MS = 15_000
 let cachedToken: string | null = null
 let expiresAt = 0
 let pendingRefresh: Promise<string> | null = null
+let failedAt = 0
+const FAILURE_COOLDOWN_MS = 5_000
 
 async function getToken(): Promise<string> {
   const clientId = process.env.BLOCKSTREAM_CLIENT_ID
@@ -27,6 +29,10 @@ async function getToken(): Promise<string> {
   }
 
   if (cachedToken && Date.now() < expiresAt) return cachedToken
+
+  if (Date.now() < failedAt + FAILURE_COOLDOWN_MS) {
+    throw new Error('Token fetch in cooldown after failure')
+  }
 
   if (pendingRefresh) return pendingRefresh
 
@@ -44,16 +50,24 @@ async function getToken(): Promise<string> {
     })
 
     if (!res.ok) {
-      throw new Error(`Token request failed: HTTP ${res.status.toString()}`)
+      throw new Error(`Token request failed: HTTP ${res.status}`)
     }
 
-    const data = (await res.json()) as { access_token: string; expires_in: number }
+    const data = (await res.json()) as Record<string, unknown>
+    if (typeof data.access_token !== 'string' || typeof data.expires_in !== 'number') {
+      throw new Error('Unexpected token response shape')
+    }
     cachedToken = data.access_token
     expiresAt = Date.now() + data.expires_in * 1000 - TOKEN_REFRESH_BUFFER_MS
     return cachedToken
-  })().finally(() => {
-    pendingRefresh = null
-  })
+  })()
+    .catch((err: unknown) => {
+      failedAt = Date.now()
+      throw err
+    })
+    .finally(() => {
+      pendingRefresh = null
+    })
 
   return pendingRefresh
 }
@@ -69,6 +83,11 @@ export async function POST(request: Request): Promise<Response> {
 async function proxyToEsplora(request: Request): Promise<Response> {
   const url = new URL(request.url)
   const esploraPath = url.searchParams.get('_path') ?? ''
+
+  if (esploraPath.includes('..') || esploraPath.startsWith('/')) {
+    return Response.json({ error: 'invalid path' }, { status: 400 })
+  }
+
   const targetUrl = `${UPSTREAM_BASE}/${esploraPath}`
 
   let token: string
@@ -89,12 +108,15 @@ async function proxyToEsplora(request: Request): Promise<Response> {
     const upstream = await fetch(targetUrl, {
       method: request.method,
       headers,
-      body:
-        request.method !== 'GET' && request.method !== 'HEAD'
-          ? await request.text()
-          : undefined,
+      body: request.method === 'POST' ? await request.text() : undefined,
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     })
+
+    // Invalidate cached token if upstream rejects it
+    if (upstream.status === 401) {
+      cachedToken = null
+      expiresAt = 0
+    }
 
     return new Response(await upstream.text(), {
       status: upstream.status,

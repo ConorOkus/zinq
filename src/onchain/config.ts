@@ -25,7 +25,7 @@ const ONCHAIN_CONFIGS: Record<NetworkId, OnchainConfig> = {
   mainnet: {
     network: 'bitcoin',
     esploraUrl: '/api/esplora',
-    explorerUrl: 'https://blockstream.info',
+    explorerUrl: 'https://mempool.space',
     syncIntervalMs: 180_000,
     fullScanGapLimit: 20,
     syncParallelRequests: 2,
