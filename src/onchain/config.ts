@@ -35,8 +35,16 @@ const ONCHAIN_CONFIGS: Record<NetworkId, OnchainConfig> = {
 
 const onchainBase = ONCHAIN_CONFIGS[ACTIVE_NETWORK]
 
+/** BDK's WASM reqwest client cannot resolve relative URLs — resolve against page origin. */
+function resolveUrl(url: string): string {
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
 export const ONCHAIN_CONFIG: OnchainConfig = {
   ...onchainBase,
-  esploraUrl: (import.meta.env.VITE_ESPLORA_URL as string | undefined) ?? onchainBase.esploraUrl,
+  esploraUrl: resolveUrl(
+    (import.meta.env.VITE_ESPLORA_URL as string | undefined) ?? onchainBase.esploraUrl
+  ),
   explorerUrl: (import.meta.env.VITE_EXPLORER_URL as string | undefined) ?? onchainBase.explorerUrl,
 }
