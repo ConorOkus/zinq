@@ -52,7 +52,7 @@ const NETWORK_CONFIGS: Record<NetworkId, LdkConfig> = {
   },
 }
 
-const networkId = (import.meta.env.VITE_NETWORK ?? 'signet') as string
+const networkId = ((import.meta.env.VITE_NETWORK ?? 'signet') as string).trim()
 if (!(networkId in NETWORK_CONFIGS)) {
   throw new Error(`[Config] Invalid VITE_NETWORK="${networkId}". Must be "mainnet" or "signet".`)
 }
