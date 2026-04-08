@@ -16,7 +16,7 @@ import {
   type Bolt11Invoice,
   type Offer,
 } from 'lightningdevkit'
-import { initializeLdk, type LdkNode } from './init'
+import { initializeLdk, WALLET_LOCK_CHANNEL, type LdkNode } from './init'
 import { VssClient, SignatureHeaderProvider } from './storage/vss-client'
 import {
   LdkContext,
@@ -898,7 +898,27 @@ export function LdkProvider({
       drainEventsRef.current = null
     }
     teardownRef.current = teardown
-    return teardown
+
+    // Listen for another tab stealing the wallet lock. When received,
+    // tear down this tab's LDK node to prevent dual ChannelManagers.
+    const lockChannel = new BroadcastChannel(WALLET_LOCK_CHANNEL)
+    lockChannel.onmessage = (event: MessageEvent<{ type: string }>) => {
+      if (event.data?.type === 'wallet-takeover') {
+        console.warn('[LDK Context] Wallet taken over by another tab — shutting down')
+        teardown()
+        setState({
+          status: 'error',
+          node: null,
+          nodeId: null,
+          error: new Error('Wallet is now open in another tab'),
+        })
+      }
+    }
+
+    return () => {
+      lockChannel.close()
+      teardown()
+    }
   }, [
     connectToPeer,
     forgetPeer,
