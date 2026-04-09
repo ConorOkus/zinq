@@ -53,6 +53,7 @@ function readyLdkContext(
     peersReconnected: true,
     connectToPeer: vi.fn(),
     forgetPeer: vi.fn(),
+    disconnectPeer: vi.fn(),
     createChannel: vi.fn(),
     bdkWallet: {} as never,
     bdkEsploraClient: {} as never,

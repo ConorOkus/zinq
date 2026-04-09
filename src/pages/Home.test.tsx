@@ -41,6 +41,7 @@ function readyLdk(
     syncStatus: 'synced',
     connectToPeer: async () => {},
     forgetPeer: async () => {},
+    disconnectPeer: () => {},
     createChannel: () => true,
     closeChannel: () => true,
     forceCloseChannel: () => true,
