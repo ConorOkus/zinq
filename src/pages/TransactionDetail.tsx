@@ -1,8 +1,12 @@
 import { useParams, useLocation } from 'react-router'
 import { useTransactionHistory, type UnifiedTransaction } from '../hooks/use-transaction-history'
 import { formatBtc } from '../utils/format-btc'
+import { ACTIVE_NETWORK } from '../ldk/config'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { ArrowUpRight, ArrowDownLeft } from '../components/icons'
+
+const EXPLORER_TX_URL =
+  ACTIVE_NETWORK === 'mainnet' ? 'https://mempool.space/tx' : 'https://mutinynet.com/tx'
 
 function formatDate(timestamp: number): string {
   if (timestamp === 0) return 'Pending'
@@ -107,6 +111,19 @@ export function TransactionDetail() {
         <DetailRow label="Time" value={formatTime(tx.timestamp)} />
         <DetailRow label="Status" value={statusLabel(tx.status)} />
         <DetailRow label="Type" value={tx.layer === 'lightning' ? 'Lightning' : 'On-chain'} />
+        {tx.layer === 'onchain' && (
+          <div className="flex items-center justify-between py-3">
+            <span className="text-[var(--color-on-dark-muted)]">Transaction</span>
+            <a
+              href={`${EXPLORER_TX_URL}/${tx.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-accent underline underline-offset-2"
+            >
+              {tx.id.slice(0, 8)}...{tx.id.slice(-8)}
+            </a>
+          </div>
+        )}
       </div>
     </div>
   )
