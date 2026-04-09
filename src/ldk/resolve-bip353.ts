@@ -59,6 +59,7 @@ export async function resolveBip353(
     if (txt.startsWith('bitcoin:')) {
       const parsed = classifyPaymentInput(txt)
       if (parsed.type !== 'error') return parsed
+      console.warn('[BIP 353] TXT record parsed but classification failed:', parsed.message, txt)
     }
   }
 
