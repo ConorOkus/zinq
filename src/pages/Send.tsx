@@ -554,7 +554,7 @@ export function Send() {
   }, [onchain, sendStep])
 
   // --- Lightning: Confirm send ---
-  const handleLnConfirm = useCallback(() => {
+  const handleLnConfirm = useCallback(async () => {
     if (sendingRef.current) return
     if (ldk.status !== 'ready' || sendStep.step !== 'ln-review') return
 
@@ -572,7 +572,7 @@ export function Send() {
           )
           break
         case 'bolt12':
-          paymentId = ldk.sendBolt12Payment(
+          paymentId = await ldk.sendBolt12Payment(
             parsed.offer,
             parsed.amountMsat === null ? amountMsat : undefined
           )
