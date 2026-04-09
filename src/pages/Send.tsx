@@ -880,7 +880,7 @@ export function Send() {
         <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-4">
           <button
             className="h-14 w-full rounded-xl bg-accent font-display text-lg font-bold text-white transition-transform active:scale-[0.98]"
-            onClick={handleLnConfirm}
+            onClick={() => void handleLnConfirm()}
           >
             Confirm Send
           </button>
