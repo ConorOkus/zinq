@@ -90,18 +90,19 @@ function classifyEstimateError(err: unknown): string {
   return msg
 }
 
+/** Truncate a raw invoice/offer string for display: "lnbc1x…q3sdwj" */
+function truncateInvoice(raw: string): string {
+  if (raw.length <= 24) return raw
+  return `${raw.slice(0, 12)}…${raw.slice(-8)}`
+}
+
 /** Get a display label for a Lightning payment recipient. */
 function recipientLabel(
   parsed: ParsedPaymentInput & { type: 'bolt11' | 'bolt12' },
   label?: string
 ): string {
   if (label) return label
-  switch (parsed.type) {
-    case 'bolt11':
-      return parsed.description || 'Lightning Invoice'
-    case 'bolt12':
-      return parsed.description || 'Lightning Offer'
-  }
+  return parsed.description || truncateInvoice(parsed.raw)
 }
 
 export function Send() {
