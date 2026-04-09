@@ -146,8 +146,13 @@ function parseBolt12Offer(raw: string): ParsedPaymentInput {
   if (chains.length > 0) {
     const genesisHash = LDK_CONFIG.genesisBlockHash
     const matchesNetwork = chains.some((chainHash) => {
-      const hex = Array.from(chainHash, (b) => b.toString(16).padStart(2, '0')).join('')
-      return hex === genesisHash
+      // LDK returns chain hashes in protocol byte order (little-endian).
+      // Reverse to display order to match LDK_CONFIG.genesisBlockHash.
+      const displayHex = Array.from(chainHash)
+        .reverse()
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')
+      return displayHex === genesisHash
     })
     if (!matchesNetwork) {
       return { type: 'error', message: 'Offer is for a different Bitcoin network' }
