@@ -149,10 +149,6 @@ describe('encodeBolt11Invoice', () => {
   })
 
   it('decodes to correct fields when independently parsed (cross-validation)', async () => {
-    const lspPubkey = new Uint8Array(33)
-    lspPubkey[0] = 0x02
-    lspPubkey[32] = 0x01
-
     const routeHint: RouteHintEntry = {
       pubkey: lspPubkey,
       shortChannelId: (100n << 40n) | (200n << 16n) | 1n,
@@ -182,8 +178,9 @@ describe('encodeBolt11Invoice', () => {
     // Verify HRP: 50_000_000 msat = 500_000_000 pico-BTC = 500u
     expect(hrp).toBe('lntbs500u')
 
-    // Convert 5-bit words to bytes for field extraction
-    function wordsToBytes(w: number[]): Uint8Array {
+    // Convert 5-bit words to bytes; when padRemaining is true, leftover bits
+    // are shifted into a final byte (matching the encoder's signing preimage)
+    function wordsToBytes(w: number[], padRemaining = false): Uint8Array {
       const result: number[] = []
       let bits = 0
       let value = 0
@@ -194,6 +191,9 @@ describe('encodeBolt11Invoice', () => {
           bits -= 8
           result.push((value >>> bits) & 0xff)
         }
+      }
+      if (padRemaining && bits > 0) {
+        result.push((value << (8 - bits)) & 0xff)
       }
       return new Uint8Array(result)
     }
@@ -210,7 +210,6 @@ describe('encodeBolt11Invoice', () => {
       const tag = dataWords[pos]!
       const len = (dataWords[pos + 1]! << 5) | dataWords[pos + 2]!
       const data = dataWords.slice(pos + 3, pos + 3 + len)
-      // Store all occurrences: route hints can repeat
       if (!fields.has(tag)) fields.set(tag, data)
       pos += 3 + len
     }
@@ -236,28 +235,9 @@ describe('encodeBolt11Invoice', () => {
     const compactSig = sigBytes.slice(0, 64)
     const recoveryByte = sigBytes[64]
 
-    // Reconstruct the message that was signed: sha256(hrp_bytes || data_bytes)
-    // The encoder's wordsToBuffer includes padding bits as a final byte
-    function wordsToBuffer(w: number[]): Uint8Array {
-      const result: number[] = []
-      let bits = 0
-      let value = 0
-      for (const word of w) {
-        value = (value << 5) | (word & 0x1f)
-        bits += 5
-        while (bits >= 8) {
-          bits -= 8
-          result.push((value >>> bits) & 0xff)
-        }
-      }
-      if (bits > 0) {
-        result.push((value << (8 - bits)) & 0xff)
-      }
-      return new Uint8Array(result)
-    }
-
+    // Reconstruct the signing preimage: sha256(hrp_bytes || data_bytes_with_padding)
     const hrpBytes = new TextEncoder().encode(hrp)
-    const dataBytes = wordsToBuffer(dataWords)
+    const dataBytes = wordsToBytes(dataWords, true)
     const preimage = new Uint8Array(hrpBytes.length + dataBytes.length)
     preimage.set(hrpBytes)
     preimage.set(dataBytes, hrpBytes.length)

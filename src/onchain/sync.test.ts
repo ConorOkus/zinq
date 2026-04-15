@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { startOnchainSyncLoop, type OnchainBalance } from './sync'
+import { startOnchainSyncLoop } from './sync'
 
 // Mock config — short interval for fast tests
 vi.mock('./config', () => ({
@@ -16,7 +16,7 @@ vi.mock('../storage/error-log', () => ({
   captureError: vi.fn(),
 }))
 
-function makeBalance(confirmed = 100n): { to_sat: () => bigint } {
+function makeBalance(confirmed: bigint): { to_sat: () => bigint } {
   return { to_sat: () => confirmed }
 }
 

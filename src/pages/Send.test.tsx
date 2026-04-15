@@ -504,7 +504,7 @@ describe('Send', () => {
   })
 
   describe('error done and retry', () => {
-    it('shows Done button for non-retryable errors', async () => {
+    it('shows Try Again button for retryable broadcast error', async () => {
       const user = userEvent.setup()
       const ctx = readyContext({
         sendToAddress: vi.fn().mockRejectedValue(new Error('Broadcast failed')),
