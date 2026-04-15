@@ -403,16 +403,13 @@ export function Send() {
         }
 
         // Lightning types (bolt11, bolt12)
-        // When input originated from a BIP 321 URI, show first 10 chars of the
-        // invoice in the "To" field instead of the description/label.
-        const isBip321 = trimmed.toLowerCase().startsWith('bitcoin:')
-        const bip321Label =
-          isBip321 && (parsed.type === 'bolt11' || parsed.type === 'bolt12')
-            ? `${parsed.raw.slice(0, 10)}…`
-            : undefined
-
         // Fixed-amount: use embedded amount, skip numpad
         if (parsed.type !== 'lnurl' && parsed.amountMsat !== null) {
+          // When input originated from a BIP 321 URI, show first 10 chars of
+          // the invoice in the "To" field instead of the description/label.
+          const bip321Label = trimmed.toLowerCase().startsWith('bitcoin:')
+            ? `${parsed.raw.slice(0, 10)}…`
+            : undefined
           if (parsed.amountMsat > lnCapacityMsat) {
             setInputError('Not enough funds')
             return
@@ -446,6 +443,9 @@ export function Send() {
           setInputError('Not enough funds')
           return
         }
+        const bip321Label = trimmed.toLowerCase().startsWith('bitcoin:')
+          ? `${parsed.raw.slice(0, 10)}…`
+          : undefined
         setSendStep({
           step: 'ln-review',
           parsed,

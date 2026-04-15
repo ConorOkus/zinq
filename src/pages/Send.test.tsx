@@ -32,6 +32,16 @@ vi.mock('../ldk/payment-input', () => ({
         description: 'Amountless invoice',
       }
     }
+    // BIP 321 with amountless lightning= invoice
+    if (raw.startsWith('bitcoin:') && raw.includes('lightning=lntbs_noamt')) {
+      return {
+        type: 'bolt11',
+        invoice: {} as never,
+        raw: 'lntbs_noamt_raw_invoice',
+        amountMsat: null,
+        description: null,
+      }
+    }
     // BIP 321 with lightning= invoice
     if (raw.startsWith('bitcoin:') && raw.includes('lightning=')) {
       return {
@@ -476,6 +486,24 @@ describe('Send', () => {
 
       await waitFor(() => {
         expect(screen.getByText('lntbs50u1p…')).toBeInTheDocument()
+      })
+    })
+
+    it('shows truncated invoice in To field for amountless BIP 321 via numpad', async () => {
+      const user = userEvent.setup()
+      renderSend(readyContext(), readyLdkContext())
+
+      await submitRecipient(user, 'bitcoin:tb1qtest?lightning=lntbs_noamt')
+      await waitFor(() => {
+        expect(screen.getByText(/available/i)).toBeInTheDocument()
+      })
+
+      await typeOnNumpad(user, '5000')
+      const nextBtns = screen.getAllByRole('button', { name: /next/i })
+      await user.click(nextBtns[nextBtns.length - 1]!)
+
+      await waitFor(() => {
+        expect(screen.getByText('lntbs_noam…')).toBeInTheDocument()
       })
     })
 
