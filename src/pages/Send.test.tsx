@@ -499,6 +499,7 @@ describe('Send', () => {
       await waitFor(() => {
         expect(screen.getByText(/sent successfully/i)).toBeInTheDocument()
       })
+      if (ctx.status !== 'ready') throw new Error('unreachable')
       expect(ctx.sendMax).toHaveBeenCalled()
     })
   })

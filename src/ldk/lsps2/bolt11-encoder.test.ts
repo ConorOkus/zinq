@@ -173,7 +173,7 @@ describe('encodeBolt11Invoice', () => {
     )
 
     // --- Independent decoder using @scure/base bech32 ---
-    const { prefix: hrp, words } = bech32.decode(invoice, 2000)
+    const { prefix: hrp, words } = bech32.decode(invoice as `${string}1${string}`, 2000)
 
     // Verify HRP: 50_000_000 msat = 500_000_000 pico-BTC = 500u
     expect(hrp).toBe('lntbs500u')
