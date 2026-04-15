@@ -79,4 +79,26 @@ if (!LDK_CONFIG.wsProxyUrl) {
   )
 }
 
+// Validate LSP config. Empty lspNodeId disables LSPS2 (valid for testing).
+if (LDK_CONFIG.lspNodeId !== '') {
+  if (!/^[0-9a-f]{66}$/.test(LDK_CONFIG.lspNodeId)) {
+    throw new Error(
+      `[LDK Config] Invalid lspNodeId "${LDK_CONFIG.lspNodeId.substring(0, 20)}...". ` +
+        'Must be a 66-character lowercase hex public key, or empty to disable LSPS2.'
+    )
+  }
+  if (
+    !Number.isFinite(LDK_CONFIG.lspPort) ||
+    LDK_CONFIG.lspPort < 1 ||
+    LDK_CONFIG.lspPort > 65535
+  ) {
+    throw new Error(`[LDK Config] Invalid lspPort "${LDK_CONFIG.lspPort}". Must be 1-65535.`)
+  }
+  if (!LDK_CONFIG.lspHost) {
+    throw new Error(
+      '[LDK Config] lspHost is empty but lspNodeId is set. Both are required for LSPS2.'
+    )
+  }
+}
+
 export const ACTIVE_NETWORK: NetworkId = networkId as NetworkId
