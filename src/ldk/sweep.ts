@@ -16,13 +16,10 @@ const FEE_TARGET_BLOCKS = 6
 const MIN_FEE_RATE_SAT_VB = ACTIVE_NETWORK === 'mainnet' ? 2 : 1
 const MAX_FEE_RATE_SAT_VB = 500
 
-export type SweepFailureReason = 'no_utxos' | 'dust_or_timelocked' | 'fee_estimation' | 'broadcast'
-
 export interface SweepResult {
   swept: number
   skipped: number
   txid: string | null
-  failureReason?: SweepFailureReason
 }
 
 let sweepInProgress = false
@@ -102,7 +99,7 @@ export async function sweepSpendableOutputs(
       feeRateSatPer1000Weight = feeRateSatVb * 250
     } catch (err: unknown) {
       captureError('error', 'Sweep', 'Fee rate estimation failed', String(err))
-      return { swept: 0, skipped: skipped + allDescriptors.length, txid: null, failureReason: 'fee_estimation' }
+      return { swept: 0, skipped: skipped + allDescriptors.length, txid: null }
     }
 
     // Build + sign sweep tx via LDK's OutputSpender
@@ -122,7 +119,7 @@ export async function sweepSpendableOutputs(
         'Sweep',
         `spend_spendable_outputs failed — outputs may be dust or timelocked, descriptors: ${allDescriptors.length}`
       )
-      return { swept: 0, skipped: skipped + allDescriptors.length, txid: null, failureReason: 'dust_or_timelocked' }
+      return { swept: 0, skipped: skipped + allDescriptors.length, txid: null }
     }
 
     let txid: string
@@ -131,7 +128,7 @@ export async function sweepSpendableOutputs(
       txid = await broadcastWithRetry(esploraUrl, txHex, esploraFallbackUrl)
     } catch (err: unknown) {
       captureError('error', 'Sweep', 'Broadcast failed after signing', String(err))
-      return { swept: 0, skipped: skipped + allDescriptors.length, txid: null, failureReason: 'broadcast' }
+      return { swept: 0, skipped: skipped + allDescriptors.length, txid: null }
     }
 
     // Clean up IDB entries atomically after successful broadcast

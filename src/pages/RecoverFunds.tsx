@@ -1,32 +1,27 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { QRCodeSVG } from 'qrcode.react'
 import { ChevronBack, CopyIcon, ClockIcon } from '../components/icons'
 import { formatBtc } from '../utils/format-btc'
+import { useLdk } from '../ldk/use-ldk'
 import { useRecovery } from '../ldk/recovery/use-recovery'
 
 export function RecoverFunds() {
   const navigate = useNavigate()
-  const { recovery, setStatus, refreshDepositNeeded } = useRecovery(null)
+  const ldk = useLdk()
+  const vssClient = ldk.status === 'ready' ? ldk.vssClient : null
+  const { recovery } = useRecovery(vssClient)
   const [copied, setCopied] = useState(false)
-
-  // Mark as deposit_shown when the user views this screen
-  useEffect(() => {
-    if (recovery && recovery.status === 'needs_recovery') {
-      void setStatus('deposit_shown')
-    }
-  }, [recovery, setStatus])
-
-  // Refresh fee estimate on mount
-  useEffect(() => {
-    void refreshDepositNeeded()
-  }, [refreshDepositNeeded])
 
   const copyAddress = useCallback(async () => {
     if (!recovery) return
-    await navigator.clipboard.writeText(recovery.depositAddress)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    try {
+      await navigator.clipboard.writeText(recovery.depositAddress)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard API can fail (permissions, non-secure context) — silent fallback
+    }
   }, [recovery])
 
   if (!recovery) {

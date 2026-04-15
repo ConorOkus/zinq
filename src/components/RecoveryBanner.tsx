@@ -44,9 +44,7 @@ export function RecoveryBanner({ recovery, onDismiss }: RecoveryBannerProps) {
       <div className="min-w-0 flex-1">
         <div className="font-display text-base font-bold">Your funds are safe</div>
         <div className="mt-0.5 text-xs text-[var(--color-on-accent-muted)]">
-          {recovery.status === 'deposit_detected'
-            ? 'Recovering your funds...'
-            : 'A small deposit is needed to unlock them'}
+          A small deposit is needed to unlock them
         </div>
       </div>
       <ChevronRight className="h-5 w-5 shrink-0 text-[var(--color-on-accent-muted)]" />

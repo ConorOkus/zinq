@@ -15,7 +15,8 @@ export function Home() {
   const ldk = useLdk()
   const { total, pending, isLoading } = useUnifiedBalance()
   const { canInstall, isIos, isStandalone, promptInstall } = usePwaInstall()
-  const { recovery, dismiss: dismissRecovery } = useRecovery(null)
+  const vssClient = ldk.status === 'ready' ? ldk.vssClient : null
+  const { recovery, dismiss: dismissRecovery } = useRecovery(vssClient)
   const [showIosHint, setShowIosHint] = useState(false)
 
   const showInstallButton = !isStandalone && (canInstall || isIos)

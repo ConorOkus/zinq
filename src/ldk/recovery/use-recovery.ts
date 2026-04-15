@@ -5,7 +5,6 @@ import {
   clearRecoveryState,
   roundUpDepositNeeded,
   type RecoveryState,
-  type RecoveryStatus,
 } from './recovery-state'
 import type { RecoveryNeededInfo } from '../traits/event-handler'
 import type { VssClient } from '../storage/vss-client'
@@ -50,11 +49,14 @@ export async function enterRecovery(
   if (existing) {
     // Aggregate: add channel to existing recovery
     if (!existing.channelIds.includes(info.channelId)) {
-      existing.channelIds.push(info.channelId)
-      existing.stuckBalanceSat += info.localBalanceSat
-      existing.depositNeededSat = await estimateDepositNeeded()
-      existing.updatedAt = Date.now()
-      await writeRecoveryState(existing, vssClient)
+      const updated: RecoveryState = {
+        ...existing,
+        channelIds: [...existing.channelIds, info.channelId],
+        stuckBalanceSat: existing.stuckBalanceSat + info.localBalanceSat,
+        depositNeededSat: await estimateDepositNeeded(),
+        updatedAt: Date.now(),
+      }
+      await writeRecoveryState(updated, vssClient)
     }
   } else {
     const depositNeeded = await estimateDepositNeeded()
@@ -75,12 +77,8 @@ export async function enterRecovery(
 
 export interface UseRecoveryResult {
   recovery: RecoveryState | null
-  /** Update status (e.g. when user opens the recovery screen). */
-  setStatus: (status: RecoveryStatus) => Promise<void>
   /** Dismiss the success banner — clears all recovery state. */
   dismiss: () => Promise<void>
-  /** Refresh the deposit needed amount based on current fee estimates. */
-  refreshDepositNeeded: () => Promise<void>
 }
 
 /**
@@ -105,32 +103,10 @@ export function useRecovery(vssClient: VssClient | null): UseRecoveryResult {
     return () => window.removeEventListener(RECOVERY_EVENT, load)
   }, [])
 
-  const setStatus = useCallback(
-    async (status: RecoveryStatus) => {
-      const current = await readRecoveryState()
-      if (!current) return
-      const updated = { ...current, status, updatedAt: Date.now() }
-      await writeRecoveryState(updated, vssClient)
-      setRecovery(updated)
-    },
-    [vssClient]
-  )
-
   const dismiss = useCallback(async () => {
     await clearRecoveryState(vssClient)
     setRecovery(null)
   }, [vssClient])
 
-  const refreshDepositNeeded = useCallback(async () => {
-    const current = await readRecoveryState()
-    if (!current) return
-    const newAmount = await estimateDepositNeeded()
-    if (newAmount !== current.depositNeededSat) {
-      const updated = { ...current, depositNeededSat: newAmount, updatedAt: Date.now() }
-      await writeRecoveryState(updated, vssClient)
-      setRecovery(updated)
-    }
-  }, [vssClient])
-
-  return { recovery, setStatus, dismiss, refreshDepositNeeded }
+  return { recovery, dismiss }
 }

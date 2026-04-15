@@ -29,6 +29,8 @@ import {
   SocketAddress_TcpIpV6,
   SocketAddress_Hostname,
   type BumpTransactionEventHandler,
+  BumpTransactionEvent_ChannelClose,
+  BumpTransactionEvent_HTLCResolution,
   type ClosureReason,
   ClosureReason_CounterpartyForceClosed,
   ClosureReason_HolderForceClosed,
@@ -331,7 +333,7 @@ function handleEvent(
         // Fallback to channel capacity if local balance unavailable
         localBalanceSat = Number(event.channel_capacity_sats.some)
       }
-      lastForceCloseInfo = { channelId: channelIdHex, localBalanceSat }
+      forceCloseInfoMap.set(channelIdHex, { channelId: channelIdHex, localBalanceSat })
     }
 
     // Notify caller so they can clean up peer storage if no channels remain.
@@ -515,17 +517,26 @@ function handleEvent(
   }
 
   if (event instanceof Event_BumpTransaction) {
+    const bumpEvent = event.bump_transaction
+    // Extract channel ID from the bump event for recovery context lookup
+    let bumpChannelIdHex: string | null = null
+    if (bumpEvent instanceof BumpTransactionEvent_ChannelClose) {
+      bumpChannelIdHex = bytesToHex(bumpEvent.channel_id.write())
+    } else if (bumpEvent instanceof BumpTransactionEvent_HTLCResolution) {
+      bumpChannelIdHex = bytesToHex(bumpEvent.channel_id.write())
+    }
+    const forceCloseInfo = bumpChannelIdHex ? forceCloseInfoMap.get(bumpChannelIdHex) : null
+
     if (bumpTxHandler) {
       console.log('[LDK Event] BumpTransaction: handling CPFP fee bump')
       try {
-        bumpTxHandler.handle_event(event.bump_transaction)
+        bumpTxHandler.handle_event(bumpEvent)
       } catch (err: unknown) {
         captureError('critical', 'Event:BumpTransaction', 'CPFP handling failed', String(err))
-        // Fire recovery callback — CPFP failed, likely due to insufficient UTXOs
-        if (onRecoveryNeeded && lastForceCloseInfo) {
+        if (onRecoveryNeeded && forceCloseInfo) {
           onRecoveryNeeded({
-            channelId: lastForceCloseInfo.channelId,
-            localBalanceSat: lastForceCloseInfo.localBalanceSat,
+            channelId: forceCloseInfo.channelId,
+            localBalanceSat: forceCloseInfo.localBalanceSat,
             reason: String(err),
           })
         }
@@ -536,10 +547,10 @@ function handleEvent(
         'Event:BumpTransaction',
         'No handler configured — force-close tx may be stuck'
       )
-      if (onRecoveryNeeded && lastForceCloseInfo) {
+      if (onRecoveryNeeded && forceCloseInfo) {
         onRecoveryNeeded({
-          channelId: lastForceCloseInfo.channelId,
-          localBalanceSat: lastForceCloseInfo.localBalanceSat,
+          channelId: forceCloseInfo.channelId,
+          localBalanceSat: forceCloseInfo.localBalanceSat,
           reason: 'No BumpTransactionEventHandler configured',
         })
       }
@@ -673,9 +684,9 @@ function isForceClose(reason: ClosureReason): boolean {
   )
 }
 
-// Tracks the most recent force-close info so the BumpTransaction handler
-// can include channel context when firing onRecoveryNeeded.
-let lastForceCloseInfo: { channelId: string; localBalanceSat: number } | null = null
+// Tracks force-close info per channel so the BumpTransaction handler
+// can include the correct channel context when firing onRecoveryNeeded.
+const forceCloseInfoMap = new Map<string, { channelId: string; localBalanceSat: number }>()
 
 function describeClosureReason(reason: ClosureReason): string {
   if (reason instanceof ClosureReason_CounterpartyForceClosed) return 'Counterparty force closed'

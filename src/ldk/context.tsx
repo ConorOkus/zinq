@@ -796,6 +796,7 @@ export function LdkProvider({
             paymentHistory: initialPaymentHistory,
             bolt12Offer: null,
             vssStatus: 'ok',
+            vssClient: vssClient ?? null,
             shutdown,
           })
 

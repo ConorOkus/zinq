@@ -7,11 +7,7 @@ const IDB_STORE = 'ldk_force_close_recovery'
 const IDB_KEY = 'state'
 const VSS_KEY = 'force_close_recovery'
 
-export type RecoveryStatus =
-  | 'needs_recovery'
-  | 'deposit_shown'
-  | 'deposit_detected'
-  | 'sweep_confirmed'
+export type RecoveryStatus = 'needs_recovery' | 'sweep_confirmed'
 
 export interface RecoveryState {
   status: RecoveryStatus

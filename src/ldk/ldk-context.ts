@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { Wallet, EsploraClient } from '@bitcoindevkit/bdk-wallet-web'
+import type { VssClient } from './storage/vss-client'
 import type {
   Bolt11Invoice,
   Offer,
@@ -67,6 +68,8 @@ export type LdkContextValue =
       bolt12Offer: string | null
       /** VSS backup service status. 'degraded' means writes are failing and Lightning ops are paused. */
       vssStatus: VssStatus
+      /** VSS client for cross-device state persistence. Null if VSS is disabled. */
+      vssClient: VssClient | null
       /** Stop all background tasks and prevent further IDB writes. Used by Restore flow. */
       shutdown: () => void
     }
