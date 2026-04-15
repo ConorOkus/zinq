@@ -79,6 +79,7 @@ function renderSend(onchainValue?: OnchainContextValue, ldkValue?: LdkContextVal
     paymentHistory: [],
     bolt12Offer: null,
     vssStatus: 'ok' as const,
+    vssClient: null,
     shutdown: () => {},
   }
   return render(
@@ -463,6 +464,7 @@ describe('Send', () => {
         paymentHistory: [],
         bolt12Offer: null,
         vssStatus: 'ok' as const,
+        vssClient: null,
         shutdown: () => {},
       })
 
