@@ -27,7 +27,7 @@ This plan produces the first README, scoped deliberately as a showcase writeup r
 
 ## Proposed Solution
 
-Write one markdown file: `/Users/conor/Projects/zinq/README.md`. Target length ~180–260 lines. No images. One Mermaid diagram for the architecture section. Use GitHub alert syntax (`> [!WARNING]`) for the experimental banner.
+Write one markdown file at the repo root: `README.md`. Target length ~180–260 lines. No images. One Mermaid diagram for the architecture section. Use GitHub alert syntax (`> [!WARNING]`) for the experimental banner.
 
 Product name convention: use **Zinqq** consistently (matches `index.html` title and `src/ldk/context.tsx` wallet description). The PWA manifest in `vite.config.ts` still reads `Zinq` and gets aligned in this PR.
 
@@ -202,7 +202,7 @@ Verify the diagram renders on github.com before calling the task complete. Previ
 
 ## Acceptance Criteria
 
-- [x] `/Users/conor/Projects/zinq/README.md` exists and is committed on a feature branch (never directly to `main`). Branch: `docs/add-readme`.
+- [x] `README.md` exists at the repo root and is committed on a feature branch (never directly to `main`). Branch: `docs/add-readme`.
 - [x] Opens with `# Zinqq`, tagline blockquote, and a GitHub `> [!WARNING]` block covering the three points listed in the outline.
 - [x] Contains exactly three top-level sections after the hero: "Why Zinqq", "What it does", "How it works", in that order.
 - [x] "What it does" groups features under the four H3 headings: Send & Receive, Channels & liquidity, Backup & recovery, Progressive web app.
