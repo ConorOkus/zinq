@@ -10,17 +10,10 @@ import {
   Result_OfferBolt12ParseErrorZ_OK,
   Result_HumanReadableNameNoneZ_OK,
 } from 'lightningdevkit'
-import { ACTIVE_NETWORK, LDK_CONFIG, type NetworkId } from './config'
+import { LDK_CONFIG } from './config'
 
-const NETWORK_CURRENCY: Record<NetworkId, Currency> = {
-  signet: Currency.LDKCurrency_Signet,
-  mainnet: Currency.LDKCurrency_Bitcoin,
-}
-
-const ON_CHAIN_RE: Record<NetworkId, RegExp> = {
-  signet: /^(tb1|bcrt1|[mn2])[a-zA-Z0-9]{25,87}$/,
-  mainnet: /^(bc1)[a-z0-9]{25,87}$|^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/,
-}
+const BECH32_RE = /^(bc1)[a-z0-9]{25,87}$/
+const LEGACY_RE = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/
 export interface LnurlPayMetadata {
   domain: string
   user: string
@@ -74,7 +67,7 @@ export function classifyPaymentInput(raw: string): ParsedPaymentInput {
     return classifyPaymentInput(input.slice('lightning:'.length))
   }
 
-  // BOLT 11 invoice (signet: lntbs, mainnet: lnbc, testnet: lntb, regtest: lnbcrt)
+  // BOLT 11 invoice (mainnet: lnbc, signet: lntbs, testnet: lntb, regtest: lnbcrt)
   if (/^ln(bc|tb|tbs|bcrt)/i.test(input)) {
     return parseBolt11(input)
   }
@@ -90,9 +83,9 @@ export function classifyPaymentInput(raw: string): ParsedPaymentInput {
   }
 
   // Fallback: treat as on-chain address if it looks like one.
-  // Use lowercased input for bech32 matching (BIP 173 is case-insensitive,
-  // QR scanners often produce uppercase BC1Q... addresses).
-  if (ON_CHAIN_RE[ACTIVE_NETWORK].test(lower)) {
+  // Bech32 is case-insensitive (BIP 173), so test against lowercased input.
+  // Legacy P2PKH/P2SH use base58check with mixed case, so test against original.
+  if (BECH32_RE.test(lower) || LEGACY_RE.test(input)) {
     return { type: 'onchain', address: input, amountSats: null }
   }
 
@@ -107,7 +100,7 @@ function parseBolt11(raw: string): ParsedPaymentInput {
   const invoice = result.res
 
   // Check network — must match the active network
-  if (invoice.currency() !== NETWORK_CURRENCY[ACTIVE_NETWORK]) {
+  if (invoice.currency() !== Currency.LDKCurrency_Bitcoin) {
     return { type: 'error', message: 'Invoice is for a different Bitcoin network' }
   }
 
@@ -157,10 +150,8 @@ function parseBolt12Offer(raw: string): ParsedPaymentInput {
     if (!matchesNetwork) {
       return { type: 'error', message: 'Offer is for a different Bitcoin network' }
     }
-  } else if (ACTIVE_NETWORK !== 'mainnet') {
-    // Empty chains = implicit mainnet. Reject on non-mainnet networks.
-    return { type: 'error', message: 'Offer is for a different Bitcoin network' }
   }
+  // Empty chains = implicit mainnet per BOLT 12 spec — always valid here.
 
   // Check expiry
   if (offer.is_expired_no_std(BigInt(Math.floor(Date.now() / 1000)))) {
@@ -240,9 +231,9 @@ function parseBip321(input: string): ParsedPaymentInput {
     return { type: 'error', message: 'Bitcoin URI has no payment method' }
   }
 
-  // Validate address against the active network before accepting.
-  // Lowercase for bech32 case-insensitivity (BIP 173).
-  if (!ON_CHAIN_RE[ACTIVE_NETWORK].test(address.toLowerCase())) {
+  // Validate address against mainnet before accepting.
+  // Bech32 is case-insensitive (BIP 173), legacy P2PKH/P2SH use original case.
+  if (!BECH32_RE.test(address.toLowerCase()) && !LEGACY_RE.test(address)) {
     return { type: 'error', message: 'Address is for a different Bitcoin network' }
   }
 

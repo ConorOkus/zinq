@@ -1,12 +1,10 @@
 import { useParams, useLocation } from 'react-router'
 import { useTransactionHistory, type UnifiedTransaction } from '../hooks/use-transaction-history'
 import { formatBtc } from '../utils/format-btc'
-import { ACTIVE_NETWORK } from '../ldk/config'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { ArrowUpRight, ArrowDownLeft } from '../components/icons'
 
-const EXPLORER_TX_URL =
-  ACTIVE_NETWORK === 'mainnet' ? 'https://mempool.space/tx' : 'https://mutinynet.com/tx'
+const EXPLORER_TX_URL = 'https://mempool.space/tx'
 
 function formatDate(timestamp: number): string {
   if (timestamp === 0) return 'Pending'

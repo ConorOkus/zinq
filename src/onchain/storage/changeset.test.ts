@@ -48,20 +48,20 @@ describe('changeset storage', () => {
   })
 
   it('stores and retrieves a changeset', async () => {
-    await changesetModule.putChangeset('{"network":"signet","local_chain":{}}')
+    await changesetModule.putChangeset('{"network":"bitcoin","local_chain":{}}')
     const result = await changesetModule.getChangeset()
     expect(result).toBeDefined()
-    expect(result).toContain('signet')
+    expect(result).toContain('bitcoin')
   })
 
   it('merges successive changesets preserving earlier fields', async () => {
-    await changesetModule.putChangeset('{"network":"signet"}')
+    await changesetModule.putChangeset('{"network":"bitcoin"}')
     await changesetModule.putChangeset('{"tx_graph":{"txs":[]}}')
 
     const result = await changesetModule.getChangeset()
     expect(result).toBeDefined()
     // Network from first put should survive the merge
-    expect(result).toContain('signet')
+    expect(result).toContain('bitcoin')
     // New data from second put should also be present
     expect(result).toContain('tx_graph')
     expect(mockMerge).toHaveBeenCalledTimes(1)

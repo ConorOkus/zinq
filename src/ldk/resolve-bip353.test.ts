@@ -25,7 +25,7 @@ describe('resolveBip353', () => {
     // that parseBip321 can handle
     mockFetch.mockResolvedValueOnce(
       dohResponse({
-        Answer: [{ type: 16, data: '"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"' }],
+        Answer: [{ type: 16, data: '"bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"' }],
       })
     )
 
@@ -33,7 +33,7 @@ describe('resolveBip353', () => {
     expect(result).not.toBeNull()
     expect(result!.type).toBe('onchain')
     if (result!.type === 'onchain') {
-      expect(result!.address).toBe('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')
+      expect(result!.address).toBe('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')
     }
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -53,7 +53,7 @@ describe('resolveBip353', () => {
     mockFetch.mockResolvedValueOnce(
       dohResponse({
         AD: false,
-        Answer: [{ type: 16, data: '"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"' }],
+        Answer: [{ type: 16, data: '"bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"' }],
       })
     )
 
@@ -115,7 +115,7 @@ describe('resolveBip353', () => {
       dohResponse({
         Answer: [
           { type: 1, data: '1.2.3.4' }, // A record
-          { type: 16, data: '"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"' },
+          { type: 16, data: '"bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"' },
         ],
       })
     )
@@ -139,7 +139,7 @@ describe('resolveBip353', () => {
 
   it('handles multi-segment TXT records (>255 bytes)', async () => {
     // DNS TXT records longer than 255 bytes are split into multiple quoted segments
-    const addr = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'
+    const addr = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq'
     mockFetch.mockResolvedValueOnce(
       dohResponse({
         Answer: [{ type: 16, data: `"bitcoin:${addr}?amount=" "0.001"` }],

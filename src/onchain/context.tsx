@@ -19,7 +19,6 @@ import {
 } from './onchain-context'
 import { fullScanBdkWallet } from './init'
 import { ONCHAIN_CONFIG } from './config'
-import { ACTIVE_NETWORK } from '../ldk/config'
 import { startOnchainSyncLoop, type OnchainBalance, type OnchainSyncHandle } from './sync'
 import { putChangeset } from './storage/changeset'
 import { captureError } from '../storage/error-log'
@@ -29,7 +28,7 @@ import { getFeeRate as getSharedFeeRate } from '../shared/fee-cache'
 import { formatBtc } from '../utils/format-btc'
 
 const FEE_TARGET_BLOCKS = 6
-const MIN_FEE_RATE_SAT_VB = ACTIVE_NETWORK === 'mainnet' ? 2n : 1n
+const MIN_FEE_RATE_SAT_VB = 2n
 const MAX_FEE_SATS = 50_000n
 
 // Reserve UTXOs for anchor channel CPFP fee bumping. When the user has
@@ -186,7 +185,7 @@ export function OnchainProvider({ children }: { children: ReactNode }) {
         const resolvedFeeRate = feeRateSatVb ?? (await getFeeRate())
         if (resolvedFeeRate < MIN_FEE_RATE_SAT_VB) {
           throw new Error(
-            `Fee rate ${resolvedFeeRate.toString()} sat/vB is below minimum for ${ACTIVE_NETWORK}`
+            `Fee rate ${resolvedFeeRate.toString()} sat/vB is below minimum (${MIN_FEE_RATE_SAT_VB.toString()})`
           )
         }
         const psbt = buildPsbt(new FeeRate(resolvedFeeRate))

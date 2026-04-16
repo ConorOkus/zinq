@@ -16,7 +16,7 @@ function readyContext(
   return {
     status: 'ready',
     balance: { confirmed: 50000n, trustedPending: 0n, untrustedPending: 0n },
-    generateAddress: () => 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+    generateAddress: () => 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
     estimateFee: vi.fn().mockResolvedValue({ fee: 150n, feeRate: 1n }),
     estimateMaxSendable: vi.fn().mockResolvedValue({ amount: 49850n, fee: 150n, feeRate: 1n }),
     sendToAddress: vi.fn().mockResolvedValue('txid123'),
@@ -58,7 +58,7 @@ function readyLdkContext(
     bdkWallet: {} as never,
     bdkEsploraClient: {} as never,
     setSyncNeeded: vi.fn(),
-    createInvoice: vi.fn(() => ({ bolt11: 'lntbs1fakeinvoice', paymentHash: 'abc123' })),
+    createInvoice: vi.fn(() => ({ bolt11: 'lnbc1fakeinvoice', paymentHash: 'abc123' })),
     requestJitInvoice: vi.fn(),
     sendBolt11Payment: vi.fn(),
     sendBolt12Payment: vi.fn(),
@@ -158,7 +158,7 @@ describe('Receive', () => {
   describe('standard invoice path (with inbound capacity)', () => {
     it('calls createInvoice with no amount on initial load', () => {
       const createInvoice = vi.fn(() => ({
-        bolt11: 'lntbs1fakeinvoice',
+        bolt11: 'lnbc1fakeinvoice',
         paymentHash: 'abc123',
       }))
       renderReceive(undefined, readyLdkContext({ createInvoice }))
@@ -168,7 +168,7 @@ describe('Receive', () => {
     it('entering digits and confirming regenerates the invoice with amount', async () => {
       const user = userEvent.setup()
       const createInvoice = vi.fn(() => ({
-        bolt11: 'lntbs1amountinvoice',
+        bolt11: 'lnbc1amountinvoice',
         paymentHash: 'abc123',
       }))
       renderReceive(undefined, readyLdkContext({ createInvoice }))
@@ -187,7 +187,7 @@ describe('Receive', () => {
     it('BIP 321 URI includes amount= when amount is set', async () => {
       const user = userEvent.setup()
       const createInvoice = vi.fn(() => ({
-        bolt11: 'lntbs1amountinvoice',
+        bolt11: 'lnbc1amountinvoice',
         paymentHash: 'abc123',
       }))
       renderReceive(undefined, readyLdkContext({ createInvoice }))
@@ -207,7 +207,7 @@ describe('Receive', () => {
       const createInvoice = vi.fn(() => {
         callCount++
         if (callCount > 1) throw new Error('Invoice creation failed')
-        return { bolt11: 'lntbs1fakeinvoice', paymentHash: 'abc123' }
+        return { bolt11: 'lnbc1fakeinvoice', paymentHash: 'abc123' }
       })
       renderReceive(undefined, readyLdkContext({ createInvoice }))
 
@@ -237,7 +237,7 @@ describe('Receive', () => {
     it('uses JIT when amount exceeds inbound capacity', async () => {
       const user = userEvent.setup()
       const requestJitInvoice = vi.fn().mockResolvedValue({
-        bolt11: 'lntbs1jitinvoice',
+        bolt11: 'lnbc1jitinvoice',
         openingFeeMsat: 2500_000n,
         paymentHash: 'jithash',
       })
@@ -267,7 +267,7 @@ describe('Receive', () => {
     it('shows opening fee when JIT invoice is ready', async () => {
       const user = userEvent.setup()
       const requestJitInvoice = vi.fn().mockResolvedValue({
-        bolt11: 'lntbs1jitinvoice',
+        bolt11: 'lnbc1jitinvoice',
         openingFeeMsat: 2500_000n,
         paymentHash: 'jithash',
       })
@@ -414,7 +414,7 @@ describe('Receive', () => {
     it('remove amount clears back to zero-amount invoice', async () => {
       const user = userEvent.setup()
       const createInvoice = vi.fn(() => ({
-        bolt11: 'lntbs1fakeinvoice',
+        bolt11: 'lnbc1fakeinvoice',
         paymentHash: 'abc123',
       }))
       renderReceive(undefined, readyLdkContext({ createInvoice }))

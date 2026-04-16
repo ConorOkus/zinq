@@ -11,14 +11,9 @@
 
 import * as secp256k1 from '@noble/secp256k1'
 import { bech32 } from '@scure/base'
-import { ACTIVE_NETWORK, type NetworkId } from '../config'
-
 // --- BOLT11 constants ---
 
-const NETWORK_PREFIX: Record<NetworkId, string> = {
-  mainnet: 'lnbc',
-  signet: 'lntbs',
-}
+const INVOICE_PREFIX = 'lnbc'
 
 // Tagged field codes (5-bit)
 const TAG_PAYMENT_HASH = 1
@@ -52,7 +47,7 @@ export interface Bolt11InvoiceParams {
 
 /**
  * Encode and sign a BOLT11 invoice.
- * Returns the bech32-encoded invoice string (e.g., "lnbc10u1p..." or "lntbs10u1p...").
+ * Returns the bech32-encoded invoice string (e.g., "lnbc10u1p...").
  */
 export async function encodeBolt11Invoice(
   params: Bolt11InvoiceParams,
@@ -99,7 +94,7 @@ function buildHrp(amountMsat: bigint): string {
   // Convert msat to the BOLT11 amount encoding
   // BOLT11 amounts are in the smallest denomination with a multiplier suffix
   if (amountMsat <= 0n) {
-    return `${NETWORK_PREFIX[ACTIVE_NETWORK]}` // zero-amount invoice
+    return `${INVOICE_PREFIX}` // zero-amount invoice
   }
 
   // Find the best multiplier to express the amount
@@ -111,18 +106,18 @@ function buildHrp(amountMsat: bigint): string {
   // Try each multiplier from largest to smallest
   // milli = 10^-3 BTC = 10^9 pico-BTC
   if (btcAmountPico % 1_000_000_000n === 0n) {
-    return `${NETWORK_PREFIX[ACTIVE_NETWORK]}${btcAmountPico / 1_000_000_000n}m`
+    return `${INVOICE_PREFIX}${btcAmountPico / 1_000_000_000n}m`
   }
   // micro = 10^-6 BTC = 10^6 pico-BTC
   if (btcAmountPico % 1_000_000n === 0n) {
-    return `${NETWORK_PREFIX[ACTIVE_NETWORK]}${btcAmountPico / 1_000_000n}u`
+    return `${INVOICE_PREFIX}${btcAmountPico / 1_000_000n}u`
   }
   // nano = 10^-9 BTC = 10^3 pico-BTC
   if (btcAmountPico % 1_000n === 0n) {
-    return `${NETWORK_PREFIX[ACTIVE_NETWORK]}${btcAmountPico / 1_000n}n`
+    return `${INVOICE_PREFIX}${btcAmountPico / 1_000n}n`
   }
   // pico = 10^-12 BTC = 1 pico-BTC
-  return `${NETWORK_PREFIX[ACTIVE_NETWORK]}${btcAmountPico}p`
+  return `${INVOICE_PREFIX}${btcAmountPico}p`
 }
 
 // --- Data Part ---

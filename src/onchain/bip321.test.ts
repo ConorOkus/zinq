@@ -3,40 +3,40 @@ import { buildBip321Uri, parseBip321, satsToBtcString } from './bip321'
 
 describe('buildBip321Uri', () => {
   it('builds URI with address only', () => {
-    expect(buildBip321Uri({ address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx' })).toBe(
-      'bitcoin:TB1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KXPJZSX'
+    expect(buildBip321Uri({ address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx' })).toBe(
+      'bitcoin:BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KXPJZSX'
     )
   })
 
   it('builds URI with address and amount', () => {
     expect(
-      buildBip321Uri({ address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx', amountSats: 100000n })
-    ).toBe('bitcoin:TB1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KXPJZSX?amount=0.00100000')
+      buildBip321Uri({ address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx', amountSats: 100000n })
+    ).toBe('bitcoin:BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KXPJZSX?amount=0.00100000')
   })
 
   it('builds URI with address and lightning invoice', () => {
-    expect(buildBip321Uri({ address: 'tb1qtest', invoice: 'lntbs1...' })).toBe(
-      'bitcoin:TB1QTEST?lightning=lntbs1...'
+    expect(buildBip321Uri({ address: 'bc1qtest', invoice: 'lnbc1...' })).toBe(
+      'bitcoin:BC1QTEST?lightning=lnbc1...'
     )
   })
 
   it('builds URI with address, amount, and lightning invoice', () => {
-    expect(buildBip321Uri({ address: 'tb1qtest', amountSats: 50000n, invoice: 'lntbs1...' })).toBe(
-      'bitcoin:TB1QTEST?amount=0.00050000&lightning=lntbs1...'
+    expect(buildBip321Uri({ address: 'bc1qtest', amountSats: 50000n, invoice: 'lnbc1...' })).toBe(
+      'bitcoin:BC1QTEST?amount=0.00050000&lightning=lnbc1...'
     )
   })
 
   it('omits amount when zero', () => {
-    expect(buildBip321Uri({ address: 'tb1qtest', amountSats: 0n })).toBe('bitcoin:TB1QTEST')
+    expect(buildBip321Uri({ address: 'bc1qtest', amountSats: 0n })).toBe('bitcoin:BC1QTEST')
   })
 
   it('omits amount when undefined', () => {
-    expect(buildBip321Uri({ address: 'tb1qtest', amountSats: undefined })).toBe('bitcoin:TB1QTEST')
+    expect(buildBip321Uri({ address: 'bc1qtest', amountSats: undefined })).toBe('bitcoin:BC1QTEST')
   })
 
   it('uppercases the address', () => {
-    const uri = buildBip321Uri({ address: 'tb1qlowercase' })
-    expect(uri).toBe('bitcoin:TB1QLOWERCASE')
+    const uri = buildBip321Uri({ address: 'bc1qlowercase' })
+    expect(uri).toBe('bitcoin:BC1QLOWERCASE')
   })
 
   it('builds URI with lno only (no address)', () => {
@@ -46,40 +46,40 @@ describe('buildBip321Uri', () => {
   })
 
   it('builds URI with address and lno', () => {
-    expect(buildBip321Uri({ address: 'tb1qtest', lno: 'lno1abc' })).toBe(
-      'bitcoin:TB1QTEST?lno=lno1abc'
+    expect(buildBip321Uri({ address: 'bc1qtest', lno: 'lno1abc' })).toBe(
+      'bitcoin:BC1QTEST?lno=lno1abc'
     )
   })
 
   it('builds URI with address, amount, invoice, and lno', () => {
     expect(
       buildBip321Uri({
-        address: 'tb1qtest',
+        address: 'bc1qtest',
         amountSats: 50000n,
-        invoice: 'lntbs1...',
+        invoice: 'lnbc1...',
         lno: 'lno1abc',
       })
-    ).toBe('bitcoin:TB1QTEST?amount=0.00050000&lightning=lntbs1...&lno=lno1abc')
+    ).toBe('bitcoin:BC1QTEST?amount=0.00050000&lightning=lnbc1...&lno=lno1abc')
   })
 
   it('omits lno when null', () => {
-    expect(buildBip321Uri({ address: 'tb1qtest', lno: null })).toBe('bitcoin:TB1QTEST')
+    expect(buildBip321Uri({ address: 'bc1qtest', lno: null })).toBe('bitcoin:BC1QTEST')
   })
 
   it('round-trips with parseBip321 for address and amount', () => {
     const uri = buildBip321Uri({
-      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: 123456n,
     })
     const parsed = parseBip321(uri)
-    expect(parsed?.address).toBe('TB1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KXPJZSX')
+    expect(parsed?.address).toBe('BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KXPJZSX')
     expect(parsed?.amountSats).toBe(123456n)
   })
 })
 
 describe('parseBip321', () => {
   it('returns null for plain addresses', () => {
-    expect(parseBip321('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')).toBeNull()
+    expect(parseBip321('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')).toBeNull()
   })
 
   it('returns null for empty string', () => {
@@ -87,43 +87,43 @@ describe('parseBip321', () => {
   })
 
   it('parses URI with address only', () => {
-    const result = parseBip321('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')
+    const result = parseBip321('bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')
     expect(result).toEqual({
-      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: undefined,
     })
   })
 
   it('parses URI with address and amount', () => {
-    const result = parseBip321('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.001')
+    const result = parseBip321('bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.001')
     expect(result).toEqual({
-      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: 100000n,
     })
   })
 
   it('parses URI with whole BTC amount', () => {
-    const result = parseBip321('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=1')
+    const result = parseBip321('bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=1')
     expect(result).toEqual({
-      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: 100000000n,
     })
   })
 
   it('ignores unknown parameters', () => {
     const result = parseBip321(
-      'bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.01&label=test&message=hello'
+      'bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.01&label=test&message=hello'
     )
     expect(result).toEqual({
-      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: 1000000n,
     })
   })
 
   it('handles case-insensitive scheme', () => {
-    const result = parseBip321('BITCOIN:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.5')
+    const result = parseBip321('BITCOIN:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.5')
     expect(result).toEqual({
-      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: 50000000n,
     })
   })
@@ -134,26 +134,26 @@ describe('parseBip321', () => {
 
   it('parses large amount without floating-point precision loss', () => {
     const result = parseBip321(
-      'bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=21000000.00000001'
+      'bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=21000000.00000001'
     )
     expect(result).toEqual({
-      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: 2100000000000001n,
     })
   })
 
   it('treats Infinity as no amount', () => {
-    const result = parseBip321('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=Infinity')
+    const result = parseBip321('bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=Infinity')
     expect(result).toEqual({
-      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: undefined,
     })
   })
 
   it('treats non-numeric amount as no amount', () => {
-    const result = parseBip321('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=abc')
+    const result = parseBip321('bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=abc')
     expect(result).toEqual({
-      address: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
       amountSats: undefined,
     })
   })
@@ -187,7 +187,7 @@ describe('satsToBtcString', () => {
   it('round-trips with parseBip321', () => {
     const sats = 123456n
     const btcStr = satsToBtcString(sats)
-    const parsed = parseBip321(`bitcoin:tb1qtest?amount=${btcStr}`)
+    const parsed = parseBip321(`bitcoin:bc1qtest?amount=${btcStr}`)
     expect(parsed?.amountSats).toBe(sats)
   })
 })

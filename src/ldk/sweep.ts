@@ -8,12 +8,11 @@ import {
 import { idbGetAll, idbDeleteBatch } from '../storage/idb'
 import { bytesToHex } from './utils'
 import { broadcastWithRetry } from './traits/broadcaster'
-import { ACTIVE_NETWORK } from './config'
 import { captureError } from '../storage/error-log'
 import { getFeeRate } from '../shared/fee-cache'
 
 const FEE_TARGET_BLOCKS = 6
-const MIN_FEE_RATE_SAT_VB = ACTIVE_NETWORK === 'mainnet' ? 2 : 1
+const MIN_FEE_RATE_SAT_VB = 2
 const MAX_FEE_RATE_SAT_VB = 500
 
 export interface SweepResult {

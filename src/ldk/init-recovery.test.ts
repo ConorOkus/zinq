@@ -33,9 +33,8 @@ vi.mock('./config', () => ({
     lspNodeId: '',
     lspHost: '',
     lspPort: 9735,
-    genesisBlockHash: '00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6',
+    genesisBlockHash: '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f',
   },
-  ACTIVE_NETWORK: 'signet',
 }))
 
 // Mock all heavy LDK dependencies
@@ -111,7 +110,7 @@ vi.mock('./sync/esplora-client', () => ({
     getBlockHeight = vi.fn().mockResolvedValue(0)
     getBlockHash = vi
       .fn()
-      .mockResolvedValue('00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6')
+      .mockResolvedValue('000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f')
   },
 }))
 vi.mock('./storage/persist-cm', () => ({}))

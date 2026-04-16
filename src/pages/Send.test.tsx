@@ -13,7 +13,7 @@ import { Send } from './Send'
 vi.mock('../ldk/payment-input', () => ({
   classifyPaymentInput: (raw: string) => {
     // BOLT 11 with amount
-    if (raw === 'lntbs_with_amount') {
+    if (raw === 'lnbc_with_amount') {
       return {
         type: 'bolt11',
         invoice: {} as never,
@@ -23,7 +23,7 @@ vi.mock('../ldk/payment-input', () => ({
       }
     }
     // BOLT 11 without amount
-    if (raw === 'lntbs_no_amount') {
+    if (raw === 'lnbc_no_amount') {
       return {
         type: 'bolt11',
         invoice: {} as never,
@@ -33,11 +33,11 @@ vi.mock('../ldk/payment-input', () => ({
       }
     }
     // BIP 321 with amountless lightning= invoice
-    if (raw.startsWith('bitcoin:') && raw.includes('lightning=lntbs_noamt')) {
+    if (raw.startsWith('bitcoin:') && raw.includes('lightning=lnbc_noamt')) {
       return {
         type: 'bolt11',
         invoice: {} as never,
-        raw: 'lntbs_noamt_raw_invoice',
+        raw: 'lnbc_noamt_raw_invoice',
         amountMsat: null,
         description: null,
       }
@@ -47,17 +47,17 @@ vi.mock('../ldk/payment-input', () => ({
       return {
         type: 'bolt11',
         invoice: {} as never,
-        raw: 'lntbs50u1ptest',
+        raw: 'lnbc50u1ptest',
         amountMsat: 50_000_000n,
         description: 'BIP 321 embedded invoice',
       }
     }
     // BIP 321 with amount
     if (raw.startsWith('bitcoin:') && raw.includes('amount=')) {
-      return { type: 'onchain', address: 'tb1qtest', amountSats: 5000n }
+      return { type: 'onchain', address: 'bc1qtest', amountSats: 5000n }
     }
     // Invalid lightning
-    if (raw.startsWith('lntbs')) {
+    if (raw.startsWith('lnbc')) {
       return { type: 'error', message: 'Invalid Lightning invoice' }
     }
     // Plain on-chain address
@@ -130,7 +130,7 @@ function readyContext(
   return {
     status: 'ready',
     balance: { confirmed: 50000n, trustedPending: 0n, untrustedPending: 0n },
-    generateAddress: () => 'tb1qtest',
+    generateAddress: () => 'bc1qtest',
     estimateFee: vi.fn().mockResolvedValue({ fee: 150n, feeRate: 1n }),
     estimateMaxSendable: vi.fn().mockResolvedValue({ amount: 49850n, fee: 150n, feeRate: 1n }),
     sendToAddress: vi.fn().mockResolvedValue('abc123txid'),
@@ -191,7 +191,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
 
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
@@ -202,7 +202,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -215,7 +215,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -231,7 +231,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -252,7 +252,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -274,7 +274,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -287,7 +287,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -314,7 +314,7 @@ describe('Send', () => {
       })
       renderSend(ctx)
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -340,7 +340,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -360,7 +360,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'bitcoin:tb1qtest?amount=0.00005')
+      await submitRecipient(user, 'bitcoin:bc1qtest?amount=0.00005')
 
       await waitFor(() => {
         expect(screen.getByText(/review/i)).toBeInTheDocument()
@@ -372,7 +372,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'bitcoin:tb1qtest?amount=0.00005')
+      await submitRecipient(user, 'bitcoin:bc1qtest?amount=0.00005')
 
       await waitFor(() => {
         expect(screen.getByText(/review/i)).toBeInTheDocument()
@@ -388,7 +388,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'lntbs_with_amount')
+      await submitRecipient(user, 'lnbc_with_amount')
 
       await waitFor(() => {
         expect(screen.getByText(/review/i)).toBeInTheDocument()
@@ -400,7 +400,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'lntbs_with_amount')
+      await submitRecipient(user, 'lnbc_with_amount')
 
       await waitFor(() => {
         expect(screen.getByText(/review/i)).toBeInTheDocument()
@@ -416,7 +416,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'lntbs_no_amount')
+      await submitRecipient(user, 'lnbc_no_amount')
 
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
@@ -427,7 +427,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'lntbs_no_amount')
+      await submitRecipient(user, 'lnbc_no_amount')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -447,7 +447,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -471,7 +471,7 @@ describe('Send', () => {
         })
       )
 
-      await submitRecipient(user, 'lntbs_with_amount')
+      await submitRecipient(user, 'lnbc_with_amount')
 
       await waitFor(() => {
         expect(screen.getByText(/not enough funds/i)).toBeInTheDocument()
@@ -482,10 +482,10 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext(), readyLdkContext())
 
-      await submitRecipient(user, 'bitcoin:tb1qtest?lightning=lntbs50u1ptest')
+      await submitRecipient(user, 'bitcoin:bc1qtest?lightning=lnbc50u1ptest')
 
       await waitFor(() => {
-        expect(screen.getByText('lntbs50u1p…')).toBeInTheDocument()
+        expect(screen.getByText('lnbc50u1pt…')).toBeInTheDocument()
       })
     })
 
@@ -493,7 +493,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext(), readyLdkContext())
 
-      await submitRecipient(user, 'bitcoin:tb1qtest?lightning=lntbs_noamt')
+      await submitRecipient(user, 'bitcoin:bc1qtest?lightning=lnbc_noamt')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -503,7 +503,7 @@ describe('Send', () => {
       await user.click(nextBtns[nextBtns.length - 1]!)
 
       await waitFor(() => {
-        expect(screen.getByText('lntbs_noam…')).toBeInTheDocument()
+        expect(screen.getByText('lnbc_noamt…')).toBeInTheDocument()
       })
     })
 
@@ -517,7 +517,7 @@ describe('Send', () => {
         })
       )
 
-      await submitRecipient(user, 'bitcoin:tb1qtest?lightning=lntbs50u1ptest')
+      await submitRecipient(user, 'bitcoin:bc1qtest?lightning=lnbc50u1ptest')
 
       await waitFor(() => {
         expect(screen.getByText(/not enough funds/i)).toBeInTheDocument()
@@ -530,7 +530,7 @@ describe('Send', () => {
       const user = userEvent.setup()
       renderSend(readyContext())
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -546,7 +546,7 @@ describe('Send', () => {
       const ctx = readyContext()
       renderSend(ctx)
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -578,7 +578,7 @@ describe('Send', () => {
       })
       renderSend(ctx)
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -608,7 +608,7 @@ describe('Send', () => {
       })
       renderSend(ctx)
 
-      await submitRecipient(user, 'tb1qtest')
+      await submitRecipient(user, 'bc1qtest')
       await waitFor(() => {
         expect(screen.getByText(/available/i)).toBeInTheDocument()
       })
@@ -640,7 +640,7 @@ describe('Send', () => {
   describe('QR scanner location.state', () => {
     it('routes scanned bolt11 with amount directly to review', async () => {
       renderSend(readyContext(), readyLdkContext(), [
-        { pathname: '/send', state: { scannedInput: 'lntbs_with_amount' } },
+        { pathname: '/send', state: { scannedInput: 'lnbc_with_amount' } },
       ])
 
       await waitFor(() => {
@@ -651,7 +651,7 @@ describe('Send', () => {
 
     it('routes scanned bolt11 without amount to numpad', async () => {
       renderSend(readyContext(), readyLdkContext(), [
-        { pathname: '/send', state: { scannedInput: 'lntbs_no_amount' } },
+        { pathname: '/send', state: { scannedInput: 'lnbc_no_amount' } },
       ])
 
       await waitFor(() => {
@@ -661,7 +661,7 @@ describe('Send', () => {
 
     it('shows error for invalid scanned input', async () => {
       renderSend(readyContext(), readyLdkContext(), [
-        { pathname: '/send', state: { scannedInput: 'lntbs_invalid' } },
+        { pathname: '/send', state: { scannedInput: 'lnbc_invalid' } },
       ])
 
       await waitFor(() => {

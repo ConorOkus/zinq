@@ -1,9 +1,7 @@
-import { ACTIVE_NETWORK } from '../ldk/config'
 import { captureError } from '../storage/error-log'
 
 const CACHE_TTL_MS = 60_000
 
-const SIGNET_DEFAULTS: Record<number, number> = { 1: 1, 6: 1, 12: 1, 144: 1 }
 // Fallback rates (sat/vB) used when esplora hasn't responded yet.
 // The 1-block default was lowered from 25 to 10 so that anchor CPFP fee
 // bumps can succeed with ~10k sats in the wallet at startup, before the
@@ -11,10 +9,7 @@ const SIGNET_DEFAULTS: Record<number, number> = { 1: 1, 6: 1, 12: 1, 144: 1 }
 // real rate takes over. 10 sat/vB is high enough to confirm within a few
 // blocks under normal mempool conditions; if actual fees spike higher,
 // the esplora rate will drive the estimate.
-const DEFAULT_RATES: Record<string, Record<number, number>> = {
-  mainnet: { 1: 10, 6: 5, 12: 3, 144: 2 },
-  signet: SIGNET_DEFAULTS,
-}
+const DEFAULT_RATES: Record<number, number> = { 1: 10, 6: 5, 12: 3, 144: 2 }
 
 interface FeeCache {
   rates: Record<string, number> // block-target → sat/vB (raw esplora format)
@@ -81,8 +76,7 @@ function isCacheStale(): boolean {
 }
 
 function defaultRate(target: number): number {
-  const defaults = DEFAULT_RATES[ACTIVE_NETWORK] ?? SIGNET_DEFAULTS
-  return defaults[target] ?? defaults[6] ?? 1
+  return DEFAULT_RATES[target] ?? DEFAULT_RATES[6] ?? 1
 }
 
 /**

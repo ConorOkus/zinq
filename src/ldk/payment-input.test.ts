@@ -42,10 +42,10 @@ vi.mock('lightningdevkit', () => {
   }
 
   // Minimal mock invoice for BIP 321 + lightning= tests
-  const TEST_BOLT11 = 'lntbs50u1ptest'
+  const TEST_BOLT11 = 'lnbc50u1ptest'
   class MockBolt11Invoice {
     currency() {
-      return 'signet'
+      return 'bitcoin'
     }
     would_expire() {
       return false
@@ -98,61 +98,61 @@ vi.mock('../lnurl/resolve-lnurl', () => ({
 }))
 
 describe('classifyPaymentInput — on-chain addresses', () => {
-  it('accepts signet on-chain address on signet', async () => {
+  it('accepts mainnet bech32 address', async () => {
     const { classifyPaymentInput } = await import('./payment-input')
-    const result = classifyPaymentInput('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')
+    const result = classifyPaymentInput('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')
     expect(result.type).toBe('onchain')
   })
 
-  it('rejects mainnet bech32 address on signet', async () => {
-    const { classifyPaymentInput } = await import('./payment-input')
-    const result = classifyPaymentInput('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')
-    expect(result.type).toBe('error')
-  })
-
-  it('rejects mainnet P2PKH address on signet', async () => {
+  it('accepts mainnet P2PKH address', async () => {
     const { classifyPaymentInput } = await import('./payment-input')
     const result = classifyPaymentInput('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')
-    expect(result.type).toBe('error')
+    expect(result.type).toBe('onchain')
   })
 
-  it('rejects mainnet P2SH address on signet', async () => {
+  it('accepts mainnet P2SH address', async () => {
     const { classifyPaymentInput } = await import('./payment-input')
     const result = classifyPaymentInput('3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy')
+    expect(result.type).toBe('onchain')
+  })
+
+  it('rejects signet address on mainnet', async () => {
+    const { classifyPaymentInput } = await import('./payment-input')
+    const result = classifyPaymentInput('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')
     expect(result.type).toBe('error')
   })
 })
 
 describe('classifyPaymentInput — BIP 321 URI validation', () => {
-  it('rejects BIP 321 URI with mainnet address on signet', async () => {
+  it('accepts BIP 321 URI with mainnet address', async () => {
     const { classifyPaymentInput } = await import('./payment-input')
-    const result = classifyPaymentInput('bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')
+    const result = classifyPaymentInput(
+      'bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?amount=0.001'
+    )
+    expect(result.type).toBe('onchain')
+    if (result.type === 'onchain') {
+      expect(result.address).toBe('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')
+      expect(result.amountSats).toBe(100_000n)
+    }
+  })
+
+  it('rejects BIP 321 URI with signet address on mainnet', async () => {
+    const { classifyPaymentInput } = await import('./payment-input')
+    const result = classifyPaymentInput('bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')
     expect(result.type).toBe('error')
     if (result.type === 'error') {
       expect(result.message).toContain('different Bitcoin network')
     }
   })
 
-  it('accepts BIP 321 URI with signet address on signet', async () => {
-    const { classifyPaymentInput } = await import('./payment-input')
-    const result = classifyPaymentInput(
-      'bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.001'
-    )
-    expect(result.type).toBe('onchain')
-    if (result.type === 'onchain') {
-      expect(result.address).toBe('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')
-      expect(result.amountSats).toBe(100_000n)
-    }
-  })
-
   it('extracts bolt11 from BIP 321 URI with lightning= parameter', async () => {
     const { classifyPaymentInput } = await import('./payment-input')
     const result = classifyPaymentInput(
-      'bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?lightning=lntbs50u1ptest'
+      'bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?lightning=lnbc50u1ptest'
     )
     expect(result.type).toBe('bolt11')
     if (result.type === 'bolt11') {
-      expect(result.raw).toBe('lntbs50u1ptest')
+      expect(result.raw).toBe('lnbc50u1ptest')
       expect(result.amountMsat).toBe(50_000_000n)
     }
   })
@@ -160,7 +160,7 @@ describe('classifyPaymentInput — BIP 321 URI validation', () => {
   it('prefers lightning= over onchain address in BIP 321 URI', async () => {
     const { classifyPaymentInput } = await import('./payment-input')
     const result = classifyPaymentInput(
-      'bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.001&lightning=lntbs50u1ptest'
+      'bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?amount=0.001&lightning=lnbc50u1ptest'
     )
     // Should return bolt11, not onchain — lightning takes precedence
     expect(result.type).toBe('bolt11')
@@ -194,7 +194,7 @@ describe('classifyPaymentInput — BIP 353', () => {
 
   it('classifies on-chain addresses correctly', async () => {
     const { classifyPaymentInput } = await import('./payment-input')
-    const result = classifyPaymentInput('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')
+    const result = classifyPaymentInput('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')
     expect(result.type).toBe('onchain')
   })
 

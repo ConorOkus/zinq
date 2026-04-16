@@ -41,7 +41,7 @@ describe('encodeBolt11Invoice', () => {
   lspPubkey[0] = 0x02
   lspPubkey[32] = 0x01
 
-  it('produces a valid bech32 string starting with lntbs', async () => {
+  it('produces a valid bech32 string starting with lnbc', async () => {
     const invoice = await encodeBolt11Invoice(
       {
         amountMsat: 100_000n,
@@ -57,7 +57,7 @@ describe('encodeBolt11Invoice', () => {
       testPrivateKey
     )
 
-    expect(invoice).toMatch(/^lntbs/)
+    expect(invoice).toMatch(/^lnbc/)
     expect(invoice.length).toBeGreaterThan(50)
   })
 
@@ -79,7 +79,7 @@ describe('encodeBolt11Invoice', () => {
     )
 
     // 100_000 msat = 1_000_000 pico-BTC = 10u
-    expect(invoice.startsWith('lntbs1u')).toBe(true)
+    expect(invoice.startsWith('lnbc1u')).toBe(true)
   })
 
   it('encodes with route hints', async () => {
@@ -106,7 +106,7 @@ describe('encodeBolt11Invoice', () => {
       testPrivateKey
     )
 
-    expect(invoice).toMatch(/^lntbs/)
+    expect(invoice).toMatch(/^lnbc/)
     // Invoice with route hints should be longer than without
     expect(invoice.length).toBeGreaterThan(100)
   })
@@ -176,7 +176,7 @@ describe('encodeBolt11Invoice', () => {
     const { prefix: hrp, words } = bech32.decode(invoice as `${string}1${string}`, 2000)
 
     // Verify HRP: 50_000_000 msat = 500_000_000 pico-BTC = 500u
-    expect(hrp).toBe('lntbs500u')
+    expect(hrp).toBe('lnbc500u')
 
     // Convert 5-bit words to bytes; when padRemaining is true, leftover bits
     // are shifted into a final byte (matching the encoder's signing preimage)

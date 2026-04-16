@@ -146,11 +146,11 @@ describe('fetchLnurlInvoice', () => {
   it('fetches an invoice from the callback URL', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ pr: 'lntbs100n1pj...' }),
+      json: () => Promise.resolve({ pr: 'lnbc100n1pj...' }),
     })
 
     const invoice = await fetchLnurlInvoice('https://example.com/lnurlp/alice/callback', 50000n)
-    expect(invoice).toBe('lntbs100n1pj...')
+    expect(invoice).toBe('lnbc100n1pj...')
 
     // In test/dev mode, callback routes through the LNURL CORS proxy
     expect(mockFetch).toHaveBeenCalledWith(
@@ -162,7 +162,7 @@ describe('fetchLnurlInvoice', () => {
   it('appends amount with & when callback has existing query params', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ pr: 'lntbs100n1pj...' }),
+      json: () => Promise.resolve({ pr: 'lnbc100n1pj...' }),
     })
 
     await fetchLnurlInvoice('https://example.com/callback?key=val', 50000n)
@@ -207,7 +207,7 @@ describe('fetchLnurlInvoice', () => {
     const controller = new AbortController()
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ pr: 'lntbs...' }),
+      json: () => Promise.resolve({ pr: 'lnbc...' }),
     })
 
     await fetchLnurlInvoice('https://example.com/cb', 50000n, controller.signal)

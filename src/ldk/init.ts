@@ -60,7 +60,7 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import { drainPendingBroadcasts } from './traits/broadcaster'
 import { Wallet as LdkWallet, BumpTransactionEventHandler } from 'lightningdevkit'
 import { createBdkWalletSource } from './traits/bdk-wallet-source'
-import { LDK_CONFIG, ACTIVE_NETWORK } from './config'
+import { LDK_CONFIG } from './config'
 import { createLspsMessageHandler } from './lsps2/message-handler'
 import { LSPS2Client } from './lsps2/client'
 import { deriveNodeSecret } from './lsps2/node-secret'
@@ -235,7 +235,7 @@ async function doInitializeLdk(options: InitOptions): Promise<InitResult> {
   if (genesisHash !== LDK_CONFIG.genesisBlockHash) {
     throw new Error(
       `[LDK Init] Network mismatch: Esplora returned genesis ${genesisHash.substring(0, 16)}... ` +
-        `but expected ${LDK_CONFIG.genesisBlockHash.substring(0, 16)}... for ${ACTIVE_NETWORK}`
+        `but expected ${LDK_CONFIG.genesisBlockHash.substring(0, 16)}...`
     )
   }
 
