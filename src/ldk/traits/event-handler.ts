@@ -548,7 +548,8 @@ function handleEvent(
         onRecoveryNeeded({
           channelId: forceCloseInfo.channelId,
           localBalanceSat: forceCloseInfo.localBalanceSat,
-          reason: 'No confirmed on-chain UTXOs available for CPFP fee bump — deposit funds to complete force-close recovery',
+          reason:
+            'No confirmed on-chain UTXOs available for CPFP fee bump — deposit funds to complete force-close recovery',
         })
       }
 

@@ -62,10 +62,14 @@ export function createBdkWalletSource(bdkWallet: Wallet): WalletSource {
 
         console.log(
           '[BDK WalletSource] list_confirmed_utxos:',
-          utxos.length, 'confirmed,',
-          skippedUnconfirmed, 'unconfirmed,',
-          skippedNoTx, 'no-tx,',
-          'total unspent:', unspent.length
+          utxos.length,
+          'confirmed,',
+          skippedUnconfirmed,
+          'unconfirmed,',
+          skippedNoTx,
+          'no-tx,',
+          'total unspent:',
+          unspent.length
         )
 
         return Result_CVec_UtxoZNoneZ.constructor_ok(utxos)
