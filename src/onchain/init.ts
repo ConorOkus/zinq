@@ -2,6 +2,7 @@ import { Wallet, EsploraClient, ChangeSet, type Network } from '@bitcoindevkit/b
 import { ONCHAIN_CONFIG } from './config'
 import { getChangeset, putChangeset } from './storage/changeset'
 import { captureError } from '../storage/error-log'
+import { broadcastWithRetry } from '../ldk/traits/broadcaster'
 
 export interface BdkWallet {
   wallet: Wallet
@@ -104,5 +105,35 @@ export async function fullScanBdkWallet(
     } catch (err) {
       captureError('critical', 'BDK', 'Failed to persist ChangeSet after full scan', String(err))
     }
+  }
+
+  // Re-broadcast unconfirmed wallet transactions. Funding txs for Lightning
+  // channels can be evicted from mempools if they have low feerates, leaving
+  // the channel (and any close tx) permanently stuck. Re-broadcasting after
+  // a full scan ensures they re-enter the mempool.
+  rebroadcastUnconfirmedTxs(wallet)
+}
+
+function rebroadcastUnconfirmedTxs(wallet: Wallet): void {
+  const txs = wallet.transactions()
+  let count = 0
+  for (const wtx of txs) {
+    if (wtx.chain_position.is_confirmed) continue
+    try {
+      const txHex = Array.from(wtx.tx.to_bytes())
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')
+      count++
+      void broadcastWithRetry(ONCHAIN_CONFIG.esploraUrl, txHex).catch((err: unknown) => {
+        // Expected for txs whose inputs are already spent (e.g., replaced via RBF).
+        // Not actionable — just log for diagnostics.
+        console.warn('[BDK] Failed to rebroadcast unconfirmed tx:', err)
+      })
+    } catch (err: unknown) {
+      console.warn('[BDK] Failed to serialize unconfirmed tx for rebroadcast:', err)
+    }
+  }
+  if (count > 0) {
+    console.log('[BDK] Rebroadcasting', count, 'unconfirmed transaction(s)')
   }
 }
