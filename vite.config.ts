@@ -63,8 +63,8 @@ export default defineConfig(({ mode }) => {
         registerType: 'prompt',
         injectRegister: null,
         manifest: {
-          name: 'Zinq',
-          short_name: 'Zinq',
+          name: 'Zinqq',
+          short_name: 'Zinqq',
           description: 'Lightning wallet powered by LDK',
           theme_color: '#7c3aed',
           background_color: '#0a0a0a',
