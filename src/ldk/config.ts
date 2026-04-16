@@ -40,10 +40,16 @@ const DEFAULTS: LdkConfig = {
 
 export const LDK_CONFIG: LdkConfig = {
   ...DEFAULTS,
-  esploraUrl: ((import.meta.env.VITE_ESPLORA_URL as string | undefined) ?? DEFAULTS.esploraUrl).trim(),
-  wsProxyUrl: ((import.meta.env.VITE_WS_PROXY_URL as string | undefined) ?? DEFAULTS.wsProxyUrl).trim(),
+  esploraUrl: (
+    (import.meta.env.VITE_ESPLORA_URL as string | undefined) ?? DEFAULTS.esploraUrl
+  ).trim(),
+  wsProxyUrl: (
+    (import.meta.env.VITE_WS_PROXY_URL as string | undefined) ?? DEFAULTS.wsProxyUrl
+  ).trim(),
   vssUrl: ((import.meta.env.VITE_VSS_URL as string | undefined) ?? DEFAULTS.vssUrl).trim(),
-  lspNodeId: ((import.meta.env.VITE_LSP_NODE_ID as string | undefined) ?? DEFAULTS.lspNodeId).trim(),
+  lspNodeId: (
+    (import.meta.env.VITE_LSP_NODE_ID as string | undefined) ?? DEFAULTS.lspNodeId
+  ).trim(),
   lspHost: ((import.meta.env.VITE_LSP_HOST as string | undefined) ?? DEFAULTS.lspHost).trim(),
   lspPort: Number(
     ((import.meta.env.VITE_LSP_PORT as string | undefined) ?? String(DEFAULTS.lspPort)).trim()
@@ -78,4 +84,3 @@ if (LDK_CONFIG.lspNodeId !== '') {
     )
   }
 }
-

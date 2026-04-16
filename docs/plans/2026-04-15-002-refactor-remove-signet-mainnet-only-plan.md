@@ -1,5 +1,5 @@
 ---
-title: "refactor: Remove signet/testnet infrastructure — mainnet only"
+title: 'refactor: Remove signet/testnet infrastructure — mainnet only'
 type: refactor
 status: completed
 date: 2026-04-15
@@ -36,7 +36,7 @@ All changes land atomically in a single commit — the `NetworkId` type is impor
 
 ### Institutional learnings (from `docs/solutions/`)
 
-1. **VITE_ vars are baked into the JS bundle at build time** (`docs/solutions/infrastructure/vercel-mainnet-env-vars-fix.md`). After removing `VITE_NETWORK` from code, leftover `VITE_NETWORK=mainnet` in Vercel env vars is harmless at runtime — but `vite.config.ts` line 54 reads `env.VITE_NETWORK === 'mainnet'` to gate production optimizations. If not updated, `isMainnetProd` silently becomes `false` and production builds stop stripping `console.debug` and `debugger` statements. **Fix: change to `mode === 'production'`.**
+1. **VITE\_ vars are baked into the JS bundle at build time** (`docs/solutions/infrastructure/vercel-mainnet-env-vars-fix.md`). After removing `VITE_NETWORK` from code, leftover `VITE_NETWORK=mainnet` in Vercel env vars is harmless at runtime — but `vite.config.ts` line 54 reads `env.VITE_NETWORK === 'mainnet'` to gate production optimizations. If not updated, `isMainnetProd` silently becomes `false` and production builds stop stripping `console.debug` and `debugger` statements. **Fix: change to `mode === 'production'`.**
 
 2. **IDB naming must be preserved** (`docs/solutions/design-patterns/bdk-ldk-transaction-history-indexeddb-persistence.md`). Keep `zinqq-ldk-mainnet` as the hardcoded DB name to preserve existing mainnet wallet state.
 
@@ -77,6 +77,7 @@ All changes land in a **single atomic commit** to avoid intermediate TypeScript 
 **This is the keystone change — everything else follows from it.**
 
 `src/ldk/config.ts`:
+
 - Delete `NetworkId` type (line 3)
 - Delete `NETWORK_CONFIGS` record (lines 27-57) — replace with a single flat config object using mainnet values
 - Delete `VITE_NETWORK` parsing and validation (lines 59-64)
@@ -84,6 +85,7 @@ All changes land in a **single atomic commit** to avoid intermediate TypeScript 
 - Keep `LdkConfig` interface and export the single mainnet config object
 
 `src/onchain/config.ts`:
+
 - Delete `BdkNetwork` type (line 3)
 - Delete `ONCHAIN_CONFIGS` record (lines 15-34) — replace with single mainnet config
 - Remove `NetworkId` import
@@ -93,18 +95,18 @@ All changes land in a **single atomic commit** to avoid intermediate TypeScript 
 
 Each file removes its `ACTIVE_NETWORK` import and hardcodes the mainnet value:
 
-| File | Change |
-|------|--------|
-| `src/pages/TransactionDetail.tsx:9` | Hardcode `https://mempool.space/tx` |
-| `src/shared/fee-cache.ts:6-10,77` | Delete `SIGNET_DEFAULTS`, inline mainnet defaults `{1:25, 6:10, 12:5, 144:2}` |
-| `src/ldk/sweep.ts:16` | Hardcode `const MIN_FEE_RATE_SAT_VB = 2` |
-| `src/onchain/context.tsx:32` | Hardcode `const MIN_FEE_RATE_SAT_VB = 2n` |
-| `src/wallet/context.tsx:25` | Hardcode `'bitcoin'` in `deriveBdkDescriptors` call |
+| File                                            | Change                                                                                                                                                      |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/pages/TransactionDetail.tsx:9`             | Hardcode `https://mempool.space/tx`                                                                                                                         |
+| `src/shared/fee-cache.ts:6-10,77`               | Delete `SIGNET_DEFAULTS`, inline mainnet defaults `{1:25, 6:10, 12:5, 144:2}`                                                                               |
+| `src/ldk/sweep.ts:16`                           | Hardcode `const MIN_FEE_RATE_SAT_VB = 2`                                                                                                                    |
+| `src/onchain/context.tsx:32`                    | Hardcode `const MIN_FEE_RATE_SAT_VB = 2n`                                                                                                                   |
+| `src/wallet/context.tsx:25`                     | Hardcode `'bitcoin'` in `deriveBdkDescriptors` call                                                                                                         |
 | `src/ldk/payment-input.ts:15-23,95,110,160,245` | Delete `NETWORK_CURRENCY` and `ON_CHAIN_RE` maps; hardcode `Currency.LDKCurrency_Bitcoin` and mainnet address regex `/(bc1)/`; simplify BOLT 12 chain check |
-| `src/ldk/lsps2/bolt11-encoder.ts:18-21` | Delete `NETWORK_PREFIX` map; hardcode `'lnbc'` prefix |
-| `src/storage/idb.ts:3` | Hardcode `export const DB_NAME = 'zinqq-ldk-mainnet'` |
-| `src/wallet/keys.ts:8,78-85` | Delete `TESTNET_VERSIONS`; remove `network` parameter from `deriveBdkDescriptors`; hardcode `coinType = 0` |
-| `src/ldk/init.ts:238` | Update error message (remove network name interpolation) |
+| `src/ldk/lsps2/bolt11-encoder.ts:18-21`         | Delete `NETWORK_PREFIX` map; hardcode `'lnbc'` prefix                                                                                                       |
+| `src/storage/idb.ts:3`                          | Hardcode `export const DB_NAME = 'zinqq-ldk-mainnet'`                                                                                                       |
+| `src/wallet/keys.ts:8,78-85`                    | Delete `TESTNET_VERSIONS`; remove `network` parameter from `deriveBdkDescriptors`; hardcode `coinType = 0`                                                  |
+| `src/ldk/init.ts:238`                           | Update error message (remove network name interpolation)                                                                                                    |
 
 ### Phase 3: Delete NetworkBadge
 
@@ -113,33 +115,33 @@ Each file removes its `ACTIVE_NETWORK` import and hardcodes the mainnet value:
 
 ### Phase 4: Config & Deployment Files (5 files)
 
-| File | Change |
-|------|--------|
-| `vite.config.ts:54` | Change `const isMainnetProd = env.VITE_NETWORK === 'mainnet' && mode === 'production'` to `const isProd = mode === 'production'`; update references at lines 107-108 |
-| `index.html:13` | Remove `https://mutinynet.com`, `https://*.mutinynet.com`, `https://rgs.mutinynet.com`, `wss://p.mutinynet.com` from `connect-src` |
-| `.env.example` | Remove `VITE_NETWORK` lines; update `VITE_WS_PROXY_URL` default to `wss://proxy.zinqq.app`; remove signet comments |
-| `.env` | Remove `VITE_NETWORK` if present; clear signet LSP values; update WS proxy URL |
-| `proxy/wrangler.toml` | Remove `https://zinqq-app-testnet.vercel.app` from dev origins (line 12); remove `https://testnet.zinqq.app` from production origins (line 23) |
+| File                  | Change                                                                                                                                                               |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vite.config.ts:54`   | Change `const isMainnetProd = env.VITE_NETWORK === 'mainnet' && mode === 'production'` to `const isProd = mode === 'production'`; update references at lines 107-108 |
+| `index.html:13`       | Remove `https://mutinynet.com`, `https://*.mutinynet.com`, `https://rgs.mutinynet.com`, `wss://p.mutinynet.com` from `connect-src`                                   |
+| `.env.example`        | Remove `VITE_NETWORK` lines; update `VITE_WS_PROXY_URL` default to `wss://proxy.zinqq.app`; remove signet comments                                                   |
+| `.env`                | Remove `VITE_NETWORK` if present; clear signet LSP values; update WS proxy URL                                                                                       |
+| `proxy/wrangler.toml` | Remove `https://zinqq-app-testnet.vercel.app` from dev origins (line 12); remove `https://testnet.zinqq.app` from production origins (line 23)                       |
 
 ### Phase 5: Test Files (13 files)
 
 Update all test fixtures and mocks to mainnet values:
 
-| File | Key Changes |
-|------|-------------|
-| `src/ldk/config.test.ts` | Assert mainnet config values; remove signet assertions |
-| `src/ldk/init-recovery.test.ts` | Update mock config to mainnet genesis hash `000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f`; update mock `EsploraClient.getBlockHash()` to return same hash |
-| `src/ldk/payment-input.test.ts` | Remove `ACTIVE_NETWORK` mock; use `bc1q` addresses; use `lnbc` invoices; flip acceptance/rejection assertions (accept bc1q, reject tb1q) |
-| `src/ldk/lsps2/bolt11-encoder.test.ts` | Expect `lnbc` prefix in all assertions |
-| `src/ldk/sync/esplora-client.test.ts` | Change `BASE_URL` from `https://mutinynet.com/api` to `/api/esplora` (or a test mock URL) |
-| `src/onchain/bip321.test.ts` | Replace `tb1q` addresses with `bc1q` addresses |
-| `src/wallet/keys.test.ts` | Test `deriveBdkDescriptors(mnemonic)` (no network param); assert coin type 0, xprv prefix |
-| `src/pages/Send.test.tsx` | Replace `tb1qtest` → `bc1qtest`; replace `lntbs` → `lnbc` |
-| `src/pages/Receive.test.tsx` | Replace `lntbs` → `lnbc`; replace `tb1q` → `bc1q` |
-| `src/pages/Home.test.tsx` | Replace `tb1qtest` → `bc1qtest` |
-| `src/hooks/use-unified-balance.test.ts` | Replace `tb1qtest` → `bc1qtest` |
-| `src/ldk/resolve-bip353.test.ts` | Replace `tb1q` → `bc1q` addresses |
-| `src/lnurl/resolve-lnurl.test.ts` | Replace `lntbs` → `lnbc` invoice prefixes (cosmetic consistency) |
+| File                                    | Key Changes                                                                                                                                                                   |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/ldk/config.test.ts`                | Assert mainnet config values; remove signet assertions                                                                                                                        |
+| `src/ldk/init-recovery.test.ts`         | Update mock config to mainnet genesis hash `000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f`; update mock `EsploraClient.getBlockHash()` to return same hash |
+| `src/ldk/payment-input.test.ts`         | Remove `ACTIVE_NETWORK` mock; use `bc1q` addresses; use `lnbc` invoices; flip acceptance/rejection assertions (accept bc1q, reject tb1q)                                      |
+| `src/ldk/lsps2/bolt11-encoder.test.ts`  | Expect `lnbc` prefix in all assertions                                                                                                                                        |
+| `src/ldk/sync/esplora-client.test.ts`   | Change `BASE_URL` from `https://mutinynet.com/api` to `/api/esplora` (or a test mock URL)                                                                                     |
+| `src/onchain/bip321.test.ts`            | Replace `tb1q` addresses with `bc1q` addresses                                                                                                                                |
+| `src/wallet/keys.test.ts`               | Test `deriveBdkDescriptors(mnemonic)` (no network param); assert coin type 0, xprv prefix                                                                                     |
+| `src/pages/Send.test.tsx`               | Replace `tb1qtest` → `bc1qtest`; replace `lntbs` → `lnbc`                                                                                                                     |
+| `src/pages/Receive.test.tsx`            | Replace `lntbs` → `lnbc`; replace `tb1q` → `bc1q`                                                                                                                             |
+| `src/pages/Home.test.tsx`               | Replace `tb1qtest` → `bc1qtest`                                                                                                                                               |
+| `src/hooks/use-unified-balance.test.ts` | Replace `tb1qtest` → `bc1qtest`                                                                                                                                               |
+| `src/ldk/resolve-bip353.test.ts`        | Replace `tb1q` → `bc1q` addresses                                                                                                                                             |
+| `src/lnurl/resolve-lnurl.test.ts`       | Replace `lntbs` → `lnbc` invoice prefixes (cosmetic consistency)                                                                                                              |
 
 ### Phase 6: Verification
 

@@ -48,6 +48,7 @@ Strip all signet/mutinynet/testnet code paths, configuration, and infrastructure
 ## Affected Files
 
 **Source files (12):**
+
 - `src/ldk/config.ts` — Remove signet config, NetworkId type, VITE_NETWORK parsing
 - `src/onchain/config.ts` — Remove signet config, simplify to single object
 - `src/pages/TransactionDetail.tsx` — Hardcode mempool.space explorer URL
@@ -62,6 +63,7 @@ Strip all signet/mutinynet/testnet code paths, configuration, and infrastructure
 - `src/wallet/keys.ts` — Remove testnet derivation paths, hardcode coin type 0
 
 **Test files (12):**
+
 - `src/ldk/config.test.ts`
 - `src/ldk/init-recovery.test.ts`
 - `src/ldk/payment-input.test.ts`
@@ -76,6 +78,7 @@ Strip all signet/mutinynet/testnet code paths, configuration, and infrastructure
 - `src/ldk/resolve-bip353.test.ts`
 
 **Config/deployment (5):**
+
 - `.env` / `.env.example` — Remove VITE_NETWORK, default URLs to mainnet
 - `vite.config.ts` — Simplify (no isMainnetProd conditional needed)
 - `index.html` — Remove mutinynet URLs from CSP connect-src
