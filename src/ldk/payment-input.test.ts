@@ -167,6 +167,91 @@ describe('classifyPaymentInput — BIP 321 URI validation', () => {
   })
 })
 
+describe('classifyPaymentInput — BIP 321 Payjoin (pj= / pjos=)', () => {
+  const ADDR = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq'
+
+  it('attaches payjoin context when pj= is present', async () => {
+    const { classifyPaymentInput } = await import('./payment-input')
+    const result = classifyPaymentInput(
+      `bitcoin:${ADDR}?amount=0.001&pj=https://btcpay.example/payjoin/xyz`
+    )
+    expect(result.type).toBe('onchain')
+    if (result.type === 'onchain') {
+      expect(result.payjoin).toBeDefined()
+      expect(result.payjoin?.url).toBe('https://btcpay.example/payjoin/xyz')
+      expect(result.payjoin?.strict).toBe(false)
+    }
+  })
+
+  it('treats uppercase PJ= as case-insensitive', async () => {
+    const { classifyPaymentInput } = await import('./payment-input')
+    const result = classifyPaymentInput(`bitcoin:${ADDR}?PJ=https://btcpay.example/p`)
+    expect(result.type).toBe('onchain')
+    if (result.type === 'onchain') {
+      expect(result.payjoin?.url).toBe('https://btcpay.example/p')
+    }
+  })
+
+  it('marks strict=true when pjos=0', async () => {
+    const { classifyPaymentInput } = await import('./payment-input')
+    const result = classifyPaymentInput(`bitcoin:${ADDR}?pj=https://btcpay.example/p&pjos=0`)
+    expect(result.type).toBe('onchain')
+    if (result.type === 'onchain') {
+      expect(result.payjoin?.strict).toBe(true)
+    }
+  })
+
+  it('captures bitcoin:// v2 URL unchanged — no scheme validation at parser', async () => {
+    // BIP 77 v2 encodes its session URL inside pj= with a non-https scheme;
+    // the parser must NOT filter it out (PDK validates downstream).
+    const v2Url = 'bitcoin://payjo.in/ABCDEF/?rk=REDACTED'
+    const { classifyPaymentInput } = await import('./payment-input')
+    const result = classifyPaymentInput(`bitcoin:${ADDR}?pj=${encodeURIComponent(v2Url)}`)
+    expect(result.type).toBe('onchain')
+    if (result.type === 'onchain') {
+      expect(result.payjoin?.url).toBe(v2Url)
+    }
+  })
+
+  it('omits payjoin field when pj= is empty', async () => {
+    const { classifyPaymentInput } = await import('./payment-input')
+    const result = classifyPaymentInput(`bitcoin:${ADDR}?pj=`)
+    expect(result.type).toBe('onchain')
+    if (result.type === 'onchain') {
+      expect(result.payjoin).toBeUndefined()
+    }
+  })
+
+  it('rejects pathologically long pj= values', async () => {
+    const { classifyPaymentInput } = await import('./payment-input')
+    const longUrl = 'https://a.example/' + 'x'.repeat(2100)
+    const result = classifyPaymentInput(`bitcoin:${ADDR}?pj=${encodeURIComponent(longUrl)}`)
+    expect(result.type).toBe('onchain')
+    if (result.type === 'onchain') {
+      expect(result.payjoin).toBeUndefined()
+    }
+  })
+
+  it('does not attach payjoin when lightning= takes precedence', async () => {
+    // LN branch wins; on-chain parsing never runs, so payjoin is never
+    // attached. Confirmed by the returned type being bolt11.
+    const { classifyPaymentInput } = await import('./payment-input')
+    const result = classifyPaymentInput(
+      `bitcoin:${ADDR}?pj=https://btcpay.example/p&lightning=lnbc50u1ptest`
+    )
+    expect(result.type).toBe('bolt11')
+  })
+
+  it('omits payjoin when pj= is absent', async () => {
+    const { classifyPaymentInput } = await import('./payment-input')
+    const result = classifyPaymentInput(`bitcoin:${ADDR}?amount=0.001`)
+    expect(result.type).toBe('onchain')
+    if (result.type === 'onchain') {
+      expect(result.payjoin).toBeUndefined()
+    }
+  })
+})
+
 describe('classifyPaymentInput — BIP 353', () => {
   it('parses user@domain as bip353', async () => {
     const { classifyPaymentInput } = await import('./payment-input')
