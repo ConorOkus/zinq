@@ -1,3 +1,9 @@
+/** Minimum fee rate the wallet will broadcast at (sat/vB). */
+export const MIN_FEE_RATE_SAT_VB = 2n
+
+/** Sanity ceiling for absolute fee on any on-chain send (sats). */
+export const MAX_FEE_SATS = 50_000n
+
 interface OnchainConfig {
   network: 'bitcoin'
   esploraUrl: string

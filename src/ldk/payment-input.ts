@@ -45,8 +45,29 @@ export type ParsedPaymentInput =
    * is assembled directly from the resolved metadata rather than during parsing.
    */
   | { type: 'lnurl'; domain: string; user: string; metadata: LnurlPayMetadata; raw: string }
-  | { type: 'onchain'; address: string; amountSats: bigint | null }
+  | {
+      type: 'onchain'
+      address: string
+      amountSats: bigint | null
+      /**
+       * Payjoin context from BIP 321 `pj=` / `pjos=` params (BIP 78 v1 or BIP 77 v2).
+       * Raw value is captured here without scheme validation — PDK parses and
+       * validates the URL shape when the send actually runs. Absent when no `pj=`.
+       */
+      payjoin?: PayjoinContext
+    }
   | { type: 'error'; message: string }
+
+export interface PayjoinContext {
+  /** Raw `pj=` URL value. May be https:// (v1) or bitcoin:/payjoin: (v2). */
+  url: string
+  /**
+   * true iff `pjos=0` was present. Receiver is signalling Payjoin is required
+   * for privacy — note: Zinqq currently does NOT honor strict mode (known
+   * divergence from BIP 78 intent; see plan).
+   */
+  strict: boolean
+}
 
 /**
  * Classify and parse a payment input string into a structured type.
@@ -203,10 +224,12 @@ function parseBip321(input: string): ParsedPaymentInput {
 
   const params = queryPart ? new URLSearchParams(queryPart) : null
 
-  // Extract lightning parameters (case-insensitive key lookup)
+  // Extract lightning + payjoin parameters (case-insensitive key lookup)
   let lnoValue: string | null = null
   let lightningValue: string | null = null
   let amountBtc: string | null = null
+  let pjValue: string | null = null
+  let pjosValue: string | null = null
 
   if (params) {
     for (const [key, value] of params.entries()) {
@@ -214,6 +237,8 @@ function parseBip321(input: string): ParsedPaymentInput {
       if (lowerKey === 'lno') lnoValue = value
       else if (lowerKey === 'lightning') lightningValue = value
       else if (lowerKey === 'amount') amountBtc = value
+      else if (lowerKey === 'pj') pjValue = value
+      else if (lowerKey === 'pjos') pjosValue = value
     }
   }
 
@@ -245,7 +270,16 @@ function parseBip321(input: string): ParsedPaymentInput {
     }
   }
 
-  return { type: 'onchain', address, amountSats }
+  // Capture payjoin raw value. No scheme validation here — BIP 77 v2 uses
+  // bitcoin:/payjoin: schemes inside pj=, so filtering on https here would
+  // silently disable v2. PDK's parseUri rejects invalid shapes downstream.
+  // Length-bound prevents pathological inputs.
+  let payjoin: PayjoinContext | undefined
+  if (pjValue && pjValue.length > 0 && pjValue.length < 2048) {
+    payjoin = { url: pjValue, strict: pjosValue === '0' }
+  }
+
+  return { type: 'onchain', address, amountSats, ...(payjoin && { payjoin }) }
 }
 
 /** Convert a BTC-denominated string to satoshis using fixed-point parsing. */

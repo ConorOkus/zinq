@@ -49,6 +49,94 @@ function lnurlCorsProxy(): Plugin {
   }
 }
 
+/**
+ * Vite plugin that proxies Payjoin (BIP 78 v1 + BIP 77 v2) sender traffic in
+ * dev. Routes POST /__payjoin_proxy/DOMAIN/PATH to https://DOMAIN/PATH with
+ * body forwarding. Mirrors the production proxy at api/payjoin-proxy.ts with a
+ * minimal subset of controls (validation-only, no rate limit in dev).
+ */
+function payjoinCorsProxy(): Plugin {
+  return {
+    name: 'payjoin-cors-proxy',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const prefix = '/__payjoin_proxy/'
+        if (!req.url?.startsWith(prefix)) return next()
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('POST only')
+          return
+        }
+
+        const rest = req.url.slice(prefix.length)
+        const slashIdx = rest.indexOf('/')
+        if (slashIdx === -1 || /[\r\n]/.test(rest) || rest.length > 2048) {
+          res.statusCode = 400
+          res.end('Bad proxy URL')
+          return
+        }
+        const targetHost = rest.slice(0, slashIdx)
+        const targetPath = rest.slice(slashIdx)
+        if (targetHost.includes('@') || targetHost.includes(':')) {
+          res.statusCode = 400
+          res.end('Bad host')
+          return
+        }
+        const targetUrl = `https://${targetHost}${targetPath}`
+
+        const contentType = req.headers['content-type'] ?? ''
+        if (
+          typeof contentType !== 'string' ||
+          (!contentType.startsWith('text/plain') &&
+            !contentType.startsWith('message/ohttp-req'))
+        ) {
+          res.statusCode = 415
+          res.end('unsupported content-type')
+          return
+        }
+
+        const chunks: Buffer[] = []
+        let total = 0
+        req.on('data', (chunk: Buffer) => {
+          total += chunk.length
+          if (total > 100 * 1024) {
+            res.statusCode = 413
+            res.end('body too large')
+            req.destroy()
+            return
+          }
+          chunks.push(chunk)
+        })
+        req.on('end', () => {
+          const body = Buffer.concat(chunks)
+          fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+              'content-type': contentType,
+              'user-agent': 'payjoin-client/1.0',
+            },
+            body,
+            redirect: 'manual',
+            signal: AbortSignal.timeout(20_000),
+          })
+            .then(async (upstream) => {
+              res.statusCode = upstream.status
+              const upstreamCt = upstream.headers.get('content-type')
+              if (upstreamCt) res.setHeader('Content-Type', upstreamCt)
+              res.setHeader('Cache-Control', 'no-store')
+              const buf = Buffer.from(await upstream.arrayBuffer())
+              res.end(buf)
+            })
+            .catch((err: unknown) => {
+              res.statusCode = 502
+              res.end(err instanceof Error ? err.message : 'Proxy error')
+            })
+        })
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const isProd = mode === 'production'
@@ -59,6 +147,7 @@ export default defineConfig(({ mode }) => {
       wasm(),
       topLevelAwait(),
       lnurlCorsProxy(),
+      payjoinCorsProxy(),
       VitePWA({
         registerType: 'prompt',
         injectRegister: null,
@@ -98,6 +187,17 @@ export default defineConfig(({ mode }) => {
                 expiration: { maxEntries: 1 },
                 cacheableResponse: { statuses: [200] },
               },
+            },
+            // Payjoin endpoints must never be cached — responses are
+            // session-specific PSBTs / OHTTP payloads.
+            {
+              urlPattern: ({ url }) =>
+                url.pathname.startsWith('/api/payjoin-proxy') ||
+                url.hostname === 'payjo.in' ||
+                url.hostname === 'pj.benalleng.com' ||
+                url.hostname === 'pj.bobspacebkk.com' ||
+                url.hostname === 'ohttp.achow101.com',
+              handler: 'NetworkOnly',
             },
           ],
         },
