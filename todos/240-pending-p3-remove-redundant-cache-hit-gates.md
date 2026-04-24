@@ -10,7 +10,7 @@ dependencies: []
 
 ## Problem Statement
 
-`ci.yml:36, 40, 47, 54, 64` each guard with `if: steps.dist-cache.outputs.cache-hit != 'true'`. Five repetitions of the same condition for steps that are *either idempotent or already self-guarding*:
+`ci.yml:36, 40, 47, 54, 64` each guard with `if: steps.dist-cache.outputs.cache-hit != 'true'`. Five repetitions of the same condition for steps that are _either idempotent or already self-guarding_:
 
 - `Add wasm32 target` (`rustup target add` is a no-op on rerun)
 - `Cache cargo bin` (`actions/cache@v4` is already a no-op fetch on miss/hit)

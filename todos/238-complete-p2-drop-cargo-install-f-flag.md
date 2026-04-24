@@ -18,7 +18,7 @@ dependencies: []
 
 - `.github/workflows/ci.yml:44` — `cargo install -f wasm-bindgen-cli --version 0.2.108 --locked`
 - `scripts/vercel-install.sh:33` — `cargo install --locked wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION"` (no `-f`)
-- `docs/payjoin-build.md:11` — documented command also has `-f` 
+- `docs/payjoin-build.md:11` — documented command also has `-f`
 
 Flagged by `code-simplicity-reviewer` (P2).
 

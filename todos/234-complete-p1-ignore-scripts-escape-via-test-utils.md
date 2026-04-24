@@ -32,6 +32,7 @@ Flagged by `security-sentinel` (P1). Independent verification confirmed the clai
 We don't consume `test-utils`; it's upstream's native test helper (napi-rs bindings to Rust test fixtures). Skipping it avoids the nested `npm install` and an extra ~1-2 min compile.
 
 Can't simply modify `generate_bindings.sh` (it's in the submodule). Options:
+
 - (a) Run the steps directly in CI/Vercel, replicating `generate_bindings.sh:1-24` verbatim but stopping before line 25. Accept upstream-script-drift risk.
 - (b) Fork the script into `scripts/payjoin-build.sh`, source-patched from upstream on each submodule bump.
 - (c) Run `generate_bindings.sh` with `SKIP_TEST_UTILS=1` env + upstream-PR the guard. Long-turnaround.
@@ -45,7 +46,7 @@ Set globally so transitive `npm install`s inherit it:
 ```yaml
 # ci.yml payjoin-build job
 env:
-  NPM_CONFIG_IGNORE_SCRIPTS: "true"
+  NPM_CONFIG_IGNORE_SCRIPTS: 'true'
 ```
 
 ```sh

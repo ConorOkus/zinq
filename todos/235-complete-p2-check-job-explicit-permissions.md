@@ -32,8 +32,7 @@ check:
   timeout-minutes: 15
   permissions:
     contents: read
-  steps:
-    ...
+  steps: ...
 ```
 
 `contents: read` is what checkout needs; everything else is implicitly denied.
