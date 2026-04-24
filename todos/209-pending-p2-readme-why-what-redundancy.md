@@ -26,19 +26,25 @@ Flagged by code-simplicity-reviewer during review of PR #138.
 ## Proposed Solutions
 
 ### Option A — trim the intro, keep the bullets
+
 Cut the second sentence of the Why intro. Let the bullets carry the four "no"s.
+
 - **Pros:** smallest change, zero risk.
 - **Cons:** intro loses some rhetorical punch.
 - **Effort:** Small.
 
 ### Option B — trim the bullets, keep the intro
+
 Keep the intro's four-nos line and shorten the corresponding bullets so they don't restate their headline.
+
 - **Pros:** intro stays punchy; bullets become shorter.
 - **Cons:** more edits; harder to keep tone consistent.
 - **Effort:** Small.
 
 ### Option C — trim both lightly (recommended)
+
 Cut the intro's second sentence; also drop the first-sentence restatement in the Self-custodial bullet; collapse the Send & Receive first bullet to stop re-listing specs.
+
 - **Pros:** every bullet earns its line; saves ~8 lines total.
 - **Cons:** needs careful re-reading to keep flow.
 - **Effort:** Small.

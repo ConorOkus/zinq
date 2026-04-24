@@ -26,6 +26,7 @@ Flagged by code-simplicity-reviewer during review of PR #138.
 ## Proposed Solution
 
 Take the trims that are unambiguous wins:
+
 1. Cut "working answer to a single question:" from line 15.
 2. Drop "by construction" from the Self-custodial headline.
 3. Collapse the three-tier paragraph (lines 88–91) to one sentence.
