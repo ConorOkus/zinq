@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "copy:wasm": "cp node_modules/lightningdevkit/liblightningjs.wasm public/liblightningjs.wasm",
-    "payjoin:build": "cd vendor/rust-payjoin/payjoin-ffi/javascript && bash ./scripts/generate_bindings.sh",
+    "payjoin:build": "bash scripts/build-payjoin-bindings.sh",
     "predev": "pnpm copy:wasm",
     "dev": "vite",
     "prebuild": "pnpm copy:wasm",

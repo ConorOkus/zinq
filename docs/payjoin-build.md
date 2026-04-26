@@ -8,7 +8,7 @@ Zinqq vendors the Payjoin Dev Kit (PDK) from [payjoin/rust-payjoin](https://gith
 | --------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------- |
 | Rust                                    | stable                                         | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | `wasm32-unknown-unknown` target         | —                                              | `rustup target add wasm32-unknown-unknown`                        |
-| `wasm-bindgen-cli`                      | **0.2.108** (must match rust-payjoin lockfile) | `cargo install -f wasm-bindgen-cli --version 0.2.108 --locked`    |
+| `wasm-bindgen-cli`                      | **0.2.108** (must match rust-payjoin lockfile) | `cargo install --locked wasm-bindgen-cli --version 0.2.108`       |
 | LLVM (macOS only — for `secp256k1-sys`) | latest                                         | `brew install llvm`                                               |
 
 The `wasm-bindgen-cli` version is pinned to whatever rust-payjoin's `Cargo.lock` resolves `wasm-bindgen` to. Version drift produces a schema-mismatch error at bind time. When bumping the submodule, re-check and update this pin.
@@ -18,12 +18,10 @@ The `wasm-bindgen-cli` version is pinned to whatever rust-payjoin's `Cargo.lock`
 ```sh
 git submodule update --init --recursive
 pnpm install
-# Install bindings' own npm deps (separate lockfile — not our pnpm)
-(cd vendor/rust-payjoin/payjoin-ffi/javascript && npm install)
 pnpm payjoin:build
 ```
 
-`pnpm payjoin:build` runs `vendor/rust-payjoin/payjoin-ffi/javascript/scripts/generate_bindings.sh`, which compiles rust-payjoin to `wasm32-unknown-unknown`, runs `wasm-bindgen`, and produces `dist/` inside the submodule. Zinqq links to that `dist/` via the `"payjoin": "link:./vendor/rust-payjoin/payjoin-ffi/javascript"` dependency.
+`pnpm payjoin:build` runs `scripts/build-payjoin-bindings.sh`. That script deliberately diverges from upstream's `generate_bindings.sh` by skipping `npm run build:test-utils` — upstream's test-utils runs `npm install` with lifecycle scripts enabled, which would bypass our `--ignore-scripts` supply-chain hardening. Zinqq does not consume the test-utils artefacts. The script produces `dist/` inside the submodule; Zinqq links to it via the `"payjoin": "link:./vendor/rust-payjoin/payjoin-ffi/javascript"` dependency.
 
 ## Bumping the submodule
 
