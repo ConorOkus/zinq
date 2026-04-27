@@ -1,5 +1,5 @@
 ---
-status: pending
+status: complete
 priority: p1
 issue_id: '223'
 tags: [code-review, payjoin, security, supply-chain]
@@ -70,10 +70,10 @@ Option 1 as default. If the build breaks on `payjoin-1.0.0-rc.2`, fall back to O
 
 ## Acceptance Criteria
 
-- [ ] Submodule HEAD is a named upstream tag, not a loose commit
-- [ ] `pnpm payjoin:build` succeeds against the chosen tag
-- [ ] Documented tag name in `docs/payjoin-build.md`
-- [ ] CI `wasm-bindgen-cli --version` flag matches the tag's `Cargo.lock`
+- [x] Submodule HEAD is a named upstream tag, not a loose commit
+- [x] `pnpm payjoin:build` succeeds against the chosen tag
+- [x] Documented tag name in `docs/payjoin-build.md`
+- [x] CI `wasm-bindgen-cli --version` flag matches the tag's `Cargo.lock`
 
 ## Work Log
 
@@ -84,6 +84,13 @@ Option 1 as default. If the build breaks on `payjoin-1.0.0-rc.2`, fall back to O
 - Verifying that `payjoin-1.0.0-rc.2` builds cleanly needs a full ~10 min cold compile — expensive to do speculatively.
 
 Recommend pairing this work with a CI "verify-tag" job that does a cold rebuild of the candidate tag on a schedule, so we can confidently swap the pin once we have a known-good tag. For now the risk delta between "pinned master SHA" and "pinned tag" is smaller than the undocumented wasm-bindgen-cli resolution behaviour would suggest.
+
+**2026-04-26** — Resolved on branch `feat/pin-payjoin-submodule-release-tag`.
+
+- Submodule moved from master HEAD `e22e3724` to release tag `payjoin-1.0.0-rc.2` (commit `7082171b`).
+- Investigation surfaced a docs error: the work log claimed `wasm-bindgen-cli` resolution depends on cargo state at build time and that the top-level `Cargo.lock` was authoritative. Neither is correct. The wasm sub-build at `vendor/rust-payjoin/payjoin-ffi/javascript/rust_modules/wasm/Cargo.lock` is the authoritative lockfile and pins `wasm-bindgen 0.2.108` for both master HEAD AND `payjoin-1.0.0-rc.2`. The top-level `Cargo.lock` (which says 0.2.118) is for the workspace's non-wasm crates and routinely diverges from the wasm sub-build.
+- Net version pin change: **none** — `wasm-bindgen-cli@0.2.108` is correct for the new tag too. Updated docs to point reviewers at the right lockfile path so the next bump doesn't repeat the misdiagnosis.
+- Verified: `pnpm payjoin:build` from clean compiles successfully; `dist/index.js`, `dist/index.web.js`, `dist/generated/wasm-bindgen/index_bg.wasm` produced; full repo `pnpm typecheck` + 442-test `pnpm test` suite green.
 
 ## Resources
 
