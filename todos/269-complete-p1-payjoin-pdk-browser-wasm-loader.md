@@ -1,5 +1,5 @@
 ---
-status: pending
+status: complete
 priority: p1
 issue_id: '269'
 tags: [code-review, payjoin, wasm, build, ci]
@@ -119,6 +119,18 @@ output. If upstream changes invalidate the patch, re-evaluate.
 - [ ] CI Vercel deploy passes
 
 ## Work Log
+
+**2026-04-27** — Resolved on `feat/payjoin-target-web`. Two-line patch in `scripts/build-payjoin-bindings.sh`:
+
+1. **wasm-bindgen target.** Found the smoking gun in `vendor/.../javascript/ubrn.config.yaml`: `target: nodejs` under the `web:` block. Almost certainly an upstream bug — the `web:` target shouldn't emit Node-only code. Build script now seds it to `target: web` before running ubrn, idempotently. Resulting `wasm-bindgen/index.js` is now ES modules, no `require('fs')`, default export `init({ module_or_path })` per the `--target web` contract.
+
+2. **Wasm asset import.** PDK's generated `dist/index.web.js` does `import wasmPath from '...index_bg.wasm'`. Without intervention, vite-plugin-wasm intercepts that import and tries to instantiate the wasm via the bundler-style protocol — looking for a non-existent `index_bg.js` companion (which `--target web` doesn't emit; that's the `--target bundler` convention). Build script now seds `index_bg.wasm` → `index_bg.wasm?url` so Vite treats the wasm as a URL asset. The `--target web` `init({ module_or_path })` API takes exactly that URL string. vite-plugin-wasm respects `?url` and steps aside.
+
+`pdk.ts` unstubbed back to `await import('payjoin')` + `mod.uniffiInitAsync()`. `pdk.test.ts` restored to the original mocked-payjoin memoization tests.
+
+`pnpm build` now succeeds; PDK ships as a separate `index.web-*.js` chunk (~45 KB gzipped, dynamically loaded only when a Payjoin-advertising URI is paid).
+
+Future: open an upstream PR/issue with `payjoin/rust-payjoin` to flip `target: nodejs` → `target: web` (or `bundler`) in `ubrn.config.yaml` so we can drop the local sed.
 
 ## Resources
 

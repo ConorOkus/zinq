@@ -2,29 +2,26 @@ import type * as PdkModule from 'payjoin'
 
 export type Pdk = typeof PdkModule.payjoin
 
+let pdkPromise: Promise<Pdk> | null = null
+
 /**
- * PDK browser-entry loader.
+ * Lazy-load the Payjoin Dev Kit. The PDK is dynamically imported so its
+ * ~1MB wasm bundle stays out of the main chunk and only fetches when an
+ * on-chain send actually needs it. Memoised: repeat callers share a
+ * single init.
  *
- * Currently rejects unconditionally. The vendored PDK build
- * (`payjoin-1.0.0-rc.2`) ships `dist/index.web.js` whose wasm-bindgen
- * output was generated with `--target nodejs` (via ubrn). The
- * resulting wasm-bindgen `index.js` uses `require('fs').readFileSync`
- * to load the wasm bytes — Node-only — and the matching `index_bg.js`
- * companion file Vite needs is not produced. Rollup fails the
- * production build with `Could not resolve "./index_bg.js" from
- * "...index_bg.wasm"`.
- *
- * Until the build script invokes wasm-bindgen with `--target web` (or
- * a runtime fetch loader is wrapped around the existing artefact),
- * `loadPdk()` rejects with a `pdk_load` reason. `tryPayjoinSend`
- * catches the rejection and falls back to broadcasting the original
- * PSBT, so on-chain sends continue to succeed — they just aren't
- * Payjoin-coordinated.
- *
- * Tracked in todo: pdk-browser-wasm-loader (TBD #).
+ * Build prerequisite: `scripts/build-payjoin-bindings.sh` patches
+ * `ubrn.config.yaml` to use wasm-bindgen `--target web` so the loader
+ * is browser-compatible. Without that patch, the upstream default
+ * (`--target nodejs`) emits a loader that uses `require('fs')` and
+ * crashes in the browser.
  */
 export function loadPdk(): Promise<Pdk> {
-  return Promise.reject(
-    new Error('Payjoin PDK browser loader not yet wired (see pdk.ts header comment)')
-  )
+  if (pdkPromise) return pdkPromise
+  pdkPromise = (async () => {
+    const mod = await import('payjoin')
+    await mod.uniffiInitAsync()
+    return mod.payjoin
+  })()
+  return pdkPromise
 }
