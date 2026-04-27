@@ -32,6 +32,8 @@ jobs:
           path: |
             vendor/rust-payjoin/payjoin-ffi/javascript/dist
             vendor/rust-payjoin/payjoin-ffi/javascript/src/generated
+            vendor/rust-payjoin/payjoin-ffi/javascript/node_modules/uniffi-bindgen-react-native/package.json
+            vendor/rust-payjoin/payjoin-ffi/javascript/node_modules/uniffi-bindgen-react-native/typescript/dist
           key: payjoin-bindings-${{ steps.payjoin-sha.outputs.sha }}-${{ hashFiles('scripts/build-payjoin-bindings.sh', 'vendor/rust-payjoin/payjoin-ffi/javascript/package-lock.json') }}
 
       - name: Cache cargo bin
@@ -60,11 +62,21 @@ jobs:
           name: payjoin-bindings
           # Upstream's dist/index.web.js does `import './../src/generated/payjoin'`
           # — relative paths that escape dist/. We must ship both directories so
-          # the consumer build can resolve them. Common ancestor is the repo root,
-          # so the artifact preserves the full vendor/.../{dist,src/generated} layout.
+          # the consumer build can resolve them. Common ancestor is the repo
+          # root, so the artifact preserves the full vendor/.../{dist,src/generated}
+          # layout.
+          #
+          # PDK's generated payjoin.{ts,js} also imports from
+          # `uniffi-bindgen-react-native` (a runtime helper installed during the
+          # PDK build). That package's full tree is ~900 MB (Rust source + build
+          # cache) but the JS portion that our consumer build actually needs is
+          # ~330 KB under typescript/dist/. Ship the package.json + that subdir
+          # so node-style module resolution succeeds in downstream jobs.
           path: |
             vendor/rust-payjoin/payjoin-ffi/javascript/dist
             vendor/rust-payjoin/payjoin-ffi/javascript/src/generated
+            vendor/rust-payjoin/payjoin-ffi/javascript/node_modules/uniffi-bindgen-react-native/package.json
+            vendor/rust-payjoin/payjoin-ffi/javascript/node_modules/uniffi-bindgen-react-native/typescript/dist
           retention-days: 1
 
   check:
