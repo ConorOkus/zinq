@@ -51,4 +51,29 @@ fi
 (cd node_modules/uniffi-bindgen-react-native \
   && cargo add home@=0.5.11 --package uniffi-bindgen-react-native)
 
+# Patch ubrn's web target from `nodejs` to `web` so wasm-bindgen emits the
+# browser-compatible loader (default `init({ module_or_path })` export +
+# `WebAssembly.instantiateStreaming(fetch(...))`). Upstream's `web:` block
+# defaulting to nodejs target is almost certainly an upstream bug — the
+# resulting `index.js` uses `require('fs').readFileSync` and crashes in
+# any browser. Idempotent: re-running the sed against an already-patched
+# file is a no-op.
+if grep -q '^[[:space:]]*target:[[:space:]]*nodejs' ubrn.config.yaml; then
+  sed -i.bak 's/^\([[:space:]]*\)target:[[:space:]]*nodejs/\1target: web/' ubrn.config.yaml
+  rm -f ubrn.config.yaml.bak
+fi
+
 npm run build
+
+# Patch dist/index.web.js: force Vite to treat the wasm-bindgen wasm as a
+# URL asset (`?url`) rather than letting vite-plugin-wasm instantiate it
+# as a module. wasm-bindgen `--target web` emits an `init({module_or_path})`
+# loader that wants a URL string; without `?url` Vite intercepts the
+# default `.wasm` import and tries to bundle it via vite-plugin-wasm,
+# which can't find the bundler-style `index_bg.js` companion that
+# `--target web` doesn't emit. The sed is idempotent: `?url` already
+# present is a no-op.
+if [[ -f dist/index.web.js ]] && ! grep -q 'index_bg.wasm?url' dist/index.web.js; then
+  sed -i.bak 's|index_bg\.wasm|index_bg.wasm?url|' dist/index.web.js
+  rm -f dist/index.web.js.bak
+fi
