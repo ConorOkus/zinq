@@ -245,6 +245,9 @@ function parseBip321(input: string): ParsedPaymentInput {
         key = decodeURIComponent(rawKey)
         value = decodeURIComponent(rawValue)
       } catch {
+        // Malformed %-sequence in the pair. Surface in dev so a corrupt pj=
+        // doesn't silently degrade to a non-Payjoin send (privacy footgun).
+        console.warn('parseBip321: skipped malformed query pair', rawKey)
         continue
       }
       const lowerKey = key.toLowerCase()

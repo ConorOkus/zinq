@@ -925,7 +925,7 @@ export function Send() {
               {sendStep.label ?? `${sendStep.address.slice(0, 12)}...${sendStep.address.slice(-8)}`}
             </span>
           </div>
-          {sendStep.payjoin ? (
+          {sendStep.payjoin && (
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Privacy</span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-accent">
@@ -933,7 +933,7 @@ export function Send() {
                 Payjoin
               </span>
             </div>
-          ) : null}
+          )}
           <div className="flex justify-between">
             <span className="text-sm font-medium text-[var(--color-on-dark-muted)]">Amount</span>
             <span className="font-semibold">{formatBtc(sendStep.amount)}</span>

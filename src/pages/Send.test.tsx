@@ -409,8 +409,8 @@ describe('Send', () => {
       await waitFor(() => {
         expect(screen.getByText(/review/i)).toBeInTheDocument()
       })
-      expect(screen.getByText(/privacy/i)).toBeInTheDocument()
-      expect(screen.getByText(/payjoin/i)).toBeInTheDocument()
+      expect(screen.getByText('Privacy')).toBeInTheDocument()
+      expect(screen.getByText('Payjoin')).toBeInTheDocument()
     })
 
     it('omits Payjoin badge on review when pj= is absent', async () => {
@@ -429,8 +429,10 @@ describe('Send', () => {
       await waitFor(() => {
         expect(screen.getByText(/review/i)).toBeInTheDocument()
       })
-      expect(screen.queryByText(/privacy/i)).not.toBeInTheDocument()
-      expect(screen.queryByText(/payjoin/i)).not.toBeInTheDocument()
+      // Exact-match to avoid false positives if other strings on this screen
+      // ever contain the substring "Privacy" / "Payjoin".
+      expect(screen.queryByText('Privacy')).not.toBeInTheDocument()
+      expect(screen.queryByText('Payjoin')).not.toBeInTheDocument()
     })
   })
 
