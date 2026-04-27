@@ -246,10 +246,26 @@ export function OnchainProvider({ children }: { children: ReactNode }) {
         // For Payjoin-modified txs, BDK didn't build the proposal so its
         // balance won't reflect the spend until the next sync. Apply the
         // unconfirmed tx so wallet.balance is correct immediately.
+        //
+        // Failure here is non-fatal — the broadcast already happened on the
+        // network, the tx is in flight, and the next BDK sync will reconcile
+        // the wallet's view. Surfacing this as "Send Failed" would mislead
+        // the user into retrying and risk a real double-spend on a wallet
+        // with multiple available UTXOs (BDK might pick different inputs
+        // before its next sync sees the in-flight tx).
         if (wasTransformed) {
-          wallet.apply_unconfirmed_txs([
-            new UnconfirmedTx(tx, BigInt(Math.floor(Date.now() / 1000))),
-          ])
+          try {
+            wallet.apply_unconfirmed_txs([
+              new UnconfirmedTx(tx, BigInt(Math.floor(Date.now() / 1000))),
+            ])
+          } catch (err) {
+            captureError(
+              'error',
+              'Onchain',
+              'Payjoin apply_unconfirmed_txs failed post-broadcast',
+              err instanceof Error ? err.message : String(err)
+            )
+          }
         }
 
         // Read balance BEFORE take_staged() to ensure the wallet still

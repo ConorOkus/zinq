@@ -21,15 +21,17 @@ function fakeOutput(value: bigint, script: ScriptBuf) {
 
 function fakePsbt(opts: {
   version: number
+  isLockTimeEnabled?: boolean
   inputs: ReturnType<typeof fakeOutPoint>[]
   outputs: ReturnType<typeof fakeOutput>[]
   fee: bigint
 }): Psbt {
   return {
+    version: opts.version,
     unsigned_tx: {
-      version: opts.version,
       input: opts.inputs,
       output: opts.outputs,
+      is_lock_time_enabled: opts.isLockTimeEnabled ?? false,
     },
     fee: () => ({ to_sat: () => opts.fee }),
   } as unknown as Psbt
@@ -193,7 +195,7 @@ describe('validateProposal', () => {
     expect(result).toEqual({ ok: false, reason: 'fee contribution exceeds cap' })
   })
 
-  it('rejects when proposal changes the tx version', () => {
+  it('rejects when proposal changes the psbt version', () => {
     const original = fakePsbt({
       version: 2,
       inputs: [fakeOutPoint('aa', 0)],
@@ -212,7 +214,62 @@ describe('validateProposal', () => {
       wallet: fakeWallet([SENDER_CHANGE]),
       originalFeeRate: 10n,
     })
-    expect(result).toEqual({ ok: false, reason: 'tx version changed' })
+    expect(result).toEqual({ ok: false, reason: 'psbt version changed' })
+  })
+
+  it('rejects when proposal flips the locktime-enabled bit', () => {
+    const original = fakePsbt({
+      version: 2,
+      isLockTimeEnabled: false,
+      inputs: [fakeOutPoint('aa', 0)],
+      outputs: [fakeOutput(1000n, RECIPIENT), fakeOutput(99_000n, SENDER_CHANGE)],
+      fee: 1_000n,
+    })
+    const proposal = fakePsbt({
+      version: 2,
+      isLockTimeEnabled: true,
+      inputs: [fakeOutPoint('aa', 0)],
+      outputs: [fakeOutput(1000n, RECIPIENT), fakeOutput(99_000n, SENDER_CHANGE)],
+      fee: 1_000n,
+    })
+    const result = validateProposal({
+      original,
+      proposal,
+      wallet: fakeWallet([SENDER_CHANGE]),
+      originalFeeRate: 10n,
+    })
+    expect(result).toEqual({ ok: false, reason: 'locktime-enabled bit changed' })
+  })
+
+  it('rejects when receiver adds a new output owned by the sender (UTXO grafting redirect)', () => {
+    const RECEIVER_GRAFTED_OURS = fakeScript([0x00, 0x14, 0x12, 0x34, 0x56])
+    const original = fakePsbt({
+      version: 2,
+      inputs: [fakeOutPoint('aa', 0)],
+      outputs: [fakeOutput(1000n, RECIPIENT), fakeOutput(99_000n, SENDER_CHANGE)],
+      fee: 1_000n,
+    })
+    // Receiver grafts a sender-owned UTXO as their "contribution" then adds a
+    // fresh output paying that value to a different sender-owned script.
+    // Without check (f), validateProposal would only iterate original outputs
+    // and miss this entirely.
+    const proposal = fakePsbt({
+      version: 2,
+      inputs: [fakeOutPoint('aa', 0), fakeOutPoint('grafted', 0)],
+      outputs: [
+        fakeOutput(1000n, RECIPIENT),
+        fakeOutput(99_000n, SENDER_CHANGE),
+        fakeOutput(50_000n, RECEIVER_GRAFTED_OURS),
+      ],
+      fee: 1_000n,
+    })
+    const result = validateProposal({
+      original,
+      proposal,
+      wallet: fakeWallet([SENDER_CHANGE, RECEIVER_GRAFTED_OURS]),
+      originalFeeRate: 10n,
+    })
+    expect(result).toEqual({ ok: false, reason: 'receiver added a sender-owned output' })
   })
 
   it('ignores a receiver-added input whose script is unrelated to the wallet', () => {
