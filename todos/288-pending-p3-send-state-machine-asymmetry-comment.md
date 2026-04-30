@@ -45,4 +45,5 @@ Add a comment near the `SendStep` union or near the `isBroadcasting` declaration
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 follow-up review
+
 **By:** architecture-strategist

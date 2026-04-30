@@ -162,10 +162,7 @@ export function OnchainProvider({ children }: { children: ReactNode }) {
   )
 
   const buildSignBroadcast = useCallback(
-    async (
-      buildPsbt: (feeRate: FeeRate) => Psbt,
-      feeRateSatVb?: bigint
-    ): Promise<string> => {
+    async (buildPsbt: (feeRate: FeeRate) => Psbt, feeRateSatVb?: bigint): Promise<string> => {
       const wallet = walletRef.current
       const esplora = esploraRef.current
       if (!wallet || !esplora) throw new Error('Wallet not ready')

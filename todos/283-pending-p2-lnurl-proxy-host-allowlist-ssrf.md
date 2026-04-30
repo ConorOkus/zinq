@@ -25,6 +25,7 @@ This is **pre-existing**, not introduced by PR #147. It became visible because P
 ## Proposed Solution
 
 Mirror what `api/payjoin-proxy.ts` (now deleted) did: parse the target via a `parseTarget` helper that:
+
 1. Rejects non-`https:` schemes.
 2. Rejects private IPs (RFC 1918, link-local, loopback, IPv6 ULA, IPv4-mapped IPv6).
 3. Normalizes hostname (lowercase, IDN punycode).
@@ -51,4 +52,5 @@ If we don't want a strict allowlist, at minimum enforce points 1–3.
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 follow-up review
+
 **By:** security-sentinel

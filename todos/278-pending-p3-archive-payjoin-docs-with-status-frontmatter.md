@@ -31,6 +31,7 @@ A future agent grep-ing for a payment bug will read these and try to open files 
 ### Option 1: Add `archived:` frontmatter (recommended)
 
 Add `archived: 2026-04-29 (PR #147 — Payjoin integration removed pending upstream)` to the frontmatter of:
+
 - `docs/plans/2026-04-23-001-feat-payjoin-send-support-plan.md`
 - `docs/brainstorms/2026-04-23-payjoin-send-brainstorm.md`
 - `docs/solutions/integration-issues/bip321-pj-urlsearchparams-plus-corruption.md`
@@ -65,6 +66,7 @@ To be filled during triage.
 ## Technical Details
 
 **Affected files:**
+
 - `docs/plans/2026-04-23-001-feat-payjoin-send-support-plan.md`
 - `docs/brainstorms/2026-04-23-payjoin-send-brainstorm.md`
 - `docs/solutions/integration-issues/bip321-pj-urlsearchparams-plus-corruption.md`
@@ -83,4 +85,5 @@ To be filled during triage.
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 review
+
 **By:** architecture-strategist, agent-native-reviewer

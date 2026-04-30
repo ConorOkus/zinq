@@ -41,4 +41,5 @@ Create `tsconfig.api.json` extending a shared base, with `include: ["api/**/*.ts
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 follow-up review
+
 **By:** architecture-strategist

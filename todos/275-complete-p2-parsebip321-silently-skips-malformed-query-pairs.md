@@ -12,7 +12,7 @@ dependencies: []
 
 PR #147 stripped Payjoin from `parseBip321` and, alongside the `pj=` parsing logic, removed both the `console.warn` and the comment that explained why malformed `%`-sequences must surface ("Surface in dev so a corrupt `pj=` doesn't silently degrade to a non-Payjoin send (privacy footgun)").
 
-The catch block now silently `continue`s on any `decodeURIComponent` failure for *any* key — so a URI like `bitcoin:bc1q…?amount=0.00%ZZ` will silently drop the `amount=` and route the user to the numpad to enter an amount, rather than surfacing "Malformed Bitcoin URI." The privacy-footgun framing is gone, but the silent-degradation pattern remains for non-payjoin keys.
+The catch block now silently `continue`s on any `decodeURIComponent` failure for _any_ key — so a URI like `bitcoin:bc1q…?amount=0.00%ZZ` will silently drop the `amount=` and route the user to the numpad to enter an amount, rather than surfacing "Malformed Bitcoin URI." The privacy-footgun framing is gone, but the silent-degradation pattern remains for non-payjoin keys.
 
 ## Findings
 
@@ -70,4 +70,5 @@ To be filled during triage. Option 1 preferred — silent skip on malformed URI 
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 review
+
 **By:** kieran-typescript-reviewer

@@ -10,7 +10,7 @@ dependencies: []
 
 ## Problem Statement
 
-`todos/236-pending-p2-pin-gha-actions-by-sha.md` is the one Payjoin-tagged todo PR #147 *intentionally kept* — it's a generic GHA security hygiene improvement that still applies repo-wide. But its current content references a `payjoin-build` job that no longer exists ("`permissions: {}` on `payjoin-build` caps the blast radius"), and its frontmatter still carries the `payjoin` tag.
+`todos/236-pending-p2-pin-gha-actions-by-sha.md` is the one Payjoin-tagged todo PR #147 _intentionally kept_ — it's a generic GHA security hygiene improvement that still applies repo-wide. But its current content references a `payjoin-build` job that no longer exists ("`permissions: {}` on `payjoin-build` caps the blast radius"), and its frontmatter still carries the `payjoin` tag.
 
 A future agent triaging GHA pinning will look for a job that's been deleted and may either dismiss the todo as stale or get confused.
 
@@ -50,4 +50,5 @@ To be filled during triage.
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 review
+
 **By:** agent-native-reviewer

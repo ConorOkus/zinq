@@ -84,4 +84,5 @@ To be filled during triage.
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 review
+
 **By:** code-simplicity-reviewer

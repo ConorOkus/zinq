@@ -29,10 +29,12 @@ The intent ("Reopen if Payjoin is re-integrated", appended to each cancelled fil
 **Approach:** Document `cancelled` as a Zinqq-local extension in `compound-engineering.local.md`. State that for filtering/listing purposes it should be treated as terminal (same as `complete`), and that re-opening a cancelled todo means renaming it back to `pending` and clearing the `## Cancelled` section.
 
 **Pros:**
+
 - Keeps the existing rename intact — no churn on the 31 files.
 - Preserves the semantic distinction (cancelled ≠ completed work) for human reviewers.
 
 **Cons:**
+
 - Slightly diverges from upstream skill vocabulary; relies on local convention.
 
 **Effort:** 15 min.
@@ -46,9 +48,11 @@ The intent ("Reopen if Payjoin is re-integrated", appended to each cancelled fil
 **Approach:** Rename `*-cancelled-*` → `*-complete-*`. Add a `cancelled_reason` field to frontmatter pointing at the removal commit. Filenames glob cleanly with existing tooling.
 
 **Pros:**
+
 - Zero divergence from skill vocabulary; existing tooling works unmodified.
 
 **Cons:**
+
 - Conflates "completed work" with "abandoned work" in lists — hides the distinction we wanted to preserve.
 - Larger churn (31 file renames + content edits).
 
@@ -63,6 +67,7 @@ To be filled during triage.
 ## Technical Details
 
 **Affected files:**
+
 - `compound-engineering.local.md` (Option 1) — add convention note
 - `todos/*-cancelled-*.md` × 31 (Option 2) — rename + add field
 
@@ -79,5 +84,6 @@ To be filled during triage.
 ## Work Log
 
 ### 2026-04-29 — Discovered during PR #147 review
+
 **By:** agent-native-reviewer
 **Actions:** Cross-referenced 31 newly-cancelled todos against the `file-todos` skill's lifecycle vocabulary; flagged as P1.

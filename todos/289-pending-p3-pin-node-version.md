@@ -41,4 +41,5 @@ Add `"engines": { "node": ">=22 <23" }` to `package.json` (or pin tighter) and a
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 follow-up review
+
 **By:** architecture-strategist

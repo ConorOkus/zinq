@@ -10,7 +10,7 @@ dependencies: []
 
 ## Problem Statement
 
-PR #147 deleted `api/payjoin-proxy.ts` and `api/payjoin-proxy.test.ts`. The remaining `api/` directory still has `esplora-proxy.ts`, `lnurl-proxy.ts`, `vss-proxy.ts` — but those are Vercel serverless functions that we *do* want lint coverage on.
+PR #147 deleted `api/payjoin-proxy.ts` and `api/payjoin-proxy.test.ts`. The remaining `api/` directory still has `esplora-proxy.ts`, `lnurl-proxy.ts`, `vss-proxy.ts` — but those are Vercel serverless functions that we _do_ want lint coverage on.
 
 The pre-existing `'api/**'` entry in `eslint.config.js`'s ignores excludes the entire directory from linting. Whether intentional historically or not, the existence of an unlinted directory in a TypeScript codebase is a smell, and the question is now visible because of this PR.
 
@@ -64,4 +64,5 @@ To be filled during triage.
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 review
+
 **By:** code-simplicity-reviewer

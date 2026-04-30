@@ -39,4 +39,5 @@ Parse the `VSS_ORIGIN` env var at module init, assert it's `https://` and matche
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 follow-up review
+
 **By:** security-sentinel

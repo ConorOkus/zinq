@@ -48,4 +48,5 @@ No need to re-import `InsufficientFunds` — the substring match keeps the type 
 ## Work Log
 
 ### 2026-04-29 — Surfaced during PR #147 follow-up review
+
 **By:** kieran-typescript-reviewer
