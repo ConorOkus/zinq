@@ -242,11 +242,7 @@ async function attemptJitInvoiceWithLsp(
   }
 
   // Step 3: Buy JIT channel.
-  const buyResponse = await node.lsps2Client.buyChannel(
-    contact.nodeId,
-    selectedParams,
-    amountMsat
-  )
+  const buyResponse = await node.lsps2Client.buyChannel(contact.nodeId, selectedParams, amountMsat)
 
   // Step 4: Register payment with LDK. The LSP deducts the opening fee
   // before forwarding, so the received amount will be less than the

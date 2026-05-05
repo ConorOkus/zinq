@@ -65,7 +65,7 @@ p2p via LSPS2 JSON-RPC, exactly as Megalith does today.
   `wss://proxy.zinqq.app` — already covered.
 - **Update reference memory** post-merge:
   `~/.claude/projects/.../memory/reference_megalith_lsp.md` becomes
-  reference for the *fallback* LSP, with a new entry pointing at LQwD
+  reference for the _fallback_ LSP, with a new entry pointing at LQwD
   as primary.
 
 ## Resolved Questions
@@ -84,11 +84,12 @@ None. Ready for `/ce:plan`.
 ## Next Steps
 
 → `/ce:plan` for the implementation details. Plan should cover:
-   - `/get_info` fetch + parse + session cache (new module)
-   - CSP entry additions
-   - Generalize current `connectAndTrack` + LSPS2 JSON-RPC path to
-     accept a primary/fallback pair
-   - Telemetry buckets (selected_lsp, fallback_reason)
-   - Test matrix: LQwD-down, LQwD-up-RPC-fails, payment-size out-of-range,
-     both-down → on-chain only
-   - Pattern reference: `src/ldk/traits/broadcaster.ts:36-62`
+
+- `/get_info` fetch + parse + session cache (new module)
+- CSP entry additions
+- Generalize current `connectAndTrack` + LSPS2 JSON-RPC path to
+  accept a primary/fallback pair
+- Telemetry buckets (selected_lsp, fallback_reason)
+- Test matrix: LQwD-down, LQwD-up-RPC-fails, payment-size out-of-range,
+  both-down → on-chain only
+- Pattern reference: `src/ldk/traits/broadcaster.ts:36-62`

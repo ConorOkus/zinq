@@ -3,11 +3,7 @@
 // or a sentinel `await Promise.resolve()`, both of which obscure intent.
 /* eslint-disable @typescript-eslint/require-await */
 import { describe, it, expect, vi } from 'vitest'
-import {
-  runJitInvoiceFlow,
-  JitPeerConnectError,
-  JitPaymentSizeOutOfRangeError,
-} from '../context'
+import { runJitInvoiceFlow, JitPeerConnectError, JitPaymentSizeOutOfRangeError } from '../context'
 import type { PeerManager } from 'lightningdevkit'
 import type { LdkNode } from '../init'
 import type { LspContact } from './contacts'
@@ -163,9 +159,7 @@ describe('runJitInvoiceFlow — primary/fallback orchestration', () => {
     const attempt: ReturnType<typeof vi.fn<AttemptFn>> = vi.fn<AttemptFn>(
       async (_node, contact) => {
         if (contact.label === 'lqwd') {
-          throw new JitPaymentSizeOutOfRangeError(
-            'no fee params accept 200000000 msat from lqwd'
-          )
+          throw new JitPaymentSizeOutOfRangeError('no fee params accept 200000000 msat from lqwd')
         }
         return RESULT_MEGALITH
       }
@@ -222,11 +216,9 @@ describe('runJitInvoiceFlow — primary/fallback orchestration', () => {
   })
 
   it('throws when primary fails and no fallback is configured', async () => {
-    const attempt: ReturnType<typeof vi.fn<AttemptFn>> = vi.fn<AttemptFn>(
-      async () => {
-        throw new JitPeerConnectError('lqwd unreachable')
-      }
-    )
+    const attempt: ReturnType<typeof vi.fn<AttemptFn>> = vi.fn<AttemptFn>(async () => {
+      throw new JitPeerConnectError('lqwd unreachable')
+    })
 
     await expect(
       runJitInvoiceFlow({
@@ -243,9 +235,7 @@ describe('runJitInvoiceFlow — primary/fallback orchestration', () => {
   })
 
   it('passes the user-provided amount and description through to attempt', async () => {
-    const attempt: ReturnType<typeof vi.fn<AttemptFn>> = vi.fn<AttemptFn>(
-      async () => RESULT_LQWD
-    )
+    const attempt: ReturnType<typeof vi.fn<AttemptFn>> = vi.fn<AttemptFn>(async () => RESULT_LQWD)
     await runJitInvoiceFlow({
       node: FAKE_NODE,
       amountMsat: 12_345_678n,

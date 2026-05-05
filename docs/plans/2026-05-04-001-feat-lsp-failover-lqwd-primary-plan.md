@@ -1,5 +1,5 @@
 ---
-title: "feat: LSP failover — LQwD primary, Megalith fallback"
+title: 'feat: LSP failover — LQwD primary, Megalith fallback'
 type: feat
 status: completed
 date: 2026-05-04
@@ -45,14 +45,14 @@ Three logical pieces, each small:
    `fetchLqwdContact(): Promise<LspContact>`. Hits the HTTP endpoint
    with `cache: 'no-store'`, parses `uris[0]`, validates the
    `<66hex>@<host>:<port>` shape, returns `{nodeId, host, port,
-   token: null}` or throws. Memoised at module scope: invocations
+token: null}` or throws. Memoised at module scope: invocations
    share the in-flight promise; resolved value is reused for the
    lifetime of the page.
 
 2. **LSP-contact resolver**
    `src/ldk/lsp/contacts.ts` — combines discovery + env config:
    `resolveLspContacts(): Promise<{primary: LspContact | null,
-   fallback: LspContact | null}>`. Primary = the discovered LQwD
+fallback: LspContact | null}>`. Primary = the discovered LQwD
    contact (or `null` if discovery failed); fallback = the existing
    `LDK_CONFIG.lsp*` env-var contact (or `null` if disabled). Fired
    eagerly at app init — by the time the user navigates to /receive
@@ -75,7 +75,7 @@ Three logical pieces, each small:
 ### Architecture
 
 - **`LspContact`** type: `{nodeId: string, host: string, port: number,
-  token: string | null, label: 'lqwd' | 'megalith'}`. The `label` is
+token: string | null, label: 'lqwd' | 'megalith'}`. The `label` is
   for telemetry only.
 - **Discovery wire shape** is the live JSON from
   `https://germany.lqwd.tech/api/v1/get_info` — we **only** consume
@@ -158,13 +158,13 @@ Use the existing `captureError` pattern
 (`src/storage/error-log.ts`). Emit one event per receive attempt:
 
 - On primary success: `info`, scope `'LSP'`, `"primary lsp succeeded
-  (lqwd)"`.
+(lqwd)"`.
 - On fallback success: `warning`, scope `'LSP'`, `"fell back to
-  megalith"` + JSON detail `{trigger: 'http_preflight' |
-  'peer_connect' | 'lsps2_rpc' | 'payment_size_filter',
-  duration_ms}`.
+megalith"` + JSON detail `{trigger: 'http_preflight' |
+'peer_connect' | 'lsps2_rpc' | 'payment_size_filter',
+duration_ms}`.
 - On both-fail: `error`, scope `'LSP'`, `"both lsps failed,
-  degrading to on-chain"` + same detail keys.
+degrading to on-chain"` + same detail keys.
 
 ## System-Wide Impact
 
@@ -264,18 +264,17 @@ other surface in the wallet generates JIT invoices. UI surface
       `fetchLqwdContact()` returning `Promise<LspContact>`. Uses
       `fetch(url, {cache: 'no-store'})`. Validates URI shape with
       strict regex. Memoised at module scope.
-- [x] `src/ldk/lsp/contacts.ts` exists. Exports `LspContact` type
-      and `resolveLspContacts()`. Returns `{primary: LspContact |
-      null, fallback: LspContact | null}`. Fired eagerly at app
-      init.
+- [x] `src/ldk/lsp/contacts.ts` exists with `LspContact` type and
+      `resolveLspContacts()` returning `{primary, fallback}` where
+      either field may be null. Fired eagerly at app init.
 - [x] `requestJitInvoice` in `src/ldk/context.tsx:260-337`
       refactored to: extract LSPS2 dance into
       `attemptJitInvoiceWithLsp(contact, amountMsat, description)`;
       wrap with primary→fallback failover; map all four brainstorm
       triggers to fallback.
 - [x] Drop the in-function one-shot retry at
-      `src/ldk/context.tsx:282-284` for the *primary* attempt.
-      Preserve a single retry on the *fallback* attempt.
+      `src/ldk/context.tsx:282-284` for the _primary_ attempt.
+      Preserve a single retry on the _fallback_ attempt.
 - [x] CSP entry `https://germany.lqwd.tech` added to **both**
       `vercel.json:31` and `index.html:13` `connect-src`.
 - [x] No Workbox runtime rule matches `germany.lqwd.tech`. If any
@@ -387,6 +386,7 @@ other surface in the wallet generates JIT invoices. UI surface
 ## Implementation Sketch
 
 ### `src/ldk/lsp/lqwd-discovery.ts`
+
 ```ts
 export type LspContact = {
   nodeId: string
@@ -425,32 +425,37 @@ export function fetchLqwdContact(): Promise<LspContact> {
   })()
   // Reset inflight on rejection so a transient failure can be retried
   // on next page load (memoisation is per-session, not per-process).
-  inflight.catch(() => { inflight = null })
+  inflight.catch(() => {
+    inflight = null
+  })
   return inflight
 }
 ```
 
 ### `src/ldk/lsp/contacts.ts`
+
 ```ts
 export async function resolveLspContacts(): Promise<{
   primary: LspContact | null
   fallback: LspContact | null
 }> {
   const primary = await fetchLqwdContact().catch(() => null)
-  const fallback: LspContact | null = LDK_CONFIG.lspNodeId && LDK_CONFIG.lspHost
-    ? {
-        nodeId: LDK_CONFIG.lspNodeId,
-        host: LDK_CONFIG.lspHost,
-        port: LDK_CONFIG.lspPort,
-        token: LDK_CONFIG.lspToken ?? null,
-        label: 'megalith',
-      }
-    : null
+  const fallback: LspContact | null =
+    LDK_CONFIG.lspNodeId && LDK_CONFIG.lspHost
+      ? {
+          nodeId: LDK_CONFIG.lspNodeId,
+          host: LDK_CONFIG.lspHost,
+          port: LDK_CONFIG.lspPort,
+          token: LDK_CONFIG.lspToken ?? null,
+          label: 'megalith',
+        }
+      : null
   return { primary, fallback }
 }
 ```
 
 ### `requestJitInvoice` refactor (sketch)
+
 ```ts
 const requestJitInvoice = useCallback(async (amountMsat, description) => {
   const node = nodeRef.current
@@ -469,8 +474,10 @@ const requestJitInvoice = useCallback(async (amountMsat, description) => {
       const trigger = classifyFailure(e) // 'http_preflight' | 'peer_connect' | 'lsps2_rpc' | 'payment_size_filter'
       if (!fallback) throw e
       captureError(
-        'warning', 'LSP', `falling back from ${primary.label} to ${fallback.label}`,
-        JSON.stringify({ trigger, duration_ms: Math.round(performance.now() - t0) }),
+        'warning',
+        'LSP',
+        `falling back from ${primary.label} to ${fallback.label}`,
+        JSON.stringify({ trigger, duration_ms: Math.round(performance.now() - t0) })
       )
     }
   }
@@ -481,14 +488,17 @@ const requestJitInvoice = useCallback(async (amountMsat, description) => {
 ```
 
 ### `attemptJitInvoiceWithLsp` (extracted from current 270-336)
+
 Signature: `(node, contact, amountMsat, description, opts?: {retryOnce: boolean}) => Promise<JitInvoiceResult>`. Body is the existing 5-step LSPS2 dance, parameterised on `contact` instead of `LDK_CONFIG`. The "no fee params match" branch becomes `throw new PaymentSizeOutOfRangeError(...)` so the wrapper can classify it as a fallback trigger rather than a user-facing error.
 
 ## Sources & References
 
 ### Origin
+
 - **Brainstorm:** [`docs/brainstorms/2026-04-30-lsp-failover-lqwd-primary-brainstorm.md`](../brainstorms/2026-04-30-lsp-failover-lqwd-primary-brainstorm.md). Key decisions carried forward: (1) LSPS2-only scope; (2) LQwD via `/get_info` on each boot, session-cached; (3) all four fallback triggers (HTTP / peer connect / LSPS2 RPC / payment-size); (4) silent + telemetry only; (5) on-chain as bottom of cascade; (6) no mid-flow swapping past `buyChannel` success.
 
 ### Internal references
+
 - Pattern reference (failover): `src/ldk/traits/broadcaster.ts:36-62`
 - LSP config: `src/ldk/config.ts:50-86`, `.env.example:26-31`
 - JIT receive flow (to refactor): `src/ldk/context.tsx:260-337`
@@ -501,14 +511,17 @@ Signature: `(node, contact, amountMsat, description, opts?: {retryOnce: boolean}
 - Telemetry: `src/storage/error-log.ts` (`captureError`)
 
 ### Institutional learnings
+
 - `docs/solutions/runtime-errors/mobile-pwa-websocket-peer-disconnect.md` — iOS Safari kills WebSockets on backgrounding; relevant to peer-connect retry semantics on the fallback path.
 - (Plus the broadcaster fallback pattern itself, which serves as a working precedent.)
 
 ### External references
+
 - LQwD discovery endpoint: `https://germany.lqwd.tech/api/v1/get_info`
 - LSPS2 spec (BLIPs): bLIP-52 — fee menu / opening fees (already implemented)
 
 ### Related work
+
 - The Megalith-only integration is the existing baseline (no PR to swap; this plan is the first time multi-LSP is introduced).
 - Brainstorm: [`docs/brainstorms/2026-04-30-lsp-failover-lqwd-primary-brainstorm.md`](../brainstorms/2026-04-30-lsp-failover-lqwd-primary-brainstorm.md)
 - Auto-memory entry to update post-merge:
