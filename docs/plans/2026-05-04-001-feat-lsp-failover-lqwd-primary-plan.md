@@ -1,9 +1,10 @@
 ---
 title: "feat: LSP failover — LQwD primary, Megalith fallback"
 type: feat
-status: active
+status: completed
 date: 2026-05-04
 origin: docs/brainstorms/2026-04-30-lsp-failover-lqwd-primary-brainstorm.md
+pr: https://github.com/ConorOkus/zinqq/pull/148
 ---
 
 # feat: LSP Failover — LQwD Primary, Megalith Fallback
