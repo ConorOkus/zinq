@@ -44,13 +44,15 @@ export function fetchLqwdContact(): Promise<LspContact> {
     if (!match) {
       throw new Error(`LQwD /get_info uris[0] shape unexpected: ${first}`)
     }
-    const port = Number(match[3])
+    // Three capture groups; when the regex matches, all three are present.
+    const [, nodeId, host, portStr] = match as RegExpExecArray & [string, string, string, string]
+    const port = Number(portStr)
     if (!Number.isFinite(port) || port < 1 || port > 65535) {
-      throw new Error(`LQwD /get_info port out of range: ${match[3]}`)
+      throw new Error(`LQwD /get_info port out of range: ${portStr}`)
     }
     return {
-      nodeId: match[1],
-      host: match[2],
+      nodeId,
+      host,
       port,
       token: null,
       label: 'lqwd',

@@ -52,7 +52,9 @@ describe('fetchLqwdContact', () => {
   it('uses cache: "no-store" and a request timeout', async () => {
     const fetchSpy = mockFetchOnce({ body: VALID_BODY })
     await fetchLqwdContact()
-    const init = fetchSpy.mock.calls[0][1]
+    const firstCall = fetchSpy.mock.calls[0]
+    expect(firstCall).toBeDefined()
+    const init = firstCall![1]
     expect(init?.cache).toBe('no-store')
     expect(init?.signal).toBeInstanceOf(AbortSignal)
   })
